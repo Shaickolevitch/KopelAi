@@ -36,6 +36,40 @@ const FEATURES = [
   },
 ];
 
+// The two people behind KopelAi. To add real photos: drop the image files into
+// /public (e.g. /public/kopel.jpg, /public/shai.jpg) and set `photo` below to
+// '/kopel.jpg' / '/shai.jpg'. Edit the bios freely — they're placeholders.
+const PEOPLE = [
+  {
+    key: 'kopel',
+    photo: null as string | null, // e.g. '/kopel.jpg'
+    he: {
+      name: 'קופל',
+      role: 'ההשראה',
+      bio: 'קופל הוא הפסיכולוג שנתן לאפליקציה את שמה ואת רוחה — גישה מתבוננת, אנושית וישירה. הקול שלו הוא שמנחה את השיחות כאן. [טקסט זמני — ניתן לעריכה]',
+    },
+    en: {
+      name: 'Kopel',
+      role: 'The inspiration',
+      bio: 'Kopel is the psychologist who gave this app its name and its spirit — a reflective, human, and direct approach. His voice is what guides the conversations here. [placeholder — editable]',
+    },
+  },
+  {
+    key: 'shai',
+    photo: null as string | null, // e.g. '/shai.jpg'
+    he: {
+      name: 'שי',
+      role: 'המייסד',
+      bio: 'שי בנה את קופל כדי לתת למטפלים מרחב פרטי לעצור, לחשוב, ולהבין את עצמם טוב יותר ככאלה. [טקסט זמני — ניתן לעריכה]',
+    },
+    en: {
+      name: 'Shai',
+      role: 'The founder',
+      bio: 'Shai built KopelAi to give therapists a private space to pause, reflect, and understand themselves better as clinicians. [placeholder — editable]',
+    },
+  },
+];
+
 export default function HomePage() {
   const { language, setLanguage } = useLang();
   const router = useRouter();
@@ -130,6 +164,49 @@ export default function HomePage() {
               {isHebrew ? 'יש לי כבר חשבון' : 'I already have an account'}
             </Link>
           </div>
+
+          {/* Who's behind KopelAi */}
+          <section className="mt-20 pt-12 border-t border-stone-200 dark:border-zinc-800">
+            <h2 className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mb-2 tracking-tight">
+              {isHebrew ? 'מי עומד מאחורי קופל' : "Who's behind KopelAi"}
+            </h2>
+            <p className="text-stone-500 dark:text-zinc-400 mb-10">
+              {isHebrew
+                ? 'שני אנשים, וכוונה אחת — מרחב מתבונן למטפלים.'
+                : 'Two people, one intention — a reflective space for therapists.'}
+            </p>
+
+            <div className="grid sm:grid-cols-2 gap-8">
+              {PEOPLE.map((person) => {
+                const copy = isHebrew ? person.he : person.en;
+                return (
+                  <div key={person.key} className="flex flex-col items-center text-center sm:items-start sm:text-start">
+                    {person.photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={person.photo}
+                        alt={copy.name}
+                        className="w-28 h-28 rounded-2xl object-cover mb-4 shadow-sm"
+                      />
+                    ) : (
+                      <div
+                        className="w-28 h-28 rounded-2xl mb-4 flex items-center justify-center border-2 border-dashed border-stone-300 dark:border-zinc-700 bg-gradient-to-br from-stone-100 to-stone-200 dark:from-zinc-900 dark:to-zinc-800 text-stone-400 dark:text-zinc-600"
+                        aria-label={isHebrew ? 'מקום לתמונה' : 'Photo placeholder'}
+                      >
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="font-semibold text-lg text-stone-900 dark:text-zinc-100">{copy.name}</div>
+                    <div className="text-sm text-indigo-700 dark:text-indigo-400 mb-2">{copy.role}</div>
+                    <p className="text-stone-500 dark:text-zinc-400 text-sm leading-relaxed">{copy.bio}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         </div>
       </main>
 

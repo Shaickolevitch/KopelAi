@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const t = useT();
-  const { language } = useLang();
+  const { language, setLanguage } = useLang();
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -86,6 +86,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 );
               })}
             </nav>
+            <button
+              onClick={() => setLanguage(language === 'he' ? 'en' : 'he')}
+              className="px-3 py-2 text-sm rounded-lg text-stone-500 dark:text-zinc-500 hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-800 dark:hover:text-zinc-200 transition-colors"
+              aria-label={language === 'he' ? 'Switch to English' : 'עבור לעברית'}
+            >
+              {language === 'he' ? 'EN' : 'עב'}
+            </button>
             <button
               onClick={async () => {
                 const msg = language === 'he' ? 'להתנתק מהחשבון?' : 'Log out of your account?';
