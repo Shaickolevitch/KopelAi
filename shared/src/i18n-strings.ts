@@ -207,7 +207,7 @@ export const STRINGS = {
 
     upgrade_nudge_title: 'התובנות שלך מוכנות',
     upgrade_nudge_body: 'הן ייעלמו כשתסגור את הלשונית. עם קופל פרו, קופל יזכור אותך מסשן לסשן.',
-    upgrade_nudge_view: 'ראה תובנות',
+    upgrade_nudge_view: 'חזרה להתחלה',
     upgrade_nudge_upgrade: 'שדרג לפרו',
 
     upgrade_anon_title: 'קודם כל תפתח חשבון',
@@ -424,7 +424,7 @@ export const STRINGS = {
 
     upgrade_nudge_title: 'Your insights are ready',
     upgrade_nudge_body: "They'll disappear when you close this tab. With KopelAi Pro, KopelAi remembers you across every session.",
-    upgrade_nudge_view: 'View insights',
+    upgrade_nudge_view: 'Back to start',
     upgrade_nudge_upgrade: 'Upgrade to Pro',
 
     upgrade_anon_title: 'Create an account first',
