@@ -434,6 +434,23 @@ export default function ConversationPage() {
 
   return (
     <>
+      {endingSession && tier === 'pro' && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-stone-50/80 dark:bg-zinc-950/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 px-10 py-8 rounded-2xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 shadow-xl">
+            <div className="w-12 h-12 rounded-full bg-indigo-950 dark:bg-indigo-600 flex items-center justify-center animate-pulse">
+              <span className="text-white font-bold text-lg leading-none">K</span>
+            </div>
+            <p className="text-stone-700 dark:text-zinc-200 font-medium text-[15px]">
+              {language === 'he' ? 'קופל מנתח את השיחה' : 'Kopel is analyzing the conversation'}
+            </p>
+            <div className="flex gap-1.5">
+              {[0, 150, 300].map((d) => (
+                <span key={d} className="w-2 h-2 rounded-full bg-indigo-500 dark:bg-indigo-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {showOnboarding && (
         <Onboarding
           onClose={() => {
