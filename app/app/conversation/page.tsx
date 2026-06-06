@@ -453,8 +453,15 @@ export default function ConversationPage() {
 
       {showPlanPicker && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setShowPlanPicker(false); window.location.reload(); }} />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowPlanPicker(false)} />
           <div className="relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <button
+              onClick={() => setShowPlanPicker(false)}
+              className="absolute top-3 end-3 text-stone-400 hover:text-stone-600 dark:hover:text-zinc-200 transition-colors"
+              aria-label={language === 'he' ? 'סגור' : 'Close'}
+            >
+              ✕
+            </button>
             <h2 className="text-lg font-semibold text-stone-900 dark:text-zinc-100">{t.settings_upgrade_title}</h2>
             <p className="text-sm text-stone-500 dark:text-zinc-400">{t.settings_upgrade_subtitle}</p>
             <PlanPicker currency={currency} onSelect={handleSelectPlan} loading={checkoutLoading} />
