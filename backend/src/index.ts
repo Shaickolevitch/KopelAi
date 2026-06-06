@@ -399,16 +399,20 @@ async function buildSystemPrompt(
 
   const { data: profile } = await supabaseAdmin
     .from('user_profile')
-    .select('prompt_summary')
+    .select('prompt_summary, subscription_tier')
     .eq('user_id', userId)
     .is('deleted_at', null)
     .maybeSingle();
 
+  // Cross-session memory is a paid feature. Free users get a fresh start every
+  // session — never inject a remembered profile, even if one exists in the DB.
+  const isPro = profile?.subscription_tier === 'pro';
+
   let memorySection = '';
-  if (profile?.prompt_summary && profile.prompt_summary.trim().length > 0) {
+  if (isPro && profile?.prompt_summary && profile.prompt_summary.trim().length > 0) {
     memorySection = `\n\n# What you remember about this person\n\n${profile.prompt_summary}\n\nUse this naturally, in your loose-memory voice. Don't quote it back. Don't list things. Reference it only when it serves them.`;
   } else {
-    memorySection = `\n\n# What you remember about this person\n\nThis is an early session. You're still getting to know them. Don't pretend to remember things you don't.`;
+    memorySection = `\n\n# What you remember about this person\n\nThis is a fresh session and you have no memory of past conversations with this person. Don't pretend to remember things you don't, and don't claim to recognize them.`;
   }
 
   return basePrompt + knowledge + memorySection + langDirective;
@@ -627,6 +631,24 @@ app.post('/end-conversation', async (req: Request, res: Response) => {
     const transcript = messages
       .map((m) => `[id:${m.id}] ${m.role === 'user' ? 'User' : 'KopelAi'}: ${m.content}`)
       .join('\n\n');
+
+    // Memory + insights are a paid feature. For free users, just close the
+    // conversation — no profile summary, no insight extraction, nothing stored
+    // that would be remembered next session.
+    const { data: tierRow } = await supabaseAdmin
+      .from('user_profile')
+      .select('subscription_tier')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const isPro = tierRow?.subscription_tier === 'pro';
+
+    if (!isPro) {
+      await supabaseAdmin
+        .from('conversations')
+        .update({ ended_at: new Date().toISOString(), message_count: messages.length })
+        .eq('id', conversationId);
+      return res.json({ status: 'ok', tier: 'free', memory: false, insights_count: 0 });
+    }
 
     // 2. Generate session summary
     const summaryPrompt = `Below is a conversation between KopelAi (a self-reflection AI) and a user.
