@@ -117,6 +117,55 @@ function PlanPicker({
   );
 }
 
+// ─── Free-tier upgrade nudges ────────────────────────────────────────────────
+// Escalating nudges at 16 / 32 / 64 messages, and an easter egg at 128.
+// The first two are formal; the last two get progressively more cheeky.
+type Nudge = { level: number; egg: boolean; text: string; cta: string };
+
+function getNudge(count: number, isHebrew: boolean): Nudge | null {
+  if (count >= 128) {
+    return {
+      level: 128,
+      egg: true,
+      text: isHebrew
+        ? '128 הודעות בחינם?! טוב, ניצחת. קופל מתרשם עמוקות מהעקשנות שלך 🏆 אולי תשדרג כבר, ולו רק כדי שלא ירגיש מנוצל?'
+        : "128 free messages?! Okay, you win. Kopel is genuinely impressed by your stamina 🏆 Maybe upgrade now — if only so he doesn't feel used?",
+      cta: isHebrew ? 'בסדר, שכנעת' : 'Fine, you got me',
+    };
+  }
+  if (count >= 64) {
+    return {
+      level: 64,
+      egg: false,
+      text: isHebrew
+        ? '64 הודעות. קופל מתחיל להתקשר אליך — חבל שהוא ישכח את הכול ברגע שתסגור. בפרו הוא זוכר.'
+        : "64 messages in. Kopel's getting a little attached — shame he'll forget all of it the moment you close the tab. Pro lets him remember.",
+      cta: isHebrew ? 'שדרג לפרו' : 'Upgrade to Pro',
+    };
+  }
+  if (count >= 32) {
+    return {
+      level: 32,
+      egg: false,
+      text: isHebrew
+        ? 'עוד שיחה ארוכה, ועדיין בתוכנית החינמית. בפרו לא תתחיל מאפס בכל פעם — קופל ימשיך מאיפה שהפסקתם.'
+        : "Another long session, still on the free plan. With Pro you won't start from scratch each time — Kopel picks up where you left off.",
+      cta: isHebrew ? 'שדרג לפרו' : 'Upgrade to Pro',
+    };
+  }
+  if (count >= 16) {
+    return {
+      level: 16,
+      egg: false,
+      text: isHebrew
+        ? 'אם השיחה מועילה לך — בתוכנית פרו קופל זוכר אותך בין מפגשים ומפיק תובנות אישיות.'
+        : "If you're finding this valuable — Pro lets Kopel remember you between sessions and build personal insights.",
+      cta: isHebrew ? 'שדרג לפרו' : 'Upgrade to Pro',
+    };
+  }
+  return null;
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 export default function ConversationPage() {
   const t = useT();
@@ -134,6 +183,8 @@ export default function ConversationPage() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [currency, setCurrency] = useState<'NIS' | 'USD'>('USD');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [tier, setTier] = useState<'free' | 'pro' | null>(null);
+  const [dismissedNudgeLevel, setDismissedNudgeLevel] = useState(0);
   const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
   const [attaching, setAttaching] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -208,6 +259,7 @@ export default function ConversationPage() {
       if (!u) return;
 
       const tier = await getSubscriptionTier(u.id);
+      setTier(tier);
 
       if (tier === 'free') {
         // Wipe previous session data so free users start clean each time.
@@ -496,6 +548,53 @@ export default function ConversationPage() {
             ) : null}
           </div>
         )}
+
+        {/* Escalating in-chat upgrade nudges for free users (16/32/64, easter egg at 128) */}
+        {(() => {
+          if (tier !== 'free' || showUpgradeNudge || showPlanPicker) return null;
+          const nudge = getNudge(messages.length, language === 'he');
+          if (!nudge || nudge.level <= dismissedNudgeLevel) return null;
+          return (
+            <div
+              className={`mb-3 flex items-center gap-3 px-4 py-2.5 rounded-xl border ${
+                nudge.egg
+                  ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800'
+                  : 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800'
+              }`}
+            >
+              <span
+                className={`text-sm flex-1 leading-snug ${
+                  nudge.egg
+                    ? 'text-amber-900 dark:text-amber-200'
+                    : 'text-indigo-900 dark:text-indigo-200'
+                }`}
+              >
+                {nudge.text}
+              </span>
+              <button
+                onClick={() => setShowPlanPicker(true)}
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-white text-sm font-medium transition-colors ${
+                  nudge.egg
+                    ? 'bg-amber-600 hover:bg-amber-500'
+                    : 'bg-indigo-950 dark:bg-indigo-600 hover:bg-indigo-900 dark:hover:bg-indigo-500'
+                }`}
+              >
+                {nudge.cta}
+              </button>
+              <button
+                onClick={() => setDismissedNudgeLevel(nudge.level)}
+                className={`shrink-0 transition-colors ${
+                  nudge.egg
+                    ? 'text-amber-400 hover:text-amber-700 dark:hover:text-amber-200'
+                    : 'text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-200'
+                }`}
+                aria-label={language === 'he' ? 'סגור' : 'Dismiss'}
+              >
+                ✕
+              </button>
+            </div>
+          );
+        })()}
 
         <div className="flex items-end gap-2 bg-white dark:bg-zinc-900 border border-stone-300 dark:border-zinc-700 rounded-2xl px-4 py-2 shadow-sm focus-within:border-indigo-400 dark:focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-900/10 dark:focus-within:ring-indigo-500/20 transition-all">
           <label
