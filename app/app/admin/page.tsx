@@ -18,6 +18,49 @@ import AdminUsers from './AdminUsers';
 // TODO: replace the hard-coded admin email with a real role flag, and enforce on the server.
 const ADMIN_EMAIL = 'shaigian1@gmail.com';
 
+const KB_ALLOWED = ['.pdf', '.docx', '.txt', '.md'];
+const isKbAllowed = (name: string) => KB_ALLOWED.some((ext) => name.toLowerCase().endsWith(ext));
+
+// Recursively read a dropped file-system entry (file or folder) into a flat list
+// of supported files. Lets an admin drag a whole folder into the knowledge base.
+function readEntryFiles(entry: any): Promise<File[]> {
+  return new Promise((resolve) => {
+    if (!entry) return resolve([]);
+    if (entry.isFile) {
+      entry.file(
+        (file: File) => resolve(isKbAllowed(file.name) ? [file] : []),
+        () => resolve([])
+      );
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const collected: any[] = [];
+      const readBatch = () => {
+        reader.readEntries(
+          (entries: any[]) => {
+            if (entries.length === 0) {
+              Promise.all(collected.map(readEntryFiles)).then((nested) =>
+                resolve(nested.flat())
+              );
+            } else {
+              collected.push(...entries);
+              readBatch();
+            }
+          },
+          () => resolve([])
+        );
+      };
+      readBatch();
+    } else {
+      resolve([]);
+    }
+  });
+}
+
+async function collectFilesFromEntries(entries: any[]): Promise<File[]> {
+  const lists = await Promise.all(entries.map(readEntryFiles));
+  return lists.flat();
+}
+
 export default function AdminPage() {
   const { language } = useLang();
   const isHebrew = language === 'he';
@@ -54,8 +97,11 @@ export default function AdminPage() {
   }, [router]);
 
   async function handleUpload(files: FileList | File[] | null | undefined) {
-    const list = files ? Array.from(files) : [];
-    if (list.length === 0) return;
+    const list = (files ? Array.from(files) : []).filter((f) => isKbAllowed(f.name));
+    if (list.length === 0) {
+      setKbError(isHebrew ? 'לא נמצאו קבצים נתמכים.' : 'No supported files found.');
+      return;
+    }
     setUploading(true);
     setKbError('');
     const failures: string[] = [];
@@ -182,7 +228,25 @@ export default function AdminPage() {
           onDrop={(e) => {
             e.preventDefault();
             setDragOver(false);
-            if (!uploading) handleUpload(e.dataTransfer.files);
+            if (uploading) return;
+            const items = e.dataTransfer.items;
+            const canTraverse =
+              items && items.length > 0 && typeof (items[0] as { webkitGetAsEntry?: unknown }).webkitGetAsEntry === 'function';
+            if (canTraverse) {
+              // Capture entries synchronously (required during the drop event), then recurse.
+              const entries = Array.from(items)
+                .map((it) => (it as unknown as { webkitGetAsEntry: () => unknown }).webkitGetAsEntry())
+                .filter(Boolean);
+              collectFilesFromEntries(entries).then((found) => {
+                if (found.length === 0) {
+                  setKbError(isHebrew ? 'לא נמצאו קבצים נתמכים בתיקייה.' : 'No supported files found in that folder.');
+                } else {
+                  handleUpload(found);
+                }
+              });
+            } else {
+              handleUpload(e.dataTransfer.files);
+            }
           }}
           className={`flex flex-col items-center justify-center gap-1.5 px-4 py-8 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-center ${
             dragOver
@@ -209,10 +273,10 @@ export default function AdminPage() {
           ) : (
             <>
               <span className="text-sm font-medium text-stone-700 dark:text-zinc-300">
-                {isHebrew ? 'גרור לכאן קבצים או לחץ לבחירה' : 'Drag files here, or click to choose'}
+                {isHebrew ? 'גרור לכאן קבצים או תיקייה, או לחץ לבחירה' : 'Drag files or a folder here, or click to choose'}
               </span>
               <span className="text-xs text-stone-400 dark:text-zinc-600">
-                {isHebrew ? 'אפשר כמה קבצים יחד · PDF · Word · טקסט · עד 25MB לקובץ' : 'Multiple files OK · PDF · Word · text · up to 25MB each'}
+                {isHebrew ? 'כמה קבצים או תיקייה שלמה · PDF · Word · טקסט · עד 25MB לקובץ' : 'Multiple files or a whole folder · PDF · Word · text · up to 25MB each'}
               </span>
             </>
           )}
