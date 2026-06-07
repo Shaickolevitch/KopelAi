@@ -35,6 +35,8 @@ export default function AdminPage() {
   const [docs, setDocs] = useState<KbDocument[]>([]);
   const [uploading, setUploading] = useState(false);
   const [kbError, setKbError] = useState('');
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; name: string } | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
     getCurrentUser().then((u) => {
@@ -51,18 +53,31 @@ export default function AdminPage() {
     });
   }, [router]);
 
-  async function handleUpload(file: File | undefined) {
-    if (!file) return;
+  async function handleUpload(files: FileList | File[] | null | undefined) {
+    const list = files ? Array.from(files) : [];
+    if (list.length === 0) return;
     setUploading(true);
     setKbError('');
-    try {
-      await uploadKbFile(file);
-      setDocs(await listKbDocuments());
-    } catch (e) {
-      setKbError(e instanceof Error ? e.message : 'Upload failed');
-    } finally {
-      setUploading(false);
+    const failures: string[] = [];
+    for (let i = 0; i < list.length; i++) {
+      const file = list[i];
+      setUploadProgress({ current: i + 1, total: list.length, name: file.name });
+      try {
+        await uploadKbFile(file);
+      } catch (e) {
+        failures.push(`${file.name}: ${e instanceof Error ? e.message : 'failed'}`);
+      }
     }
+    setUploadProgress(null);
+    try {
+      setDocs(await listKbDocuments());
+    } catch { /* ignore refresh error */ }
+    if (failures.length > 0) {
+      setKbError(
+        (isHebrew ? 'חלק מהקבצים נכשלו: ' : 'Some files failed: ') + failures.join('  •  ')
+      );
+    }
+    setUploading(false);
   }
 
   async function handleDeleteDoc(id: string) {
@@ -161,23 +176,49 @@ export default function AdminPage() {
             : 'Upload PDF / Word / text with psychological material. KopelAi learns from it and draws on it in conversations.'}
         </p>
 
-        <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-950 dark:bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors cursor-pointer disabled:opacity-60">
+        <label
+          onDragOver={(e) => { e.preventDefault(); if (!uploading) setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            if (!uploading) handleUpload(e.dataTransfer.files);
+          }}
+          className={`flex flex-col items-center justify-center gap-1.5 px-4 py-8 rounded-xl border-2 border-dashed cursor-pointer transition-colors text-center ${
+            dragOver
+              ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-950/40'
+              : 'border-stone-300 dark:border-zinc-700 hover:border-stone-400 dark:hover:border-zinc-600'
+          } ${uploading ? 'opacity-60 cursor-wait' : ''}`}
+        >
           <input
             type="file"
             accept=".pdf,.docx,.txt,.md"
+            multiple
             disabled={uploading}
-            onChange={(e) => handleUpload(e.target.files?.[0])}
+            onChange={(e) => handleUpload(e.target.files)}
             className="hidden"
           />
-          {uploading
-            ? isHebrew ? 'מעלה ומעבד…' : 'Uploading & processing…'
-            : isHebrew ? 'העלה קובץ' : 'Upload a file'}
+          {uploading ? (
+            <span className="text-sm font-medium text-stone-700 dark:text-zinc-300">
+              {uploadProgress
+                ? (isHebrew
+                    ? `מעלה ${uploadProgress.current}/${uploadProgress.total}: ${uploadProgress.name}`
+                    : `Uploading ${uploadProgress.current}/${uploadProgress.total}: ${uploadProgress.name}`)
+                : (isHebrew ? 'מעבד…' : 'Processing…')}
+            </span>
+          ) : (
+            <>
+              <span className="text-sm font-medium text-stone-700 dark:text-zinc-300">
+                {isHebrew ? 'גרור לכאן קבצים או לחץ לבחירה' : 'Drag files here, or click to choose'}
+              </span>
+              <span className="text-xs text-stone-400 dark:text-zinc-600">
+                {isHebrew ? 'אפשר כמה קבצים יחד · PDF · Word · טקסט · עד 25MB לקובץ' : 'Multiple files OK · PDF · Word · text · up to 25MB each'}
+              </span>
+            </>
+          )}
         </label>
-        <span className="ms-3 text-xs text-stone-400 dark:text-zinc-600">
-          {isHebrew ? 'PDF · Word · טקסט · עד 25MB' : 'PDF · Word · text · up to 25MB'}
-        </span>
         {kbError && (
-          <span className="ms-3 text-sm text-rose-600 dark:text-rose-400">{kbError}</span>
+          <p className="mt-3 text-sm text-rose-600 dark:text-rose-400">{kbError}</p>
         )}
 
         {/* Document list */}
