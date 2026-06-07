@@ -139,7 +139,11 @@ app.post('/admin/kb/upload', upload.single('file'), async (req: Request, res: Re
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const text = await extractText(req.file.buffer, req.file.originalname);
+    // multer/busboy decodes the multipart filename header as latin1, which mangles
+    // UTF-8 names (e.g. Hebrew). Re-decode to get the real filename.
+    const originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+
+    const text = await extractText(req.file.buffer, originalName);
     const chunks = chunkText(text);
     if (chunks.length === 0) {
       return res.status(400).json({ error: 'No readable text found in the file.' });
@@ -150,7 +154,7 @@ app.post('/admin/kb/upload', upload.single('file'), async (req: Request, res: Re
     const { data: doc, error: docErr } = await supabaseAdmin
       .from('kb_documents')
       .insert({
-        filename: req.file.originalname,
+        filename: originalName,
         char_count: text.length,
         chunk_count: chunks.length,
       })
@@ -166,7 +170,7 @@ app.post('/admin/kb/upload', upload.single('file'), async (req: Request, res: Re
     const { error: chunkErr } = await supabaseAdmin.from('kb_chunks').insert(rows);
     if (chunkErr) throw chunkErr;
 
-    res.json({ id: doc.id, filename: req.file.originalname, chunk_count: chunks.length });
+    res.json({ id: doc.id, filename: originalName, chunk_count: chunks.length });
   } catch (err: any) {
     console.error('KB upload error:', err);
     res.status(500).json({ error: err.message ?? 'Upload failed' });

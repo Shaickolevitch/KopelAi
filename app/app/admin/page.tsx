@@ -80,6 +80,7 @@ export default function AdminPage() {
   const [kbError, setKbError] = useState('');
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; name: string } | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [kbListOpen, setKbListOpen] = useState(false);
 
   useEffect(() => {
     getCurrentUser().then((u) => {
@@ -286,34 +287,54 @@ export default function AdminPage() {
         )}
 
         {/* Document list */}
-        <div className="mt-5 space-y-2">
-          {docs.length === 0 && (
-            <div className="text-sm text-stone-400 dark:text-zinc-600">
-              {isHebrew ? 'עדיין לא הועלו קבצים.' : 'No files uploaded yet.'}
-            </div>
-          )}
-          {docs.map((d) => (
-            <div
-              key={d.id}
-              className="flex items-center justify-between rounded-lg border border-stone-200 dark:border-zinc-800 px-3 py-2"
+        {docs.length === 0 ? (
+          <div className="mt-5 text-sm text-stone-400 dark:text-zinc-600">
+            {isHebrew ? 'עדיין לא הועלו קבצים.' : 'No files uploaded yet.'}
+          </div>
+        ) : (
+          <div className="mt-5">
+            <button
+              onClick={() => setKbListOpen((o) => !o)}
+              className="flex items-center gap-2 w-full text-start text-sm font-medium text-stone-700 dark:text-zinc-300 hover:text-stone-900 dark:hover:text-zinc-100 transition-colors"
+              aria-expanded={kbListOpen}
             >
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-stone-900 dark:text-zinc-100 truncate">
-                  {d.filename}
-                </div>
-                <div className="text-xs text-stone-400 dark:text-zinc-600">
-                  {d.chunk_count} {isHebrew ? 'קטעים' : 'chunks'}
-                </div>
-              </div>
-              <button
-                onClick={() => handleDeleteDoc(d.id)}
-                className="text-sm text-rose-600 dark:text-rose-400 hover:underline shrink-0 ms-3"
+              <svg
+                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                className={`transition-transform ${kbListOpen ? 'rotate-90' : ''}`}
               >
-                {isHebrew ? 'מחק' : 'Delete'}
-              </button>
-            </div>
-          ))}
-        </div>
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+              {isHebrew ? `קבצים שהועלו (${docs.length})` : `Uploaded files (${docs.length})`}
+            </button>
+
+            {kbListOpen && (
+              <div className="mt-3 space-y-2 max-h-96 overflow-y-auto pe-1">
+                {docs.map((d) => (
+                  <div
+                    key={d.id}
+                    className="flex items-center justify-between rounded-lg border border-stone-200 dark:border-zinc-800 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-stone-900 dark:text-zinc-100 truncate">
+                        {d.filename}
+                      </div>
+                      <div className="text-xs text-stone-400 dark:text-zinc-600">
+                        {d.chunk_count} {isHebrew ? 'קטעים' : 'chunks'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteDoc(d.id)}
+                      className="text-sm text-rose-600 dark:text-rose-400 hover:underline shrink-0 ms-3"
+                    >
+                      {isHebrew ? 'מחק' : 'Delete'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mt-5">
