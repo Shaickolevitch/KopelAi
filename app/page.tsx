@@ -122,13 +122,22 @@ export default function HomePage() {
         <div className="max-w-2xl w-full">
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl font-bold text-stone-900 dark:text-zinc-100 leading-tight mb-4 tracking-tight">
-            {isHebrew ? 'שיחה שמכירה אותך' : 'A conversation that knows you'}
+            {isHebrew ? 'אני־אתה' : 'I–Thou'}
           </h1>
+
+          <blockquote className="border-s-2 border-indigo-300 dark:border-indigo-700 ps-4 mb-6 max-w-xl">
+            <p className="text-lg sm:text-xl text-stone-600 dark:text-zinc-300 italic leading-relaxed">
+              {isHebrew ? '״כל חיים אמיתיים הם פגישה.״' : '"All real living is meeting."'}
+            </p>
+            <cite className="text-sm text-stone-400 dark:text-zinc-500 not-italic">
+              {isHebrew ? '— מרטין בובר' : '— Martin Buber'}
+            </cite>
+          </blockquote>
 
           <p className="text-lg sm:text-xl text-stone-500 dark:text-zinc-400 leading-relaxed mb-14 max-w-xl">
             {isHebrew
-              ? 'אפליקציה שמקשיבה, זוכרת, ועוזרת לך להבין את עצמך'
-              : 'An app that listens, remembers, and helps you understand yourself'}
+              ? 'מרחב לחשוב על עצמך — לא רק על המטופלים. קופלAI מקשיב, זוכר, ועוזר לך להבין את עצמך.'
+              : 'A space to reflect on yourself — not only your clients. KopelAi listens, remembers, and helps you understand yourself.'}
           </p>
 
           {/* Feature pills */}
@@ -164,6 +173,50 @@ export default function HomePage() {
               {isHebrew ? 'יש לי כבר חשבון' : 'I already have an account'}
             </Link>
           </div>
+
+          {/* Who is this for */}
+          <section className="mt-20 pt-12 border-t border-stone-200 dark:border-zinc-800">
+            <h2 className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mb-2 tracking-tight">
+              {isHebrew ? 'מי אתה?' : 'Is this for you?'}
+            </h2>
+            <p className="text-stone-500 dark:text-zinc-400 mb-8">
+              {isHebrew
+                ? 'קופלAI נבנה למטפל/ת שרוצה להבין את עצמו — לא רק את המטופלים.'
+                : 'KopelAi is built for the therapist who wants to understand themselves — not only their clients.'}
+            </p>
+
+            <div className="flex flex-col gap-4">
+              {[
+                {
+                  he: 'מטפל/ת שרוצה להיות מודע/ת יותר לעצמו/ה — לחוזקות, לנקודות העיוורון, ולדפוסים שחוזרים.',
+                  en: "A therapist who wants to be more self-aware — of their strengths, blind spots, and recurring patterns.",
+                },
+                {
+                  he: 'מי שמרגיש/ה שהעבודה הטיפולית נוגעת בו/ה, ורוצה מרחב פרטי לעבד את זה.',
+                  en: 'Someone who feels the work touches them, and wants a private space to process it.',
+                },
+                {
+                  he: 'מי שמחפש/ת צמיחה מקצועית מתמשכת, ולא רק עוד כלי לניהול מטופלים.',
+                  en: 'Someone after ongoing professional growth — not just another client-management tool.',
+                },
+                {
+                  he: 'מי שרוצה בן-שיח חכם ודיסקרטי בין הפגישות, שזוכר וממשיך איתו לאורך זמן.',
+                  en: 'Someone who wants a smart, discreet companion between sessions that remembers and grows with them.',
+                },
+              ].map((item, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-400">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  </div>
+                  <p className="text-stone-600 dark:text-zinc-300 leading-relaxed text-[15px]">
+                    {isHebrew ? item.he : item.en}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
 
           {/* Who's behind KopelAi */}
           <section className="mt-20 pt-12 border-t border-stone-200 dark:border-zinc-800">
