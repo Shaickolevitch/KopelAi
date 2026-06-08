@@ -480,7 +480,7 @@ app.post('/chat', async (req: Request, res: Response) => {
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: systemPrompt,
       messages: cappedMessages.map((m: any) => ({
         role: m.role,
