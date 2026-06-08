@@ -21,6 +21,24 @@ const ADMIN_EMAIL = 'shaigian1@gmail.com';
 const KB_ALLOWED = ['.pdf', '.docx', '.txt', '.md'];
 const isKbAllowed = (name: string) => KB_ALLOWED.some((ext) => name.toLowerCase().endsWith(ext));
 
+type SortField = 'name' | 'date' | 'kind' | 'size';
+
+function fileKind(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.endsWith('.pdf')) return 'PDF';
+  if (lower.endsWith('.docx')) return 'Word';
+  if (lower.endsWith('.txt')) return 'Text';
+  if (lower.endsWith('.md')) return 'Markdown';
+  return '—';
+}
+
+function formatSize(bytes: number | null): string {
+  if (!bytes || bytes <= 0) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 // Recursively read a dropped file-system entry (file or folder) into a flat list
 // of supported files. Lets an admin drag a whole folder into the knowledge base.
 function readEntryFiles(entry: any): Promise<File[]> {
@@ -81,6 +99,8 @@ export default function AdminPage() {
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; name: string } | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [kbListOpen, setKbListOpen] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     getCurrentUser().then((u) => {
@@ -156,6 +176,25 @@ export default function AdminPage() {
   }
 
   if (!allowed) return null;
+
+  const sortedDocs = [...docs].sort((a, b) => {
+    let cmp = 0;
+    switch (sortField) {
+      case 'name':
+        cmp = a.filename.localeCompare(b.filename, isHebrew ? 'he' : 'en');
+        break;
+      case 'date':
+        cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        break;
+      case 'kind':
+        cmp = fileKind(a.filename).localeCompare(fileKind(b.filename));
+        break;
+      case 'size':
+        cmp = (a.file_size ?? 0) - (b.file_size ?? 0);
+        break;
+    }
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
 
   return (
     <div className="max-w-2xl mx-auto w-full px-4 sm:px-6 py-10">
@@ -309,29 +348,53 @@ export default function AdminPage() {
             </button>
 
             {kbListOpen && (
-              <div className="mt-3 space-y-2 max-h-96 overflow-y-auto pe-1">
-                {docs.map((d) => (
-                  <div
-                    key={d.id}
-                    className="flex items-center justify-between rounded-lg border border-stone-200 dark:border-zinc-800 px-3 py-2"
+              <>
+                {/* Sort controls */}
+                <div className="mt-3 flex items-center gap-2 text-sm">
+                  <span className="text-stone-400 dark:text-zinc-600">{isHebrew ? 'מיון לפי:' : 'Sort by:'}</span>
+                  <select
+                    value={sortField}
+                    onChange={(e) => setSortField(e.target.value as SortField)}
+                    className="px-2 py-1 rounded-md border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm text-stone-900 dark:text-zinc-100 outline-none"
                   >
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-stone-900 dark:text-zinc-100 truncate">
-                        {d.filename}
-                      </div>
-                      <div className="text-xs text-stone-400 dark:text-zinc-600">
-                        {d.chunk_count} {isHebrew ? 'קטעים' : 'chunks'}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteDoc(d.id)}
-                      className="text-sm text-rose-600 dark:text-rose-400 hover:underline shrink-0 ms-3"
+                    <option value="name">{isHebrew ? 'שם' : 'Name'}</option>
+                    <option value="date">{isHebrew ? 'תאריך העלאה' : 'Upload time'}</option>
+                    <option value="kind">{isHebrew ? 'סוג קובץ' : 'File kind'}</option>
+                    <option value="size">{isHebrew ? 'גודל' : 'Size'}</option>
+                  </select>
+                  <button
+                    onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                    className="px-2 py-1 rounded-md border border-stone-300 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-600 dark:text-zinc-400"
+                    title={isHebrew ? 'הפוך סדר' : 'Reverse order'}
+                  >
+                    {sortDir === 'asc' ? '↑' : '↓'}
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-2 max-h-96 overflow-y-auto pe-1">
+                  {sortedDocs.map((d) => (
+                    <div
+                      key={d.id}
+                      className="flex items-center justify-between rounded-lg border border-stone-200 dark:border-zinc-800 px-3 py-2"
                     >
-                      {isHebrew ? 'מחק' : 'Delete'}
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-stone-900 dark:text-zinc-100 truncate">
+                          {d.filename}
+                        </div>
+                        <div className="text-xs text-stone-400 dark:text-zinc-600">
+                          {fileKind(d.filename)} · {formatSize(d.file_size)} · {d.chunk_count} {isHebrew ? 'קטעים' : 'chunks'} · {new Date(d.created_at).toLocaleDateString(isHebrew ? 'he-IL' : 'en-US')}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteDoc(d.id)}
+                        className="text-sm text-rose-600 dark:text-rose-400 hover:underline shrink-0 ms-3"
+                      >
+                        {isHebrew ? 'מחק' : 'Delete'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}

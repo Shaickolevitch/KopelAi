@@ -70,6 +70,7 @@ export type KbDocument = {
   char_count: number;
   chunk_count: number;
   created_at: string;
+  file_size: number | null;
 };
 
 export async function uploadKbFile(file: File) {

@@ -157,6 +157,7 @@ app.post('/admin/kb/upload', upload.single('file'), async (req: Request, res: Re
         filename: originalName,
         char_count: text.length,
         chunk_count: chunks.length,
+        file_size: req.file.size,
       })
       .select('id')
       .single();
@@ -185,7 +186,7 @@ app.get('/admin/kb/documents', async (req: Request, res: Response) => {
     }
     const { data, error } = await supabaseAdmin
       .from('kb_documents')
-      .select('id, filename, char_count, chunk_count, created_at')
+      .select('id, filename, char_count, chunk_count, created_at, file_size')
       .order('created_at', { ascending: false });
     if (error) throw error;
     res.json({ documents: data ?? [] });
