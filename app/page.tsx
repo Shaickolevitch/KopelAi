@@ -134,10 +134,19 @@ export default function HomePage() {
             </cite>
           </blockquote>
 
-          <p className="text-lg sm:text-xl text-stone-500 dark:text-zinc-400 leading-relaxed mb-14 max-w-xl">
+          <p className="text-lg sm:text-xl text-stone-500 dark:text-zinc-400 leading-relaxed mb-6 max-w-xl">
             {isHebrew
               ? 'מרחב לחשוב על עצמך — לצד הבנת המטופלים. קופלAI מקשיב, זוכר, ועוזר לך להבין את עצמך.'
               : 'A space to reflect on yourself — alongside understanding your clients. KopelAi listens, remembers, and helps you understand yourself.'}
+          </p>
+
+          <p className="text-base sm:text-lg leading-relaxed mb-14 max-w-xl text-stone-600 dark:text-zinc-300">
+            <span className="font-semibold text-stone-800 dark:text-zinc-100">
+              {isHebrew ? 'תומך מפגש' : 'Session support'}
+            </span>
+            {isHebrew
+              ? ' — קופלAI עוזר לך כמטפל להגיע למטופל מדויק יותר, קוהרנטי יותר, מעובד יותר.'
+              : ' — KopelAi helps you, as a therapist, meet your client more precisely, more coherently, more worked-through.'}
           </p>
 
           {/* Feature pills */}

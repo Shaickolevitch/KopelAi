@@ -59,10 +59,18 @@ export default function AboutUsPage() {
       <h1 className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mb-2 tracking-tight">
         {isHebrew ? 'מי אנחנו' : 'Who we are'}
       </h1>
-      <p className="text-stone-500 dark:text-zinc-400 mb-10">
+      <p className="text-stone-500 dark:text-zinc-400 mb-4">
         {isHebrew
           ? 'שני אנשים, וכוונה אחת — מרחב מתבונן למטפלים.'
           : 'Two people, one intention — a reflective space for therapists.'}
+      </p>
+      <p className="text-stone-600 dark:text-zinc-300 mb-10 leading-relaxed">
+        <span className="font-semibold text-stone-800 dark:text-zinc-100">
+          {isHebrew ? 'תומך מפגש' : 'Session support'}
+        </span>
+        {isHebrew
+          ? ' — קופלAI עוזר לך כמטפל להגיע למטופל מדויק יותר, קוהרנטי יותר, מעובד יותר.'
+          : ' — KopelAi helps you, as a therapist, meet your client more precisely, more coherently, more worked-through.'}
       </p>
 
       <div className="space-y-10">
