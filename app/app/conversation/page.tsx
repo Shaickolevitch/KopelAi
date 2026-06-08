@@ -684,14 +684,14 @@ export default function ConversationPage() {
         </p>
 
         {messages.length > 0 && (
-          <div className="mt-3 text-center space-y-1">
+          <div className="mt-3 text-center space-y-2">
             <p className="text-[11px] text-stone-400 dark:text-zinc-600 leading-snug px-4">
               {t.conversation_end_session_hint}
             </p>
             <button
               onClick={handleEndSession}
               disabled={endingSession || sending}
-              className="text-xs text-stone-500 dark:text-zinc-500 hover:text-stone-700 dark:hover:text-zinc-300 disabled:opacity-50 transition-colors underline underline-offset-2 font-medium"
+              className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white text-base font-semibold shadow-sm hover:bg-indigo-900 dark:hover:bg-indigo-500 disabled:opacity-50 transition-colors"
             >
               {endingSession
                 ? (language === 'he' ? 'מנתח את השיחה…' : 'Analyzing…')

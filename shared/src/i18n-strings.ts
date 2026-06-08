@@ -22,7 +22,7 @@ export const STRINGS = {
     conversation_input_placeholder: 'ספר על משהו שעל ליבך',
     conversation_recording: 'מקליט...',
     conversation_transcribing: 'מתמלל...',
-    conversation_end_session: 'סיים שיחה',
+    conversation_end_session: 'סיימתי לעכשיו — בוא ננתח',
     conversation_end_session_hint: 'כשבא לך לעצור — לחצו "סיים שיחה", ונראה יחד מה עלה',
     conversation_end_confirm_title: 'לסיים את השיחה?',
     conversation_end_confirm_body: 'אשמור על מה שדיברנו, ובפעם הבאה נמשיך מכאן',
@@ -243,7 +243,7 @@ export const STRINGS = {
     conversation_input_placeholder: "Tell me what's on your mind",
     conversation_recording: 'Recording...',
     conversation_transcribing: 'Transcribing...',
-    conversation_end_session: 'End session',
+    conversation_end_session: "I'm done for now — let's analyze",
     conversation_end_session_hint: 'Whenever you want to stop — tap "End session" and we\'ll look at what came up together',
     conversation_end_confirm_title: 'End this session?',
     conversation_end_confirm_body:
