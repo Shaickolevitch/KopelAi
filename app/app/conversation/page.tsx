@@ -688,15 +688,23 @@ export default function ConversationPage() {
         {messages.length > 0 && (
           <div className="mt-3 text-center space-y-2">
             <p className="text-sm text-stone-500 dark:text-zinc-500 leading-snug px-4">
-              {t.conversation_end_session_hint}
+              {tier === 'free'
+                ? (language === 'he' ? 'ניתוח השיחה זמין בתוכנית פרו' : 'Session analysis is available on Pro')
+                : t.conversation_end_session_hint}
             </p>
             <button
               onClick={handleEndSession}
               disabled={endingSession || sending}
-              className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white text-base font-semibold shadow-sm hover:bg-indigo-900 dark:hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+              className={`inline-flex items-center justify-center px-6 py-3 rounded-xl text-base font-semibold shadow-sm disabled:opacity-50 transition-colors ${
+                tier === 'free'
+                  ? 'bg-stone-200 dark:bg-zinc-800 text-stone-400 dark:text-zinc-500 hover:bg-stone-300 dark:hover:bg-zinc-700'
+                  : 'bg-indigo-950 dark:bg-indigo-600 text-white hover:bg-indigo-900 dark:hover:bg-indigo-500'
+              }`}
             >
               {endingSession
                 ? (language === 'he' ? 'מנתח את השיחה…' : 'Analyzing…')
+                : tier === 'free'
+                ? `🔒 ${t.conversation_end_session}`
                 : t.conversation_end_session}
             </button>
           </div>
