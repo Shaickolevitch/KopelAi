@@ -23,7 +23,7 @@ const FEATURES = [
       </svg>
     ),
     en: { title: 'Memory', body: 'Each session, KopelAi remembers more.' },
-    he: { title: 'זיכרון', body: 'כל שיחה — קופל זוכר עוד עליך.' },
+    he: { title: 'זיכרון', body: 'כל שיחה — קופלAI זוכר עוד עליך.' },
   },
   {
     icon: (
@@ -60,7 +60,7 @@ const PEOPLE = [
     he: {
       name: 'שי',
       role: 'המייסד',
-      bio: 'שי בנה את קופל כדי לתת למטפלים מרחב פרטי לעצור, לחשוב, ולהבין את עצמם טוב יותר ככאלה. [טקסט זמני — ניתן לעריכה]',
+      bio: 'שי בנה את קופלAI כדי לתת למטפלים מרחב פרטי לעצור, לחשוב, ולהבין את עצמם טוב יותר ככאלה. [טקסט זמני — ניתן לעריכה]',
     },
     en: {
       name: 'Shai',
@@ -168,7 +168,7 @@ export default function HomePage() {
           {/* Who's behind KopelAi */}
           <section className="mt-20 pt-12 border-t border-stone-200 dark:border-zinc-800">
             <h2 className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mb-2 tracking-tight">
-              {isHebrew ? 'מי עומד מאחורי קופל' : "Who's behind KopelAi"}
+              {isHebrew ? 'מי עומד מאחורי קופלAI' : "Who's behind KopelAi"}
             </h2>
             <p className="text-stone-500 dark:text-zinc-400 mb-10">
               {isHebrew
