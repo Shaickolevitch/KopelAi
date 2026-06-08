@@ -15,6 +15,7 @@ export const STRINGS = {
     tab_settings: 'הגדרות',
     tab_analysis: 'ניתוח',
     tab_lectures: 'הרצאות',
+    tab_about_us: 'מי אנחנו',
     tab_plan: 'מנוי',
     tab_admin: 'אדמין',
 
@@ -236,6 +237,7 @@ export const STRINGS = {
     tab_settings: 'Settings',
     tab_analysis: 'Analysis',
     tab_lectures: 'Lectures',
+    tab_about_us: 'Who we are',
     tab_plan: 'Plan',
     tab_admin: 'Admin',
 

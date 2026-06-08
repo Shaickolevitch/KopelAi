@@ -50,6 +50,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { href: '/app/conversation', label: t.tab_conversation },
     { href: '/app/insights', label: t.tab_analysis },
     { href: '/app/store', label: t.tab_lectures },
+    { href: '/app/about', label: t.tab_about_us },
     { href: '/app/plan', label: t.tab_plan },
     ...(isAdmin ? [{ href: '/app/admin', label: t.tab_admin }] : []),
   ];
