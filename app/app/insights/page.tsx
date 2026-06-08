@@ -128,7 +128,7 @@ export default function InsightsPage() {
             href="/app/conversation"
             className="inline-block px-6 py-3 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors"
           >
-            {language === 'he' ? 'התחל שיחה עם קופל ←' : 'Start a conversation →'}
+            {language === 'he' ? 'התחל שיחה עם קופלAI ←' : 'Start a conversation →'}
           </Link>
         </div>
       </div>

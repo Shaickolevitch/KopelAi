@@ -138,7 +138,7 @@ export default function AdminPage() {
 
   async function handleSavePrompt() {
     const warn = isHebrew
-      ? 'שינוי זה ישפיע על התנהגות קופל בשיחות הבאות. להמשיך?'
+      ? 'שינוי זה ישפיע על התנהגות קופלAI בשיחות הבאות. להמשיך?'
       : "This will change KopelAi's behavior in future conversations. Continue?";
     if (!window.confirm(warn)) return;
     setSaving(true);
@@ -183,7 +183,7 @@ export default function AdminPage() {
             promptLoading
               ? isHebrew ? 'טוען...' : 'Loading...'
               : isHebrew
-              ? 'כאן תוכל לערוך את האישיות וההנחיות של קופל...'
+              ? 'כאן תוכל לערוך את האישיות וההנחיות של קופלAI...'
               : "Edit KopelAi's persona and instructions here..."
           }
           className="w-full rounded-lg border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 p-3 text-sm text-stone-700 dark:text-zinc-300 resize-y font-mono leading-relaxed text-left"

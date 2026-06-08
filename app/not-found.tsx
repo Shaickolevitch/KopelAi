@@ -17,7 +17,7 @@ export default function NotFound() {
           href="/app/conversation"
           className="inline-block px-6 py-3 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors"
         >
-          חזרה לקופל
+          חזרה לקופלAI
         </Link>
       </div>
     </div>

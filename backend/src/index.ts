@@ -51,7 +51,7 @@ const INSIGHT_CATEGORIES = [
   { key: 'calling', he: 'הייעוד שלך', en: 'Calling' },
   { key: 'thriving_contexts', he: 'איפה תוכל לפרוח', en: 'Where you might thrive' },
   { key: 'experience', he: 'ניסיון ורקע', en: 'Experience & background' },
-  { key: 'open_questions', he: 'מה קופל עדיין לומד עליך', en: 'Open questions' },
+  { key: 'open_questions', he: 'מה קופלAI עדיין לומד עליך', en: 'Open questions' },
 ];
 
 // ----------------------------------------------------------

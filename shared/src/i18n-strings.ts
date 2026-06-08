@@ -18,30 +18,30 @@ export const STRINGS = {
     tab_plan: 'מנוי',
     tab_admin: 'אדמין',
 
-    conversation_empty_hint: 'קופל כאן.\nספר על משהו שעל ליבך, או על משהו שקרה היום.\nזה לא מבחן — פשוט תדבר.',
+    conversation_empty_hint: 'אני כאן.\nספר לי על משהו שעל ליבך, או על משהו שקרה היום.\nזה לא מבחן — בוא פשוט נדבר.',
     conversation_input_placeholder: 'ספר על משהו שעל ליבך',
     conversation_recording: 'מקליט...',
     conversation_transcribing: 'מתמלל...',
     conversation_end_session: 'סיים שיחה',
-    conversation_end_session_hint: 'לחצו על סיים שיחה כדי שקופל תנתח את השיחה לתובנות',
+    conversation_end_session_hint: 'כשבא לך לעצור — לחצו "סיים שיחה", ונראה יחד מה עלה',
     conversation_end_confirm_title: 'לסיים את השיחה?',
-    conversation_end_confirm_body: 'קופל ישמור על מה שדיברנו ויתחיל מחדש בפעם הבאה',
+    conversation_end_confirm_body: 'אשמור על מה שדיברנו, ובפעם הבאה נמשיך מכאן',
     conversation_end_cancel: 'ביטול',
     conversation_end_confirm: 'סיים',
     conversation_end_failed: 'לא הצלחתי לסיים את השיחה',
     conversation_send_failed: 'לא הצלחתי לשלוח',
 
     mic_permission_title: 'נדרשת גישה למיקרופון',
-    mic_permission_body: 'קופל משתמש במיקרופון כדי שתוכל לדבר במקום להקליד. אפשר להפעיל בהגדרות.',
+    mic_permission_body: 'קופלAI משתמש במיקרופון כדי שתוכל לדבר במקום להקליד. אפשר להפעיל בהגדרות.',
 
     insights_title: 'תובנות',
     insights_stat_conversations: 'שיחות',
     insights_stat_messages: 'הודעות',
     insights_stat_last_activity: 'פעילות אחרונה',
-    insights_card_empty: 'קופל עוד לומד אותך כאן',
+    insights_card_empty: 'קופלAI עוד לומד אותך כאן',
     insights_empty_title: 'הדף הזה מתמלא ככל שאתה מדבר',
     insights_empty_body:
-      'תהיה לך שיחה עם קופל, ואז תסיים את הסשן. מה שקופל שם לב אליו אצלך יופיע כאן — הדפוסים שלך, מה ממלא לך אנרגיה, מה אתה חוזר אליו. כל תובנה תוכל להצביע לרגע שממנו היא נולדה.',
+      'תהיה לך שיחה עם קופלAI, ואז תסיים את הסשן. מה שקופלAI שם לב אליו אצלך יופיע כאן — הדפוסים שלך, מה ממלא לך אנרגיה, מה אתה חוזר אליו. כל תובנה תוכל להצביע לרגע שממנו היא נולדה.',
     insights_empty_footer: 'אין מבחן. אין פרופיל למלא. פשוט תדבר, ותן לדף הזה לגדול.',
 
     time_now: 'עכשיו',
@@ -91,7 +91,7 @@ export const STRINGS = {
     settings_deletion_in_progress: 'מוחק...',
 
     settings_export_data: 'ייצוא הנתונים שלי',
-    settings_export_data_subtitle: 'הורד את כל מה שקופל שמרה עליך',
+    settings_export_data_subtitle: 'הורד את כל מה שקופלAI שמרה עליך',
     export_in_progress: 'מכין את הנתונים שלך...',
     export_failed: 'הייצוא נכשל',
     export_success_title: 'הנתונים מוכנים',
@@ -109,7 +109,7 @@ export const STRINGS = {
     deletion_expired_body:
       'המחיקה של החשבון לא ניתנת עוד לביטול. הנתונים שלך יימחקו לצמיתות בקרוב.',
 
-    auth_welcome_title: 'ברוך הבא לקופל',
+    auth_welcome_title: 'ברוך הבא לקופלAI',
     auth_welcome_subtitle: 'הירשם כדי לשמור על השיחות והתובנות שלך, או היכנס לחשבון קיים.',
     auth_signup_title: 'יצירת חשבון',
     auth_signin_title: 'כניסה',
@@ -154,19 +154,19 @@ export const STRINGS = {
       'כדי לשמור את מה שאתם בונים יחד — צור חשבון. ככה תוכל להמשיך מהמכשיר הזה או מאחר.',
     save_prompt_1_emoji: '😐',
 
-    save_prompt_2_title: 'קופל מתחילה ללמוד אותך.',
+    save_prompt_2_title: 'קופלAI מתחילה ללמוד אותך.',
     save_prompt_2_body:
       'עוד קצת והפרופיל שלך יתחיל לקבל צורה. בלי חשבון — זה רק כאן, על המכשיר הזה. תרצה לשמור את זה כדי שזה יישאר?',
     save_prompt_2_emoji: '😕',
 
     save_prompt_3_title: 'אתה משקיע פה זמן ומחשבה.',
     save_prompt_3_body:
-      'קופל כבר מבינה דברים עליך — דפוסים, מה שחשוב לך, מה שחוזר. בלי חשבון, אם תאבד את הטלפון או תאפס את האפליקציה — הכל ייעלם. אנחנו ממליצים לשמור עכשיו.',
+      'קופלAI כבר מבינה דברים עליך — דפוסים, מה שחשוב לך, מה שחוזר. בלי חשבון, אם תאבד את הטלפון או תאפס את האפליקציה — הכל ייעלם. אנחנו ממליצים לשמור עכשיו.',
     save_prompt_3_emoji: '😔',
 
     save_prompt_4_title: 'אתה כבר באמת בפנים.',
     save_prompt_4_body:
-      'קופל מכירה אותך כבר. דפוסים, חוזקות, פחדים, חלומות. כל זה — רק על המכשיר הזה. בלי חשבון, יום אחד זה ייעלם. זה הרגע לשמור את החשבון שלך.',
+      'קופלAI מכירה אותך כבר. דפוסים, חוזקות, פחדים, חלומות. כל זה — רק על המכשיר הזה. בלי חשבון, יום אחד זה ייעלם. זה הרגע לשמור את החשבון שלך.',
     save_prompt_4_emoji: '😢',
 
     save_prompt_5_title: 'בסדר, הבנתי.',
@@ -189,11 +189,11 @@ export const STRINGS = {
     settings_sign_out_confirm: 'התנתק',
 
     pro_badge: 'פרו',
-    settings_upgrade_title: 'שדרג לקופל פרו',
-    settings_upgrade_subtitle: 'קופל יזכור אותך בין סשנים',
+    settings_upgrade_title: 'שדרג לקופלAI פרו',
+    settings_upgrade_subtitle: 'קופלAI יזכור אותך בין סשנים',
     settings_manage_subscription: 'ניהול מנוי',
     settings_manage_subscription_subtitle: 'ביטול, החלפת כרטיס אשראי ועוד',
-    settings_subscription_pro: 'מנוי פעיל — קופל פרו',
+    settings_subscription_pro: 'מנוי פעיל — קופלAI פרו',
 
     pricing_monthly_label: 'חודשי',
     pricing_annual_label: 'שנתי',
@@ -206,7 +206,7 @@ export const STRINGS = {
     pricing_cta_loading: 'מכין את הקופה...',
 
     upgrade_nudge_title: 'התובנות שלך מוכנות',
-    upgrade_nudge_body: 'הן ייעלמו כשתסגור את הלשונית. עם קופל פרו, קופל יזכור אותך מסשן לסשן.',
+    upgrade_nudge_body: 'הן ייעלמו כשתסגור את הלשונית. עם קופלAI פרו, קופלAI יזכור אותך מסשן לסשן.',
     upgrade_nudge_view: 'חזרה להתחלה',
     upgrade_nudge_upgrade: 'שדרג לפרו',
 
@@ -216,7 +216,7 @@ export const STRINGS = {
     upgrade_anon_cancel: 'אולי מאוחר יותר',
 
     insights_pro_banner_title: 'התובנות האלה לא יישמרו',
-    insights_pro_banner_body: 'משתמשי פרו זוכרים כל סשן. שדרג כדי לשמור על מה שקופל למד עליך.',
+    insights_pro_banner_body: 'משתמשי פרו זוכרים כל סשן. שדרג כדי לשמור על מה שקופלAI למד עליך.',
     insights_pro_banner_cta: 'שדרג לפרו',
 
     checkout_success_title: 'ברוך הבא לפרו!',
@@ -225,7 +225,7 @@ export const STRINGS = {
     checkout_success_timeout: 'לקח יותר זמן ממצופה. בדוק את ההגדרות שלך.',
     checkout_success_goto_settings: 'עבור להגדרות',
 
-    mobile_upgrade_title: 'שדרג לקופל פרו',
+    mobile_upgrade_title: 'שדרג לקופלAI פרו',
     mobile_upgrade_subtitle: 'הירשם באתר כדי להפעיל מנוי',
     mobile_upgrade_cta: 'עבור לאתר',
   },
@@ -239,15 +239,15 @@ export const STRINGS = {
     tab_plan: 'Plan',
     tab_admin: 'Admin',
 
-    conversation_empty_hint: "KopelAi is here.\nTell me about something on your mind, or something that happened today.\nThis isn't a test — just talk.",
+    conversation_empty_hint: "I'm here.\nTell me about something on your mind, or something that happened today.\nThis isn't a test — let's just talk.",
     conversation_input_placeholder: "Tell me what's on your mind",
     conversation_recording: 'Recording...',
     conversation_transcribing: 'Transcribing...',
     conversation_end_session: 'End session',
-    conversation_end_session_hint: 'Tap End session so KopelAi can analyze the conversation into insights',
+    conversation_end_session_hint: 'Whenever you want to stop — tap "End session" and we\'ll look at what came up together',
     conversation_end_confirm_title: 'End this session?',
     conversation_end_confirm_body:
-      'KopelAi will save what you talked about and start fresh next time.',
+      "I'll keep what we talked about, and we'll pick up here next time.",
     conversation_end_cancel: 'Cancel',
     conversation_end_confirm: 'End',
     conversation_end_failed: 'Could not end session',

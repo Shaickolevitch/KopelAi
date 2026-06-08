@@ -94,7 +94,7 @@ export default function PlanPage() {
           {isHebrew ? 'התוכנית הנוכחית' : 'Current plan'}
         </div>
         <div className="text-lg font-semibold text-stone-900 dark:text-zinc-100">
-          {loading ? '…' : isPro ? (isHebrew ? 'קופל פרו' : 'KopelAi Pro') : isHebrew ? 'חינמית' : 'Free'}
+          {loading ? '…' : isPro ? (isHebrew ? 'קופלAI פרו' : 'KopelAi Pro') : isHebrew ? 'חינמית' : 'Free'}
         </div>
         <p className="text-sm text-stone-500 dark:text-zinc-500 mt-1">
           {isPro
@@ -119,7 +119,7 @@ export default function PlanPage() {
       </div>
       <p className="text-sm text-stone-500 dark:text-zinc-400 mb-4">
         {isHebrew
-          ? 'ההבדל בין חינם לפרו: בחינם כל שיחה עומדת בפני עצמה. בפרו קופל זוכר אותך לאורך זמן ובונה ניתוח מצטבר.'
+          ? 'ההבדל בין חינם לפרו: בחינם כל שיחה עומדת בפני עצמה. בפרו קופלAI זוכר אותך לאורך זמן ובונה ניתוח מצטבר.'
           : 'Free vs Pro: on Free each conversation stands alone. On Pro, KopelAi remembers you over time and builds cumulative analysis.'}
       </p>
       <div className="grid sm:grid-cols-3 gap-4">
@@ -161,7 +161,7 @@ export default function PlanPage() {
             ₪25<span className="text-sm font-normal text-stone-500"> / {isHebrew ? 'חודש' : 'mo'}</span>
           </div>
           <ul className="mt-3 space-y-1.5 text-sm text-stone-600 dark:text-zinc-400 flex-1">
-            <li>✓ {isHebrew ? 'זיכרון לאורך זמן — קופל זוכר אותך בין שיחות' : 'Long-term memory — KopelAi remembers you between sessions'}</li>
+            <li>✓ {isHebrew ? 'זיכרון לאורך זמן — קופלAI זוכר אותך בין שיחות' : 'Long-term memory — KopelAi remembers you between sessions'}</li>
             <li>✓ {isHebrew ? 'ניתוח מצטבר בעמוד הניתוח' : 'Cumulative analysis on the Analysis page'}</li>
             <li>✓ {isHebrew ? 'שיחות ללא הגבלה' : 'Unlimited conversations'}</li>
           </ul>
@@ -193,7 +193,7 @@ export default function PlanPage() {
             {isHebrew ? '12 חודשים במחיר של 10 · כ-₪21 לחודש' : '12 months for the price of 10 · ~₪21/mo'}
           </div>
           <ul className="mt-3 space-y-1.5 text-sm text-stone-600 dark:text-zinc-400 flex-1">
-            <li>✓ {isHebrew ? 'זיכרון לאורך זמן — קופל זוכר אותך בין שיחות' : 'Long-term memory — KopelAi remembers you between sessions'}</li>
+            <li>✓ {isHebrew ? 'זיכרון לאורך זמן — קופלAI זוכר אותך בין שיחות' : 'Long-term memory — KopelAi remembers you between sessions'}</li>
             <li>✓ {isHebrew ? 'ניתוח מצטבר בעמוד הניתוח' : 'Cumulative analysis on the Analysis page'}</li>
             <li>✓ {isHebrew ? 'שיחות ללא הגבלה' : 'Unlimited conversations'}</li>
             <li>✓ {isHebrew ? 'חיסכון של חודשיים בשנה' : 'Two months free vs monthly'}</li>

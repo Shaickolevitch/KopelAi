@@ -128,7 +128,7 @@ function getNudge(count: number, isHebrew: boolean): Nudge | null {
       level: 128,
       egg: true,
       text: isHebrew
-        ? '128 הודעות בחינם?! טוב, ניצחת. קופל מתרשם עמוקות מהעקשנות שלך 🏆 אולי תשדרג כבר, ולו רק כדי שלא ירגיש מנוצל?'
+        ? '128 הודעות בחינם?! טוב, ניצחת. קופלAI מתרשם עמוקות מהעקשנות שלך 🏆 אולי תשדרג כבר, ולו רק כדי שלא ירגיש מנוצל?'
         : "128 free messages?! Okay, you win. Kopel is genuinely impressed by your stamina 🏆 Maybe upgrade now — if only so he doesn't feel used?",
       cta: isHebrew ? 'בסדר, שכנעת' : 'Fine, you got me',
     };
@@ -138,7 +138,7 @@ function getNudge(count: number, isHebrew: boolean): Nudge | null {
       level: 64,
       egg: false,
       text: isHebrew
-        ? '64 הודעות. קופל מתחיל להתקשר אליך — חבל שהוא ישכח את הכול ברגע שתסגור. בפרו הוא זוכר.'
+        ? '64 הודעות. קופלAI מתחיל להתקשר אליך — חבל שהוא ישכח את הכול ברגע שתסגור. בפרו הוא זוכר.'
         : "64 messages in. Kopel's getting a little attached — shame he'll forget all of it the moment you close the tab. Pro lets him remember.",
       cta: isHebrew ? 'שדרג לפרו' : 'Upgrade to Pro',
     };
@@ -148,7 +148,7 @@ function getNudge(count: number, isHebrew: boolean): Nudge | null {
       level: 32,
       egg: false,
       text: isHebrew
-        ? 'עוד שיחה ארוכה, ועדיין בתוכנית החינמית. בפרו לא תתחיל מאפס בכל פעם — קופל ימשיך מאיפה שהפסקתם.'
+        ? 'עוד שיחה ארוכה, ועדיין בתוכנית החינמית. בפרו לא תתחיל מאפס בכל פעם — קופלAI ימשיך מאיפה שהפסקתם.'
         : "Another long session, still on the free plan. With Pro you won't start from scratch each time — Kopel picks up where you left off.",
       cta: isHebrew ? 'שדרג לפרו' : 'Upgrade to Pro',
     };
@@ -158,7 +158,7 @@ function getNudge(count: number, isHebrew: boolean): Nudge | null {
       level: 16,
       egg: false,
       text: isHebrew
-        ? 'אם השיחה מועילה לך — בתוכנית פרו קופל זוכר אותך בין מפגשים ומפיק תובנות אישיות.'
+        ? 'אם השיחה מועילה לך — בתוכנית פרו קופלAI זוכר אותך בין מפגשים ומפיק תובנות אישיות.'
         : "If you're finding this valuable — Pro lets Kopel remember you between sessions and build personal insights.",
       cta: isHebrew ? 'שדרג לפרו' : 'Upgrade to Pro',
     };
@@ -441,7 +441,7 @@ export default function ConversationPage() {
               <span className="text-white font-bold text-lg leading-none">K</span>
             </div>
             <p className="text-stone-700 dark:text-zinc-200 font-medium text-[15px]">
-              {language === 'he' ? 'קופל מנתח את השיחה' : 'Kopel is analyzing the conversation'}
+              {language === 'he' ? 'קופלAI מנתח את השיחה' : 'Kopel is analyzing the conversation'}
             </p>
             <div className="flex gap-1.5">
               {[0, 150, 300].map((d) => (
