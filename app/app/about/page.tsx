@@ -15,7 +15,7 @@ const PEOPLE = [
       bio: [
         'קופל אליעזר הוא פסיכולוג ומורה, בגישה פסיכואנליטית-אינטרסובייקטיבית. לאורך שנים ליווה מטפלים והעביר עשרות הרצאות על מושגי היסוד של הנפש — מהלא-מודע, דרך יחסי אובייקט, ועד למרחב הפוטנציאלי.',
         'הגישה שלו מתבוננת, אנושית וישירה. בלבה עומדת אמונה אחת: הכלי המרכזי של המטפל הוא המטפל עצמו — ולכן ההיכרות של מטפל עם עצמו היא העבודה החשובה ביותר שיש.',
-        'קופלAI נבנה בהשראת הקול, החשיבה והתורה שלו — לא כדי להחליף אותו, אלא כדי להנגיש את הדרך שבה הוא חושב על אנשים. [טקסט זמני — ניתן לעריכה]',
+        'קופלAI נבנה בהשראת הקול, החשיבה והתורה שלו — כדי להנגיש את הדרך שבה הוא חושב על אנשים, ולהביא אותה לכל מטפל. [טקסט זמני — ניתן לעריכה]',
       ],
     },
     en: {
@@ -24,7 +24,7 @@ const PEOPLE = [
       bio: [
         'Kopel Eliezer is a psychologist and teacher working in the psychoanalytic, intersubjective tradition. Over many years he has mentored therapists and given dozens of lectures on the core concepts of the psyche — from the unconscious, through object relations, to the potential space.',
         'His approach is reflective, human, and direct. At its heart is a single conviction: the therapist’s main instrument is the therapist themselves — which makes knowing yourself the most important work there is.',
-        'KopelAi is built in the spirit of his voice, his thinking, and his teaching — not to replace him, but to make the way he thinks about people more accessible. [placeholder — editable]',
+        'KopelAi is built in the spirit of his voice, his thinking, and his teaching — to make the way he thinks about people accessible to every therapist. [placeholder — editable]',
       ],
     },
   },
@@ -35,7 +35,7 @@ const PEOPLE = [
       name: 'שי חי גיאן',
       role: 'המייסד',
       bio: [
-        'שי חי גיאן הוא היזם והמפתח שמאחורי קופלAI. הוא בנה את האפליקציה מתוך אמונה שמטפלים זקוקים למרחב פרטי לעצור, לחשוב, ולהבין את עצמם — לא רק את המטופלים.',
+        'שי חי גיאן הוא היזם והמפתח שמאחורי קופלAI. הוא בנה את האפליקציה מתוך אמונה שמטפלים זקוקים למרחב פרטי לעצור, לחשוב, ולהבין את עצמם — לצד הבנת המטופלים.',
         'המטרה פשוטה: לקחת את הדרך שבה קופל מתבונן בנפש, ולהפוך אותה למרחב אישי ומתמשך שכל מטפל יכול לחזור אליו בין מפגש למפגש. [טקסט זמני — ניתן לעריכה]',
       ],
     },

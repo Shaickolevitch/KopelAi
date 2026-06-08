@@ -136,8 +136,8 @@ export default function HomePage() {
 
           <p className="text-lg sm:text-xl text-stone-500 dark:text-zinc-400 leading-relaxed mb-14 max-w-xl">
             {isHebrew
-              ? 'מרחב לחשוב על עצמך — לא רק על המטופלים. קופלAI מקשיב, זוכר, ועוזר לך להבין את עצמך.'
-              : 'A space to reflect on yourself — not only your clients. KopelAi listens, remembers, and helps you understand yourself.'}
+              ? 'מרחב לחשוב על עצמך — לצד הבנת המטופלים. קופלAI מקשיב, זוכר, ועוזר לך להבין את עצמך.'
+              : 'A space to reflect on yourself — alongside understanding your clients. KopelAi listens, remembers, and helps you understand yourself.'}
           </p>
 
           {/* Feature pills */}
@@ -181,8 +181,8 @@ export default function HomePage() {
             </h2>
             <p className="text-stone-500 dark:text-zinc-400 mb-8">
               {isHebrew
-                ? 'קופלAI נבנה למטפל/ת שרוצה להבין את עצמו — לא רק את המטופלים.'
-                : 'KopelAi is built for the therapist who wants to understand themselves — not only their clients.'}
+                ? 'קופלAI נבנה למטפל/ת שרוצה להבין את עצמו — לצד הבנת המטופלים.'
+                : 'KopelAi is built for the therapist who wants to understand themselves — alongside understanding their clients.'}
             </p>
 
             <div className="flex flex-col gap-4">
@@ -196,8 +196,8 @@ export default function HomePage() {
                   en: 'Someone who feels the work touches them, and wants a private space to process it.',
                 },
                 {
-                  he: 'מי שמחפש/ת צמיחה מקצועית מתמשכת, ולא רק עוד כלי לניהול מטופלים.',
-                  en: 'Someone after ongoing professional growth — not just another client-management tool.',
+                  he: 'מי שמחפש/ת צמיחה מקצועית מתמשכת, ומרחב אישי משלו מעבר לכלים לניהול מטופלים.',
+                  en: 'Someone after ongoing professional growth — a personal space of their own, beyond client-management tools.',
                 },
                 {
                   he: 'מי שרוצה בן-שיח חכם ודיסקרטי בין הפגישות, שזוכר וממשיך איתו לאורך זמן.',

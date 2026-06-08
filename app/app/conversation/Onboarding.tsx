@@ -6,7 +6,7 @@ import { useLang } from '@/lib/i18n';
 const STEPS_HE = [
   {
     title: 'ברוך הבא לקופלAI',
-    body: 'זה מרחב פרטי שלך, להתבונן בעצמך. ספר לי מה שעל ליבך — אחרי מפגש קשה, מחשבה שחוזרת, או משהו שמעסיק אותך. אין נכון או לא נכון; בוא פשוט נדבר.',
+    body: 'זה מרחב פרטי שלך, להתבונן בעצמך. ספר לי מה שעל ליבך — אחרי מפגש קשה, מחשבה שחוזרת, או משהו שמעסיק אותך. הכול פתוח כאן; בוא פשוט נדבר.',
   },
   {
     title: 'בסוף השיחה — נעצור להתבונן',
@@ -21,7 +21,7 @@ const STEPS_HE = [
 const STEPS_EN = [
   {
     title: 'Welcome to KopelAi',
-    body: "This is your private space to look inward. Tell me what's on your mind — after a hard session, a recurring thought, or anything weighing on you. There's no right or wrong; let's just talk.",
+    body: "This is your private space to look inward. Tell me what's on your mind — after a hard session, a recurring thought, or anything weighing on you. It's all open here; let's just talk.",
   },
   {
     title: "When we're done, we'll pause to reflect",
