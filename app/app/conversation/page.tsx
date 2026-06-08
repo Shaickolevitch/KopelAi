@@ -681,13 +681,13 @@ export default function ConversationPage() {
           </button>
         </div>
 
-        <p className="mt-2 text-center text-[11px] text-stone-400 dark:text-zinc-600">
+        <p className="mt-2 text-center text-sm text-stone-400 dark:text-zinc-600">
           {language === 'he' ? '🔒 השיחות שלך פרטיות ומוצפנות' : '🔒 Your conversations are private and encrypted'}
         </p>
 
         {messages.length > 0 && (
           <div className="mt-3 text-center space-y-2">
-            <p className="text-[11px] text-stone-400 dark:text-zinc-600 leading-snug px-4">
+            <p className="text-sm text-stone-500 dark:text-zinc-500 leading-snug px-4">
               {t.conversation_end_session_hint}
             </p>
             <button
