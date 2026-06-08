@@ -188,6 +188,7 @@ export default function ConversationPage() {
   const [dismissedNudgeLevel, setDismissedNudgeLevel] = useState(0);
   const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
   const [attaching, setAttaching] = useState(false);
+  const [composerDragOver, setComposerDragOver] = useState(false);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -622,7 +623,22 @@ export default function ConversationPage() {
           );
         })()}
 
-        <div className="flex items-end gap-2 bg-white dark:bg-zinc-900 border border-stone-300 dark:border-zinc-700 rounded-2xl px-4 py-2 shadow-sm focus-within:border-indigo-400 dark:focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-900/10 dark:focus-within:ring-indigo-500/20 transition-all">
+        <div
+          onDragOver={(e) => { e.preventDefault(); if (!sending && !attaching) setComposerDragOver(true); }}
+          onDragLeave={(e) => { e.preventDefault(); setComposerDragOver(false); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setComposerDragOver(false);
+            if (sending || attaching) return;
+            const file = e.dataTransfer.files?.[0];
+            if (file) handleAttach(file);
+          }}
+          className={`flex items-end gap-2 bg-white dark:bg-zinc-900 border rounded-2xl px-4 py-2 shadow-sm focus-within:ring-2 focus-within:ring-indigo-900/10 dark:focus-within:ring-indigo-500/20 transition-all ${
+            composerDragOver
+              ? 'border-indigo-400 dark:border-indigo-500 ring-2 ring-indigo-400/30'
+              : 'border-stone-300 dark:border-zinc-700 focus-within:border-indigo-400 dark:focus-within:border-indigo-600'
+          }`}
+        >
           <label
             className="w-8 h-8 rounded-full text-stone-400 hover:text-stone-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-stone-100 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center shrink-0 cursor-pointer"
             title={language === 'he' ? 'צרף תמונה או קובץ' : 'Attach an image or file'}
