@@ -170,6 +170,7 @@ function getNudge(count: number, isHebrew: boolean): Nudge | null {
 export default function ConversationPage() {
   const t = useT();
   const { language } = useLang();
+  const router = useRouter();
 
   const [user, setUser] = useState<AuthUser | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -400,7 +401,8 @@ export default function ConversationPage() {
       if (tier === 'free') {
         setShowUpgradeNudge(true);
       } else {
-        window.location.reload();
+        // Analysis is ready — take Pro users straight to the Analysis page.
+        router.push('/app/insights');
       }
     } catch (err) {
       console.error('End session failed:', err);
