@@ -4,6 +4,23 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { adminListUsers, adminSetTier, adminDeleteUser, type AdminUser } from '@/lib/api';
 
+const INACTIVE_DAYS = 30;
+
+// Format "last active" as a short relative label, and flag long-inactive users.
+function lastActiveInfo(iso: string | null, isHebrew: boolean): { text: string; inactive: boolean } {
+  if (!iso) return { text: isHebrew ? 'מעולם' : 'Never', inactive: true };
+  const then = new Date(iso).getTime();
+  const days = Math.floor((Date.now() - then) / 86_400_000);
+  const inactive = days >= INACTIVE_DAYS;
+  let text: string;
+  if (days <= 0) text = isHebrew ? 'היום' : 'Today';
+  else if (days === 1) text = isHebrew ? 'אתמול' : 'Yesterday';
+  else if (days < 30) text = isHebrew ? `לפני ${days} ימים` : `${days}d ago`;
+  else if (days < 365) text = isHebrew ? `לפני ${Math.floor(days / 30)} חודשים` : `${Math.floor(days / 30)}mo ago`;
+  else text = isHebrew ? `לפני ${Math.floor(days / 365)} שנים` : `${Math.floor(days / 365)}y ago`;
+  return { text, inactive };
+}
+
 export default function AdminUsers() {
   const { language } = useLang();
   const isHebrew = language === 'he';
@@ -12,6 +29,8 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('');
   const [tier, setTier] = useState<'all' | 'free' | 'pro'>('all');
   const [page, setPage] = useState(0);
+  const [sortBy, setSortBy] = useState<'name' | 'created_at' | 'last_active' | 'tier'>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
@@ -33,7 +52,7 @@ export default function AdminUsers() {
     setLoading(true);
     setError('');
     try {
-      const res = await adminListUsers({ search, tier, page });
+      const res = await adminListUsers({ search, tier, page, sortBy, sortDir });
       setUsers(res.users);
       setTotal(res.total);
       setPageSize(res.pageSize);
@@ -42,7 +61,7 @@ export default function AdminUsers() {
     } finally {
       setLoading(false);
     }
-  }, [search, tier, page]);
+  }, [search, tier, page, sortBy, sortDir]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -107,6 +126,23 @@ export default function AdminUsers() {
           <option value="free">{isHebrew ? 'חינם' : 'Free'}</option>
           <option value="pro">{isHebrew ? 'פרו' : 'Pro'}</option>
         </select>
+        <select
+          value={sortBy}
+          onChange={(e) => { setSortBy(e.target.value as typeof sortBy); setPage(0); }}
+          className="px-3 py-2 rounded-lg border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm text-stone-900 dark:text-zinc-100 outline-none"
+        >
+          <option value="name">{isHebrew ? 'מיון: שם' : 'Sort: Name'}</option>
+          <option value="created_at">{isHebrew ? 'מיון: תאריך הצטרפות' : 'Sort: Date joined'}</option>
+          <option value="last_active">{isHebrew ? 'מיון: פעילות אחרונה' : 'Sort: Last active'}</option>
+          <option value="tier">{isHebrew ? 'מיון: תוכנית' : 'Sort: Plan'}</option>
+        </select>
+        <button
+          onClick={() => { setSortDir((d) => (d === 'asc' ? 'desc' : 'asc')); setPage(0); }}
+          className="px-3 py-2 rounded-lg border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm text-stone-600 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800 outline-none"
+          title={isHebrew ? 'הפוך סדר' : 'Reverse order'}
+        >
+          {sortDir === 'asc' ? '↑' : '↓'}
+        </button>
       </div>
 
       {error && (
@@ -121,14 +157,15 @@ export default function AdminUsers() {
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'אימייל' : 'Email'}</th>
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'תוכנית' : 'Plan'}</th>
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'נוצר' : 'Joined'}</th>
+              <th className="text-start font-medium py-2 px-2">{isHebrew ? 'פעילות אחרונה' : 'Last active'}</th>
               <th className="text-start font-medium py-2 px-2"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={4} className="py-6 text-center text-stone-400 dark:text-zinc-600">…</td></tr>
+              <tr><td colSpan={5} className="py-6 text-center text-stone-400 dark:text-zinc-600">…</td></tr>
             ) : users.length === 0 ? (
-              <tr><td colSpan={4} className="py-6 text-center text-stone-400 dark:text-zinc-600">{isHebrew ? 'לא נמצאו משתמשים' : 'No users found'}</td></tr>
+              <tr><td colSpan={5} className="py-6 text-center text-stone-400 dark:text-zinc-600">{isHebrew ? 'לא נמצאו משתמשים' : 'No users found'}</td></tr>
             ) : (
               users.map((u) => (
                 <tr key={u.id} className="border-t border-stone-100 dark:border-zinc-800">
@@ -155,6 +192,16 @@ export default function AdminUsers() {
                   </td>
                   <td className="py-2.5 px-2 text-stone-500 dark:text-zinc-500 text-xs">
                     {new Date(u.created_at).toLocaleDateString(isHebrew ? 'he-IL' : 'en-US')}
+                  </td>
+                  <td className="py-2.5 px-2 text-xs">
+                    {(() => {
+                      const { text, inactive } = lastActiveInfo(u.last_active, isHebrew);
+                      return (
+                        <span className={inactive ? 'text-amber-600 dark:text-amber-500' : 'text-stone-500 dark:text-zinc-500'}>
+                          {text}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="py-2.5 px-2 text-end">
                     <button

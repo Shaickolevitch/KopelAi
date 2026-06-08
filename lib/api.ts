@@ -117,9 +117,16 @@ export type AdminUser = {
   created_at: string;
   tier: 'free' | 'pro';
   deleted_at: string | null;
+  last_active: string | null;
 };
 
-export async function adminListUsers(params: { search?: string; tier?: string; page?: number }): Promise<{
+export async function adminListUsers(params: {
+  search?: string;
+  tier?: string;
+  page?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+}): Promise<{
   users: AdminUser[];
   total: number;
   page: number;
@@ -129,6 +136,8 @@ export async function adminListUsers(params: { search?: string; tier?: string; p
   if (params.search) q.set('search', params.search);
   if (params.tier && params.tier !== 'all') q.set('tier', params.tier);
   q.set('page', String(params.page ?? 0));
+  if (params.sortBy) q.set('sortBy', params.sortBy);
+  if (params.sortDir) q.set('sortDir', params.sortDir);
   const response = await fetch(`${API_URL}/admin/users?${q.toString()}`, {
     headers: { ...(await authHeaders()) },
   });

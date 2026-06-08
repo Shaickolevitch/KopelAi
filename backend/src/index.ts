@@ -224,11 +224,18 @@ app.get('/admin/users', async (req: Request, res: Response) => {
     const tier = (req.query.tier as string) || 'all';
     const page = Math.max(0, parseInt((req.query.page as string) || '0', 10) || 0);
     const pageSize = 25;
+    const ALLOWED_SORT = ['name', 'created_at', 'last_active', 'tier'];
+    const sortBy = ALLOWED_SORT.includes(req.query.sortBy as string)
+      ? (req.query.sortBy as string)
+      : 'created_at';
+    const sortDir = req.query.sortDir === 'asc' ? 'asc' : 'desc';
     const { data, error } = await supabaseAdmin.rpc('admin_list_users', {
       search,
       tier_filter: tier === 'free' || tier === 'pro' ? tier : 'all',
       lim: pageSize,
       off: page * pageSize,
+      sort_by: sortBy,
+      sort_dir: sortDir,
     });
     if (error) throw error;
     const rows = (data as any[]) ?? [];
@@ -240,6 +247,7 @@ app.get('/admin/users', async (req: Request, res: Response) => {
         created_at: r.created_at,
         tier: r.tier,
         deleted_at: r.deleted_at,
+        last_active: r.last_active,
       })),
       total,
       page,
