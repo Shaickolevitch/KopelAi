@@ -614,6 +614,31 @@ export default function AdminPage() {
               ) : null
             )}
 
+            {/* Traffic — pageviews from PostHog */}
+            {monTab === 'traffic' && monitoring && (
+              monitoring.posthog.configured && !monitoring.posthog.error ? (
+                <div className="mb-5">
+                  <div className="inline-block rounded-lg border border-stone-200 dark:border-zinc-800 px-4 py-3 text-center mb-3">
+                    <div className="text-2xl font-bold text-stone-900 dark:text-zinc-100">{monitoring.posthog.pageviews7d ?? 0}</div>
+                    <div className="text-xs text-stone-500 dark:text-zinc-500 mt-0.5">{isHebrew ? 'צפיות בעמודים (7 ימים)' : 'Page views (7d)'}</div>
+                  </div>
+                  <div className="text-xs font-medium text-stone-500 dark:text-zinc-500 mb-1">{isHebrew ? 'עמודים מובילים' : 'Top pages'}</div>
+                  <div className="space-y-1">
+                    {(monitoring.posthog.topPages ?? []).map((p) => (
+                      <div key={p.page} className="flex justify-between items-center text-sm border-b border-stone-100 dark:border-zinc-800 py-1.5">
+                        <span className="text-stone-600 dark:text-zinc-400 font-mono text-xs truncate" dir="ltr">{p.page || '/'}</span>
+                        <span className="font-semibold text-stone-900 dark:text-zinc-100 shrink-0 ms-3">{p.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : !monLoading ? (
+                <p className="text-sm text-stone-500 dark:text-zinc-500 mb-4">
+                  {isHebrew ? 'נתוני התנועה מגיעים מ-PostHog. למידע מפורט יותר (מקורות, מכשירים) פתחו את Vercel.' : 'Traffic data comes from PostHog. For deeper detail (sources, devices) open Vercel.'}
+                </p>
+              ) : null
+            )}
+
             {/* Errors — Sentry */}
             {monTab === 'errors' && monitoring && (
               monitoring.sentry.configured ? (

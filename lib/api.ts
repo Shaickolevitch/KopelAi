@@ -158,7 +158,9 @@ export type MonitoringSummary = {
   posthog: {
     configured: boolean;
     activeUsers7d?: number;
+    pageviews7d?: number;
     events?: { event: string; count: number }[];
+    topPages?: { page: string; count: number }[];
     error?: string;
   };
   sentry: {

@@ -280,14 +280,18 @@ async function getPosthogSummary() {
       const j = await r.json();
       return (j.results ?? []) as unknown[][];
     };
-    const [eventRows, userRows] = await Promise.all([
+    const [eventRows, userRows, pvRows, pageRows] = await Promise.all([
       run("SELECT event, count() AS c FROM events WHERE timestamp > now() - INTERVAL 7 DAY GROUP BY event ORDER BY c DESC LIMIT 8"),
       run("SELECT count(DISTINCT person_id) AS c FROM events WHERE timestamp > now() - INTERVAL 7 DAY"),
+      run("SELECT count() AS c FROM events WHERE event = '$pageview' AND timestamp > now() - INTERVAL 7 DAY"),
+      run("SELECT properties.$pathname AS p, count() AS c FROM events WHERE event = '$pageview' AND timestamp > now() - INTERVAL 7 DAY GROUP BY p ORDER BY c DESC LIMIT 8"),
     ]);
     return {
       configured: true,
       activeUsers7d: Number(userRows?.[0]?.[0] ?? 0),
+      pageviews7d: Number(pvRows?.[0]?.[0] ?? 0),
       events: eventRows.map((row) => ({ event: String(row[0]), count: Number(row[1]) })),
+      topPages: pageRows.map((row) => ({ page: String(row[0] ?? '/'), count: Number(row[1]) })),
     };
   } catch (e) {
     return { configured: true, error: e instanceof Error ? e.message : 'PostHog fetch failed' };
