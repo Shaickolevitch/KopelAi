@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useT, useLang } from '@/lib/i18n';
 import { AuthUser, getCurrentUser, signOut } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { identifyUser, resetAnalytics } from '@/lib/analytics';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const t = useT();
@@ -18,13 +19,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     getCurrentUser().then((u) => {
       if (!u) router.replace('/auth/signin');
-      else { setUser(u); setChecking(false); }
+      else { setUser(u); setChecking(false); identifyUser(u.id); }
     });
   }, [router]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase().auth.onAuthStateChange((event: string) => {
-      if (event === 'SIGNED_OUT') router.replace('/');
+      if (event === 'SIGNED_OUT') { resetAnalytics(); router.replace('/'); }
     });
     return () => subscription.unsubscribe();
   }, [router]);

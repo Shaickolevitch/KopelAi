@@ -12,6 +12,7 @@ import {
   clearPreviousSession,
   startCheckout,
 } from '@/lib/subscription';
+import { track } from '@/lib/analytics';
 
 type DisplayMessage = ChatMessage & { id: string; attachmentName?: string };
 
@@ -334,6 +335,7 @@ export default function ConversationPage() {
       .select('id').single();
     if (insertErr || !data) throw new Error(insertErr?.message ?? 'Failed to create conversation');
     setConversationId(data.id);
+    track('conversation_started');
     return data.id;
   }
 
@@ -419,6 +421,7 @@ export default function ConversationPage() {
     try {
       await endConversation(conversationId);
       const tier = await getSubscriptionTier(user.id);
+      track('session_ended', { tier });
       if (tier === 'free') {
         setShowUpgradeNudge(true);
       } else {
@@ -435,6 +438,7 @@ export default function ConversationPage() {
 
   async function handleSelectPlan(plan: 'monthly' | 'annual') {
     setCheckoutLoading(true);
+    track('checkout_started', { plan });
     try {
       await startCheckout(plan);
     } catch (err) {

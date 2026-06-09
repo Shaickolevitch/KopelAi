@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { LangProvider } from "@/lib/i18n";
+import AnalyticsProvider from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,7 +26,11 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <LangProvider>{children}</LangProvider>
+        <AnalyticsProvider>
+          <LangProvider>{children}</LangProvider>
+        </AnalyticsProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
