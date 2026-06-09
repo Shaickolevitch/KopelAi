@@ -133,6 +133,8 @@ export const STRINGS = {
     auth_error_email_in_use: 'אימייל זה כבר רשום במערכת',
     auth_error_wrong_credentials: 'אימייל או סיסמה שגויים',
     auth_error_network: 'בעיית רשת. נסה שוב.',
+    auth_error_rate_limit: 'נשלחו יותר מדי בקשות. נסה שוב בעוד כמה דקות, או היכנס עם Google.',
+    auth_error_signups_disabled: 'הרשמה במייל אינה זמינה כרגע. נסה להיכנס עם Google.',
     auth_error_generic: 'משהו השתבש',
 
     auth_reset_confirm_title: 'הגדרת סיסמה חדשה',
@@ -351,6 +353,8 @@ export const STRINGS = {
     auth_error_email_in_use: 'This email is already registered',
     auth_error_wrong_credentials: 'Wrong email or password',
     auth_error_network: 'Network problem. Try again.',
+    auth_error_rate_limit: 'Too many attempts. Try again in a few minutes, or sign in with Google.',
+    auth_error_signups_disabled: "Email signup isn't available right now. Try Google instead.",
     auth_error_generic: 'Something went wrong',
 
     auth_reset_confirm_title: 'Set new password',

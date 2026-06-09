@@ -73,13 +73,19 @@ export function authErrorToMessageKey(err: unknown): string {
   if (!err || typeof err !== 'object') return 'auth_error_generic';
   const message = (err as Error).message?.toLowerCase() ?? '';
 
-  if (message.includes('already registered') || message.includes('already in use')) {
+  if (message.includes('already')) {
     return 'auth_error_email_in_use';
+  }
+  if (message.includes('rate limit') || message.includes('too many') || message.includes('exceeded')) {
+    return 'auth_error_rate_limit';
   }
   if (message.includes('invalid login') || message.includes('invalid credentials')) {
     return 'auth_error_wrong_credentials';
   }
-  if (message.includes('email')) {
+  if (message.includes('signup') || message.includes('not allowed') || message.includes('disabled')) {
+    return 'auth_error_signups_disabled';
+  }
+  if (message.includes('invalid') && message.includes('email')) {
     return 'auth_error_invalid_email';
   }
   if (message.includes('password')) {
