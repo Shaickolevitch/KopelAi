@@ -36,36 +36,34 @@ const FEATURES = [
   },
 ];
 
-// The two people behind KopelAi. To add real photos: drop the image files into
-// /public (e.g. /public/kopel.jpg, /public/shai.jpg) and set `photo` below to
-// '/kopel.jpg' / '/shai.jpg'. Edit the bios freely — they're placeholders.
+// The two people behind KopelAi. Photos live in /public (kopel.jpg, shai.jpg).
 const PEOPLE = [
   {
     key: 'kopel',
-    photo: null as string | null, // e.g. '/kopel.jpg'
+    photo: '/kopel.jpg',
     he: {
-      name: 'קופל',
-      role: 'ההשראה',
-      bio: 'קופל הוא הפסיכולוג שנתן לאפליקציה את שמה ואת רוחה — גישה מתבוננת, אנושית וישירה. הקול שלו הוא שמנחה את השיחות כאן. [טקסט זמני — ניתן לעריכה]',
+      name: 'קופל אליעזר',
+      role: 'פסיכואנליטיקאי',
+      bio: 'אנליטיקאי עצמאי ועובד סוציאלי קליני, בגישה הפסיכואנליטית הבין-אישית. יוצר מפעל הלמידה "פסיכואנליזה בין שעה לשעה" — הקול והחשיבה שמאחורי קופלAI.',
     },
     en: {
-      name: 'Kopel',
-      role: 'The inspiration',
-      bio: 'Kopel is the psychologist who gave this app its name and its spirit — a reflective, human, and direct approach. His voice is what guides the conversations here. [placeholder — editable]',
+      name: 'Kopel Eliezer',
+      role: 'Psychoanalyst',
+      bio: 'An independent analyst and clinical social worker in the interpersonal psychoanalytic tradition. Creator of the "Psychoanalysis, Hour by Hour" learning project — the voice and thinking behind KopelAi.',
     },
   },
   {
     key: 'shai',
-    photo: null as string | null, // e.g. '/shai.jpg'
+    photo: '/shai.jpg',
     he: {
-      name: 'שי',
-      role: 'המייסד',
-      bio: 'שי בנה את קופלAI כדי לתת למטפלים מרחב פרטי לעצור, לחשוב, ולהבין את עצמם טוב יותר ככאלה. [טקסט זמני — ניתן לעריכה]',
+      name: 'שי חי גיאן',
+      role: 'המייסד והמפתח',
+      bio: 'היזם והמפתח של קופלAI. בנה את האפליקציה כדי לתת למטפלים מרחב פרטי לעצור, לחשוב, ולהבין את עצמם — לצד הבנת המטופלים.',
     },
     en: {
-      name: 'Shai',
-      role: 'The founder',
-      bio: 'Shai built KopelAi to give therapists a private space to pause, reflect, and understand themselves better as clinicians. [placeholder — editable]',
+      name: 'Shai Hay Gian',
+      role: 'Founder & developer',
+      bio: 'The founder and developer of KopelAi. He built the app to give therapists a private space to pause, reflect, and understand themselves — alongside understanding their clients.',
     },
   },
 ];

@@ -8,43 +8,45 @@ import { useLang } from '@/lib/i18n';
 const PEOPLE = [
   {
     key: 'kopel',
-    photo: null as string | null, // e.g. '/kopel.jpg'
+    photo: '/kopel.jpg',
+    contact: null as string | null,
     he: {
       name: 'קופל אליעזר',
-      role: 'ההשראה',
+      role: 'פסיכואנליטיקאי',
       bio: [
-        'קופל אליעזר הוא פסיכולוג ומורה, בגישה פסיכואנליטית-אינטרסובייקטיבית. לאורך שנים ליווה מטפלים והעביר עשרות הרצאות על מושגי היסוד של הנפש — מהלא-מודע, דרך יחסי אובייקט, ועד למרחב הפוטנציאלי.',
-        'הגישה שלו מתבוננת, אנושית וישירה. בלבה עומדת אמונה אחת: הכלי המרכזי של המטפל הוא המטפל עצמו — ולכן ההיכרות של מטפל עם עצמו היא העבודה החשובה ביותר שיש.',
-        'קופלAI נבנה בהשראת הקול, החשיבה והתורה שלו — כדי להנגיש את הדרך שבה הוא חושב על אנשים, ולהביא אותה לכל מטפל. [טקסט זמני — ניתן לעריכה]',
+        'אני קופל אליעזר, אנליטיקאי עצמאי, הפועל מתוך הבנה שהאדם מתגלה ומתעצב בתוך קשר חי, נוכח ומורכב.',
+        'עבודתי — כמטפל, כמדריך וכיוצר תוכן — נשענת על הפסיכואנליזה הבין-אישית, ומתמקדת בדיאלוג פתוח שבו הקשר קודם לפרשנות, הפעולה הטיפולית חשובה, והנוכחות היא חלק מהטכניקה.',
+        'אני עובד סוציאלי קליני, מקבל בקליניקה שלי במרכז תל אביב, ברחוב בן יהודה 32, ומוביל מרחבי למידה מקצועיים — ביניהם מפעל הלמידה בפייסבוק "פסיכואנליזה בין שעה לשעה".',
       ],
     },
     en: {
       name: 'Kopel Eliezer',
-      role: 'The inspiration',
+      role: 'Psychoanalyst',
       bio: [
-        'Kopel Eliezer is a psychologist and teacher working in the psychoanalytic, intersubjective tradition. Over many years he has mentored therapists and given dozens of lectures on the core concepts of the psyche — from the unconscious, through object relations, to the potential space.',
-        'His approach is reflective, human, and direct. At its heart is a single conviction: the therapist’s main instrument is the therapist themselves — which makes knowing yourself the most important work there is.',
-        'KopelAi is built in the spirit of his voice, his thinking, and his teaching — to make the way he thinks about people accessible to every therapist. [placeholder — editable]',
+        'I’m Kopel Eliezer, an independent analyst, working from the understanding that a person is revealed and shaped within a living, present, and complex relationship.',
+        'My work — as a therapist, supervisor, and content creator — rests on interpersonal psychoanalysis, and centers on an open dialogue in which the relationship comes before interpretation, the therapeutic act matters, and presence is part of the technique.',
+        'I’m a clinical social worker, seeing clients at my clinic in central Tel Aviv, on 32 Ben Yehuda St., and I lead professional learning spaces — among them the Facebook learning project "Psychoanalysis, Hour by Hour".',
       ],
     },
   },
   {
     key: 'shai',
-    photo: null as string | null, // e.g. '/shai.jpg'
+    photo: '/shai.jpg',
+    contact: '050-204-2507 · shaigian1@gmail.com',
     he: {
       name: 'שי חי גיאן',
-      role: 'המייסד',
+      role: 'המייסד והמפתח',
       bio: [
-        'שי חי גיאן הוא היזם והמפתח שמאחורי קופלAI. הוא בנה את האפליקציה מתוך אמונה שמטפלים זקוקים למרחב פרטי לעצור, לחשוב, ולהבין את עצמם — לצד הבנת המטופלים.',
-        'המטרה פשוטה: לקחת את הדרך שבה קופל מתבונן בנפש, ולהפוך אותה למרחב אישי ומתמשך שכל מטפל יכול לחזור אליו בין מפגש למפגש. [טקסט זמני — ניתן לעריכה]',
+        'אני שי חי גיאן, היזם והמפתח של קופלAI. אני מאמין שמטפלים זקוקים למרחב פרטי לעצור, לחשוב, ולהבין את עצמם — לצד הבנת המטופלים.',
+        'לקחתי את הדרך שבה קופל מתבונן בנפש, והפכתי אותה למרחב אישי ומתמשך שכל מטפל יכול לחזור אליו בין מפגש למפגש.',
       ],
     },
     en: {
       name: 'Shai Hay Gian',
-      role: 'The founder',
+      role: 'Founder & developer',
       bio: [
-        'Shai Hay Gian is the founder and developer behind KopelAi. He built the app out of a belief that therapists need a private space to pause, reflect, and understand themselves — not only their clients.',
-        'The goal is simple: take the way Kopel looks at the psyche and turn it into a personal, ongoing space any therapist can return to between sessions. [placeholder — editable]',
+        'I’m Shai Hay Gian, the founder and developer of KopelAi. I believe therapists need a private space to pause, reflect, and understand themselves — alongside understanding their clients.',
+        'I took the way Kopel looks at the psyche and turned it into a personal, ongoing space any therapist can return to between sessions.',
       ],
     },
   },
@@ -61,8 +63,8 @@ export default function AboutUsPage() {
       </h1>
       <p className="text-stone-500 dark:text-zinc-400 mb-4">
         {isHebrew
-          ? 'שני אנשים, וכוונה אחת — מרחב מתבונן למטפלים.'
-          : 'Two people, one intention — a reflective space for therapists.'}
+          ? 'קופלAI הוא בינה מלאכותית שיצרנו קופל אליעזר ושי חי גיאן, במטרה להרחיב את המגע של מטפלים עם החשיבה הפסיכואנליטית.'
+          : 'KopelAi is an AI created by Kopel Eliezer and Shai Hay Gian, to expand therapists’ contact with psychoanalytic thinking.'}
       </p>
       <p className="text-stone-600 dark:text-zinc-300 mb-10 leading-relaxed">
         <span className="font-semibold text-stone-800 dark:text-zinc-100">
@@ -105,6 +107,12 @@ export default function AboutUsPage() {
                     <p key={i}>{para}</p>
                   ))}
                 </div>
+                {person.contact && (
+                  <div className="mt-3 text-sm text-stone-500 dark:text-zinc-500">
+                    {isHebrew ? 'ליצירת קשר: ' : 'Contact: '}
+                    <span dir="ltr" className="inline-block align-middle">{person.contact}</span>
+                  </div>
+                )}
               </div>
             </div>
           );
