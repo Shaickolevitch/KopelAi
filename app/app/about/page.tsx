@@ -9,7 +9,7 @@ const PEOPLE = [
   {
     key: 'kopel',
     photo: '/kopel.jpg',
-    contact: null as string | null,
+    contact: '052-583-8686' as string | null,
     he: {
       name: 'קופל אליעזר',
       role: 'פסיכואנליטיקאי',
