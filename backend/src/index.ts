@@ -261,6 +261,84 @@ app.get('/admin/users', async (req: Request, res: Response) => {
   }
 });
 
+// Monitoring summary for the admin dashboard: own-DB metrics + PostHog + Sentry.
+// PostHog/Sentry light up only when their env keys are present; otherwise they
+// return { configured: false } and the UI shows a "connect" hint.
+async function getPosthogSummary() {
+  const apiKey = process.env.POSTHOG_API_KEY;
+  const projectId = process.env.POSTHOG_PROJECT_ID;
+  const host = process.env.POSTHOG_HOST || 'https://eu.posthog.com';
+  if (!apiKey || !projectId) return { configured: false };
+  try {
+    const run = async (query: string) => {
+      const r = await fetch(`${host}/api/projects/${projectId}/query/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: { kind: 'HogQLQuery', query } }),
+      });
+      if (!r.ok) throw new Error(`PostHog ${r.status}`);
+      const j = await r.json();
+      return (j.results ?? []) as unknown[][];
+    };
+    const [eventRows, userRows] = await Promise.all([
+      run("SELECT event, count() AS c FROM events WHERE timestamp > now() - INTERVAL 7 DAY GROUP BY event ORDER BY c DESC LIMIT 8"),
+      run("SELECT count(DISTINCT person_id) AS c FROM events WHERE timestamp > now() - INTERVAL 7 DAY"),
+    ]);
+    return {
+      configured: true,
+      activeUsers7d: Number(userRows?.[0]?.[0] ?? 0),
+      events: eventRows.map((row) => ({ event: String(row[0]), count: Number(row[1]) })),
+    };
+  } catch (e) {
+    return { configured: true, error: e instanceof Error ? e.message : 'PostHog fetch failed' };
+  }
+}
+
+async function getSentrySummary() {
+  const token = process.env.SENTRY_AUTH_TOKEN;
+  const org = process.env.SENTRY_ORG;
+  const project = process.env.SENTRY_PROJECT;
+  if (!token || !org || !project) return { configured: false };
+  try {
+    const r = await fetch(
+      `https://sentry.io/api/0/projects/${org}/${project}/issues/?query=is:unresolved&statsPeriod=14d&limit=8`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!r.ok) throw new Error(`Sentry ${r.status}`);
+    const issues = (await r.json()) as any[];
+    return {
+      configured: true,
+      openIssues: issues.length,
+      issues: issues.map((i) => ({
+        title: i.title ?? i.metadata?.value ?? 'Issue',
+        count: Number(i.count ?? 0),
+        lastSeen: i.lastSeen ?? null,
+        permalink: i.permalink ?? null,
+      })),
+    };
+  } catch (e) {
+    return { configured: true, error: e instanceof Error ? e.message : 'Sentry fetch failed' };
+  }
+}
+
+app.get('/admin/monitoring', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user || user.id !== ADMIN_USER_ID) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    const [{ data: supa }, posthog, sentry] = await Promise.all([
+      supabaseAdmin.rpc('admin_metrics'),
+      getPosthogSummary(),
+      getSentrySummary(),
+    ]);
+    res.json({ supabase: supa ?? null, posthog, sentry });
+  } catch (err: any) {
+    console.error('Admin monitoring error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
 app.post('/admin/set-tier', async (req: Request, res: Response) => {
   try {
     const user = await getAuthedUser(req);

@@ -10,7 +10,9 @@ import {
   listKbDocuments,
   uploadKbFile,
   deleteKbDocument,
+  adminGetMonitoring,
   type KbDocument,
+  type MonitoringSummary,
 } from '@/lib/api';
 import AdminUsers from './AdminUsers';
 
@@ -102,7 +104,20 @@ export default function AdminPage() {
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [tab, setTab] = useState<'users' | 'prompt' | 'kb' | 'monitoring'>('users');
-  const [monTab, setMonTab] = useState<'behavior' | 'traffic' | 'errors' | 'data'>('behavior');
+  const [monTab, setMonTab] = useState<'behavior' | 'traffic' | 'errors' | 'data'>('data');
+  const [monitoring, setMonitoring] = useState<MonitoringSummary | null>(null);
+  const [monLoading, setMonLoading] = useState(false);
+
+  // Load monitoring numbers the first time the Monitoring tab is opened.
+  useEffect(() => {
+    if (tab === 'monitoring' && !monitoring && !monLoading) {
+      setMonLoading(true);
+      adminGetMonitoring()
+        .then(setMonitoring)
+        .catch(() => {})
+        .finally(() => setMonLoading(false));
+    }
+  }, [tab, monitoring, monLoading]);
 
   useEffect(() => {
     getCurrentUser().then((u) => {
@@ -490,6 +505,86 @@ export default function AdminPage() {
           <div className="rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-sm">
             <div className="font-semibold text-lg text-stone-900 dark:text-zinc-100 mb-1">{activeMon.title}</div>
             <p className="text-sm text-stone-500 dark:text-zinc-500 leading-relaxed mb-4">{activeMon.desc}</p>
+
+            {monLoading && (
+              <p className="text-sm text-stone-400 dark:text-zinc-600 mb-4">{isHebrew ? 'טוען נתונים…' : 'Loading…'}</p>
+            )}
+
+            {/* Data — own database overview */}
+            {monTab === 'data' && monitoring?.supabase && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
+                {[
+                  { label: isHebrew ? 'משתמשים' : 'Users', value: monitoring.supabase.total_users },
+                  { label: isHebrew ? 'מנויי פרו' : 'Pro', value: monitoring.supabase.pro_users },
+                  { label: isHebrew ? 'נרשמו (7 ימים)' : 'New (7d)', value: monitoring.supabase.new_users_7d },
+                  { label: isHebrew ? 'פעילים (7 ימים)' : 'Active (7d)', value: monitoring.supabase.active_users_7d },
+                  { label: isHebrew ? 'שיחות (7 ימים)' : 'Conversations (7d)', value: monitoring.supabase.conversations_7d },
+                  { label: isHebrew ? 'הודעות (7 ימים)' : 'Messages (7d)', value: monitoring.supabase.messages_7d },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-lg border border-stone-200 dark:border-zinc-800 px-3 py-3 text-center">
+                    <div className="text-2xl font-bold text-stone-900 dark:text-zinc-100">{s.value}</div>
+                    <div className="text-xs text-stone-500 dark:text-zinc-500 mt-0.5">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Behavior — PostHog */}
+            {monTab === 'behavior' && monitoring && (
+              monitoring.posthog.configured ? (
+                monitoring.posthog.error ? (
+                  <p className="text-sm text-rose-600 dark:text-rose-400 mb-4">PostHog: {monitoring.posthog.error}</p>
+                ) : (
+                  <div className="mb-5">
+                    <div className="inline-block rounded-lg border border-stone-200 dark:border-zinc-800 px-4 py-3 text-center mb-3">
+                      <div className="text-2xl font-bold text-stone-900 dark:text-zinc-100">{monitoring.posthog.activeUsers7d ?? 0}</div>
+                      <div className="text-xs text-stone-500 dark:text-zinc-500 mt-0.5">{isHebrew ? 'משתמשים פעילים (7 ימים)' : 'Active users (7d)'}</div>
+                    </div>
+                    <div className="space-y-1">
+                      {(monitoring.posthog.events ?? []).map((e) => (
+                        <div key={e.event} className="flex justify-between items-center text-sm border-b border-stone-100 dark:border-zinc-800 py-1.5">
+                          <span className="text-stone-600 dark:text-zinc-400 font-mono text-xs truncate">{e.event}</span>
+                          <span className="font-semibold text-stone-900 dark:text-zinc-100 shrink-0 ms-3">{e.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              ) : !monLoading ? (
+                <p className="text-sm text-amber-600 dark:text-amber-500 mb-4">
+                  {isHebrew ? 'כדי לראות נתונים כאן צריך להוסיף מפתח PostHog בשרת (ראה הוראות).' : 'Add a PostHog API key on the server to show data here.'}
+                </p>
+              ) : null
+            )}
+
+            {/* Errors — Sentry */}
+            {monTab === 'errors' && monitoring && (
+              monitoring.sentry.configured ? (
+                monitoring.sentry.error ? (
+                  <p className="text-sm text-rose-600 dark:text-rose-400 mb-4">Sentry: {monitoring.sentry.error}</p>
+                ) : (
+                  <div className="mb-5">
+                    <p className="text-sm text-stone-600 dark:text-zinc-400 mb-2">
+                      {isHebrew ? `תקלות פתוחות: ${monitoring.sentry.openIssues ?? 0}` : `Open issues: ${monitoring.sentry.openIssues ?? 0}`}
+                    </p>
+                    <div className="space-y-1">
+                      {(monitoring.sentry.issues ?? []).map((i, idx) => (
+                        <a key={idx} href={i.permalink ?? activeMon.url} target="_blank" rel="noopener noreferrer"
+                          className="flex justify-between items-center gap-3 text-sm border-b border-stone-100 dark:border-zinc-800 py-1.5 hover:bg-stone-50 dark:hover:bg-zinc-800/50">
+                          <span className="text-stone-700 dark:text-zinc-300 truncate">{i.title}</span>
+                          <span className="font-semibold text-rose-600 dark:text-rose-400 shrink-0">{i.count}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )
+              ) : !monLoading ? (
+                <p className="text-sm text-amber-600 dark:text-amber-500 mb-4">
+                  {isHebrew ? 'כדי לראות שגיאות כאן צריך ליצור פרויקט Sentry ולהוסיף מפתחות בשרת.' : 'Create a Sentry project and add its keys on the server to show errors here.'}
+                </p>
+              ) : null
+            )}
+
             <a
               href={activeMon.url}
               target="_blank"

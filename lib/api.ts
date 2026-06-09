@@ -145,6 +145,37 @@ export async function adminListUsers(params: {
   return response.json();
 }
 
+export type MonitoringSummary = {
+  supabase: {
+    total_users: number;
+    pro_users: number;
+    new_users_7d: number;
+    active_users_7d: number;
+    conversations_7d: number;
+    messages_7d: number;
+  } | null;
+  posthog: {
+    configured: boolean;
+    activeUsers7d?: number;
+    events?: { event: string; count: number }[];
+    error?: string;
+  };
+  sentry: {
+    configured: boolean;
+    openIssues?: number;
+    issues?: { title: string; count: number; lastSeen: string | null; permalink: string | null }[];
+    error?: string;
+  };
+};
+
+export async function adminGetMonitoring(): Promise<MonitoringSummary> {
+  const response = await fetch(`${API_URL}/admin/monitoring`, {
+    headers: { ...(await authHeaders()) },
+  });
+  if (!response.ok) throw new Error(`Monitoring error (${response.status})`);
+  return response.json();
+}
+
 export async function adminSetTier(userId: string, tier: 'free' | 'pro') {
   const response = await fetch(`${API_URL}/admin/set-tier`, {
     method: 'POST',
