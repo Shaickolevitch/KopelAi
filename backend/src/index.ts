@@ -265,8 +265,8 @@ app.get('/admin/users', async (req: Request, res: Response) => {
 // PostHog/Sentry light up only when their env keys are present; otherwise they
 // return { configured: false } and the UI shows a "connect" hint.
 async function getPosthogSummary() {
-  const apiKey = process.env.POSTHOG_API_KEY;
-  const projectId = process.env.POSTHOG_PROJECT_ID;
+  const apiKey = process.env.POSTHOG_API_KEY; // secret — must be set in Railway
+  const projectId = process.env.POSTHOG_PROJECT_ID || '197739';
   const host = process.env.POSTHOG_HOST || 'https://eu.posthog.com';
   if (!apiKey || !projectId) return { configured: false };
   try {
@@ -295,9 +295,9 @@ async function getPosthogSummary() {
 }
 
 async function getSentrySummary() {
-  const token = process.env.SENTRY_AUTH_TOKEN;
-  const org = process.env.SENTRY_ORG;
-  const project = process.env.SENTRY_PROJECT;
+  const token = process.env.SENTRY_AUTH_TOKEN; // secret — must be set in Railway
+  const org = process.env.SENTRY_ORG || 'shaiyan';
+  const project = process.env.SENTRY_PROJECT || 'kopelai';
   if (!token || !org || !project) return { configured: false };
   try {
     const r = await fetch(
