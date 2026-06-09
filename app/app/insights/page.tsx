@@ -111,6 +111,36 @@ export default function InsightsPage() {
     );
   }
 
+  // Analysis is a Pro feature — free users see a locked, greyed-out state.
+  if (!isPro) {
+    return (
+      <div className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="max-w-md text-center opacity-90">
+          <div className="w-16 h-16 rounded-2xl bg-stone-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-5">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-stone-400 dark:text-zinc-500">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-semibold text-stone-700 dark:text-zinc-300 mb-3">
+            {language === 'he' ? 'אפשרות זו פתוחה למשתמשי פרו' : 'This is open to Pro members'}
+          </h2>
+          <p className="text-stone-500 dark:text-zinc-500 leading-relaxed mb-6 text-sm">
+            {language === 'he'
+              ? 'בתוכנית פרו, קופלAI זוכר אותך בין מפגשים ומפיק כאן תובנות אישיות — הדפוסים שלך, החוזקות, ונקודות העיוורון.'
+              : 'With Pro, KopelAi remembers you between sessions and builds your personal insights here — your patterns, strengths, and blind spots.'}
+          </p>
+          <Link
+            href="/app/plan"
+            className="inline-block px-6 py-3 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors"
+          >
+            {language === 'he' ? 'שדרג לפרו' : 'Upgrade to Pro'}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!hasAnyInsights) {
     return (
       <div className="flex-1 flex items-center justify-center px-6 py-12">
