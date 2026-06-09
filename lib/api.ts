@@ -153,6 +153,7 @@ export type MonitoringSummary = {
     active_users_7d: number;
     conversations_7d: number;
     messages_7d: number;
+    daily?: { day: string; new_users: number; active_users: number; messages: number }[];
   } | null;
   posthog: {
     configured: boolean;

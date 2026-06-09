@@ -42,6 +42,35 @@ function formatSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Lightweight inline bar chart (no chart library) for the monitoring dashboard.
+function MiniBars({ title, data, valueKey, color }: {
+  title: string;
+  data: { day: string; new_users: number; active_users: number; messages: number }[];
+  valueKey: 'new_users' | 'active_users' | 'messages';
+  color: string;
+}) {
+  const max = Math.max(1, ...data.map((d) => d[valueKey]));
+  return (
+    <div className="rounded-lg border border-stone-200 dark:border-zinc-800 p-3">
+      <div className="text-xs font-medium text-stone-500 dark:text-zinc-500 mb-2">{title}</div>
+      <div className="flex items-end gap-1 h-24">
+        {data.map((d) => (
+          <div key={d.day} className="flex-1 flex flex-col items-center justify-end group" title={`${d.day}: ${d[valueKey]}`}>
+            <div
+              className={`w-full rounded-t ${color}`}
+              style={{ height: `${(d[valueKey] / max) * 100}%`, minHeight: d[valueKey] > 0 ? '3px' : '0' }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-between text-[10px] text-stone-400 dark:text-zinc-600 mt-1">
+        <span>{data[0]?.day}</span>
+        <span>{data[data.length - 1]?.day}</span>
+      </div>
+    </div>
+  );
+}
+
 // Recursively read a dropped file-system entry (file or folder) into a flat list
 // of supported files. Lets an admin drag a whole folder into the knowledge base.
 function readEntryFiles(entry: any): Promise<File[]> {
@@ -530,6 +559,30 @@ export default function AdminPage() {
                     <div className="text-xs text-stone-500 dark:text-zinc-500 mt-0.5">{s.label}</div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Data — 14-day trend charts */}
+            {monTab === 'data' && monitoring?.supabase?.daily && monitoring.supabase.daily.length > 0 && (
+              <div className="grid sm:grid-cols-3 gap-3 mb-5">
+                <MiniBars
+                  title={isHebrew ? 'הודעות ליום (14 ימים)' : 'Messages / day (14d)'}
+                  data={monitoring.supabase.daily}
+                  valueKey="messages"
+                  color="bg-indigo-500"
+                />
+                <MiniBars
+                  title={isHebrew ? 'משתמשים פעילים ליום' : 'Active users / day'}
+                  data={monitoring.supabase.daily}
+                  valueKey="active_users"
+                  color="bg-emerald-500"
+                />
+                <MiniBars
+                  title={isHebrew ? 'הרשמות ליום' : 'Signups / day'}
+                  data={monitoring.supabase.daily}
+                  valueKey="new_users"
+                  color="bg-amber-500"
+                />
               </div>
             )}
 
