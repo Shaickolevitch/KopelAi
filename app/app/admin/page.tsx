@@ -101,6 +101,8 @@ export default function AdminPage() {
   const [kbListOpen, setKbListOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [tab, setTab] = useState<'users' | 'prompt' | 'kb' | 'monitoring'>('users');
+  const [monTab, setMonTab] = useState<'behavior' | 'traffic' | 'errors' | 'data'>('behavior');
 
   useEffect(() => {
     getCurrentUser().then((u) => {
@@ -196,19 +198,83 @@ export default function AdminPage() {
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
+  // External monitoring dashboards (each is a sub-tab under "Monitoring").
+  const monitors = [
+    {
+      key: 'behavior' as const,
+      tab: isHebrew ? 'התנהגות' : 'Behavior',
+      title: isHebrew ? 'התנהגות משתמשים' : 'User behavior',
+      desc: isHebrew
+        ? 'מי עושה מה באתר — אירועים, משפכים, שימור ומסעות משתמש. דרך PostHog.'
+        : 'Who does what — events, funnels, retention, and user journeys. Via PostHog.',
+      url: 'https://eu.posthog.com',
+      cta: 'PostHog',
+    },
+    {
+      key: 'traffic' as const,
+      tab: isHebrew ? 'תנועה וביצועים' : 'Traffic & speed',
+      title: isHebrew ? 'תנועה וביצועים' : 'Traffic & performance',
+      desc: isHebrew
+        ? 'מבקרים, צפיות, מקורות תנועה ומהירות טעינה. דרך Vercel Analytics ו-Speed Insights.'
+        : 'Visitors, page views, sources, and load speed. Via Vercel Analytics & Speed Insights.',
+      url: 'https://vercel.com/shais-projects-ed0a97e4/kopel-ai/analytics',
+      cta: 'Vercel',
+    },
+    {
+      key: 'errors' as const,
+      tab: isHebrew ? 'שגיאות' : 'Errors',
+      title: isHebrew ? 'שגיאות וקריסות' : 'Errors & crashes',
+      desc: isHebrew
+        ? 'שגיאות באתר ובשרת — מתי, איפה, וכמה משתמשים נפגעו. דרך Sentry.'
+        : 'Front-end and server errors — when, where, and how many users were affected. Via Sentry.',
+      url: 'https://sentry.io',
+      cta: 'Sentry',
+    },
+    {
+      key: 'data' as const,
+      tab: isHebrew ? 'נתונים' : 'Data',
+      title: isHebrew ? 'מסד הנתונים' : 'Database',
+      desc: isHebrew
+        ? 'הנתונים הגולמיים — משתמשים, שיחות ומנויים. שאילתות SQL ולוגים. דרך Supabase.'
+        : 'The raw data — users, conversations, and subscriptions. SQL queries & logs. Via Supabase.',
+      url: 'https://supabase.com/dashboard/project/yxioeeuzhdknhpbjjzgq',
+      cta: 'Supabase',
+    },
+  ];
+  const activeMon = monitors.find((m) => m.key === monTab) ?? monitors[0];
+
   return (
-    <div className="max-w-2xl mx-auto w-full px-4 sm:px-6 py-10">
-      <h1 className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mb-1">
+    <div className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-10">
+      <h1 className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mb-5">
         {isHebrew ? 'ניהול' : 'Admin'}
       </h1>
-      <p className="text-stone-500 dark:text-zinc-400 mb-8">
-        {isHebrew
-          ? 'עריכת ההנחיה של ה-AI וטעינת חומרי ידע שהמערכת תלמד מהם.'
-          : "Edit the AI's prompt and load knowledge material the system learns from."}
-      </p>
 
-      {/* System prompt editor (placeholder) */}
-      <div className="rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm mb-5">
+      {/* Tab bar */}
+      <div className="flex gap-1 mb-6 border-b border-stone-200 dark:border-zinc-800 overflow-x-auto">
+        {([
+          { key: 'users', label: isHebrew ? 'משתמשים' : 'Users' },
+          { key: 'prompt', label: isHebrew ? 'הנחיית AI' : 'AI prompt' },
+          { key: 'kb', label: isHebrew ? 'בסיס ידע' : 'Knowledge base' },
+          { key: 'monitoring', label: isHebrew ? 'ניטור' : 'Monitoring' },
+        ] as const).map((tb) => (
+          <button
+            key={tb.key}
+            onClick={() => setTab(tb.key)}
+            className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
+              tab === tb.key
+                ? 'border-indigo-600 text-indigo-700 dark:text-indigo-400'
+                : 'border-transparent text-stone-500 dark:text-zinc-500 hover:text-stone-800 dark:hover:text-zinc-200'
+            }`}
+          >
+            {tb.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'users' && <AdminUsers />}
+
+      {tab === 'prompt' && (
+      <div className="rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm">
         <div className="font-semibold text-stone-900 dark:text-zinc-100 mb-2">
           {isHebrew ? 'הנחיית המערכת (System Prompt)' : 'System prompt'}
         </div>
@@ -250,8 +316,9 @@ export default function AdminPage() {
             : 'Takes effect on the next conversation. Empty = revert to the built-in prompt.'}
         </p>
       </div>
+      )}
 
-      {/* Knowledge base */}
+      {tab === 'kb' && (
       <div className="rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm">
         <div className="font-semibold text-stone-900 dark:text-zinc-100 mb-2">
           {isHebrew ? 'בסיס ידע' : 'Knowledge base'}
@@ -399,10 +466,44 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+      )}
 
-      <div className="mt-5">
-        <AdminUsers />
-      </div>
+      {tab === 'monitoring' && (
+        <div>
+          {/* Monitoring sub-tabs */}
+          <div className="flex flex-wrap gap-2 mb-5">
+            {monitors.map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setMonTab(m.key)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                  monTab === m.key
+                    ? 'bg-stone-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                    : 'bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-400 hover:bg-stone-200 dark:hover:bg-zinc-700'
+                }`}
+              >
+                {m.tab}
+              </button>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-sm">
+            <div className="font-semibold text-lg text-stone-900 dark:text-zinc-100 mb-1">{activeMon.title}</div>
+            <p className="text-sm text-stone-500 dark:text-zinc-500 leading-relaxed mb-4">{activeMon.desc}</p>
+            <a
+              href={activeMon.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-950 dark:bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors"
+            >
+              {(isHebrew ? 'פתח ' : 'Open ') + activeMon.cta}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 17L17 7M17 7H8M17 7v9" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
