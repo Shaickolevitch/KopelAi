@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import './instrument'; // Sentry init — must come before other imports
+import * as Sentry from '@sentry/node';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import Anthropic from '@anthropic-ai/sdk';
@@ -1048,6 +1050,9 @@ app.get('/export-data', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Server error', details: err.message });
   }
 });
+
+// Sentry error handler — must be after all routes, before listen.
+Sentry.setupExpressErrorHandler(app);
 
 app.listen(port, () => {
   console.log(`kopelai-api listening on port ${port}`);
