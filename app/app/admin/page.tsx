@@ -42,6 +42,22 @@ function formatSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Friendly names for PostHog event keys (the raw names are cryptic).
+function eventLabel(event: string, isHebrew: boolean): string {
+  const map: Record<string, { he: string; en: string }> = {
+    '$pageview': { he: 'צפיות בעמודים', en: 'Page views' },
+    '$pageleave': { he: 'יציאות מעמוד', en: 'Page leaves' },
+    '$autocapture': { he: 'קליקים ואינטראקציות', en: 'Clicks & interactions' },
+    '$identify': { he: 'כניסות לחשבון', en: 'Logins' },
+    '$rageclick': { he: 'קליקי תסכול (לחיצות חוזרות)', en: 'Frustrated clicks' },
+    'conversation_started': { he: 'שיחות שהתחילו', en: 'Conversations started' },
+    'session_ended': { he: 'שיחות שהסתיימו', en: 'Sessions ended' },
+    'checkout_started': { he: 'התחלות תשלום (שדרוג)', en: 'Checkouts started' },
+  };
+  const m = map[event];
+  return m ? (isHebrew ? m.he : m.en) : event;
+}
+
 // Lightweight inline bar chart (no chart library) for the monitoring dashboard.
 function MiniBars({ title, data, valueKey, color }: {
   title: string;
@@ -600,7 +616,7 @@ export default function AdminPage() {
                     <div className="space-y-1">
                       {(monitoring.posthog.events ?? []).map((e) => (
                         <div key={e.event} className="flex justify-between items-center text-sm border-b border-stone-100 dark:border-zinc-800 py-1.5">
-                          <span className="text-stone-600 dark:text-zinc-400 font-mono text-xs truncate">{e.event}</span>
+                          <span className="text-stone-700 dark:text-zinc-300 truncate">{eventLabel(e.event, isHebrew)}</span>
                           <span className="font-semibold text-stone-900 dark:text-zinc-100 shrink-0 ms-3">{e.count}</span>
                         </div>
                       ))}
