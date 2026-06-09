@@ -168,6 +168,69 @@ export type MonitoringSummary = {
   };
 };
 
+// ── Feedback ─────────────────────────────────────────────────────────────────
+export type FeedbackItem = {
+  id: string;
+  user_id: string | null;
+  email: string | null;
+  subject: string;
+  headline: string;
+  content: string;
+  status: 'new' | 'in_progress' | 'resolved';
+  created_at: string;
+};
+
+export async function submitFeedback(subject: string, headline: string, content: string) {
+  const response = await fetch(`${API_URL}/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ subject, headline, content }),
+  });
+  if (!response.ok) {
+    const t = await response.text();
+    throw new Error(`Feedback error (${response.status}): ${t}`);
+  }
+  return response.json();
+}
+
+export async function adminListFeedback(params: { status?: string; subject?: string; page?: number }): Promise<{
+  items: FeedbackItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: Record<string, number>;
+}> {
+  const q = new URLSearchParams();
+  if (params.status && params.status !== 'all') q.set('status', params.status);
+  if (params.subject && params.subject !== 'all') q.set('subject', params.subject);
+  q.set('page', String(params.page ?? 0));
+  const response = await fetch(`${API_URL}/admin/feedback?${q.toString()}`, {
+    headers: { ...(await authHeaders()) },
+  });
+  if (!response.ok) throw new Error(`Feedback list error (${response.status})`);
+  return response.json();
+}
+
+export async function adminSetFeedbackStatus(id: string, status: 'new' | 'in_progress' | 'resolved') {
+  const response = await fetch(`${API_URL}/admin/feedback/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ id, status }),
+  });
+  if (!response.ok) throw new Error(`Feedback status error (${response.status})`);
+  return response.json();
+}
+
+export async function adminDeleteFeedback(id: string) {
+  const response = await fetch(`${API_URL}/admin/feedback/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ id }),
+  });
+  if (!response.ok) throw new Error(`Feedback delete error (${response.status})`);
+  return response.json();
+}
+
 export async function adminGetMonitoring(): Promise<MonitoringSummary> {
   const response = await fetch(`${API_URL}/admin/monitoring`, {
     headers: { ...(await authHeaders()) },

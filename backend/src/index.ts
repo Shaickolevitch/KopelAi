@@ -339,6 +339,105 @@ app.get('/admin/monitoring', async (req: Request, res: Response) => {
   }
 });
 
+// ----------------------------------------------------------
+// Feedback: any signed-in user can submit; admin reviews.
+// ----------------------------------------------------------
+const FEEDBACK_SUBJECTS = ['bug', 'feature', 'content', 'billing', 'other'];
+const FEEDBACK_STATUSES = ['new', 'in_progress', 'resolved'];
+
+app.post('/feedback', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (rateLimited(`feedback:${user.id}`, 10, 60_000)) {
+      return res.status(429).json({ error: 'Too many requests, slow down a moment.' });
+    }
+    const { subject, headline, content } = req.body;
+    if (
+      !FEEDBACK_SUBJECTS.includes(subject) ||
+      typeof headline !== 'string' || headline.trim().length === 0 ||
+      typeof content !== 'string' || content.trim().length === 0
+    ) {
+      return res.status(400).json({ error: 'subject, headline and content are required' });
+    }
+    const { error } = await supabaseAdmin.from('feedback').insert({
+      user_id: user.id,
+      email: user.email ?? null,
+      subject,
+      headline: headline.trim().slice(0, 200),
+      content: content.trim().slice(0, 5000),
+    });
+    if (error) throw error;
+    res.json({ status: 'ok' });
+  } catch (err: any) {
+    console.error('feedback submit error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+app.get('/admin/feedback', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user || user.id !== ADMIN_USER_ID) return res.status(403).json({ error: 'Not authorized' });
+    const status = (req.query.status as string) || 'all';
+    const subject = (req.query.subject as string) || 'all';
+    const page = Math.max(0, parseInt((req.query.page as string) || '0', 10) || 0);
+    const pageSize = 25;
+    let q = supabaseAdmin
+      .from('feedback')
+      .select('id, user_id, email, subject, headline, content, status, created_at', { count: 'exact' });
+    if (FEEDBACK_STATUSES.includes(status)) q = q.eq('status', status);
+    if (FEEDBACK_SUBJECTS.includes(subject)) q = q.eq('subject', subject);
+    q = q.order('created_at', { ascending: false }).range(page * pageSize, page * pageSize + pageSize - 1);
+    const { data, count, error } = await q;
+    if (error) throw error;
+
+    const { data: statusRows } = await supabaseAdmin.from('feedback').select('status');
+    const counts: Record<string, number> = { all: 0, new: 0, in_progress: 0, resolved: 0 };
+    (statusRows ?? []).forEach((r: any) => {
+      counts.all += 1;
+      counts[r.status] = (counts[r.status] ?? 0) + 1;
+    });
+
+    res.json({ items: data ?? [], total: count ?? 0, page, pageSize, counts });
+  } catch (err: any) {
+    console.error('admin feedback list error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+app.post('/admin/feedback/status', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user || user.id !== ADMIN_USER_ID) return res.status(403).json({ error: 'Not authorized' });
+    const { id, status } = req.body;
+    if (!id || !FEEDBACK_STATUSES.includes(status)) {
+      return res.status(400).json({ error: 'id and valid status required' });
+    }
+    const { error } = await supabaseAdmin.from('feedback').update({ status }).eq('id', id);
+    if (error) throw error;
+    res.json({ status: 'ok' });
+  } catch (err: any) {
+    console.error('admin feedback status error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+app.post('/admin/feedback/delete', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user || user.id !== ADMIN_USER_ID) return res.status(403).json({ error: 'Not authorized' });
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'id required' });
+    const { error } = await supabaseAdmin.from('feedback').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ status: 'ok' });
+  } catch (err: any) {
+    console.error('admin feedback delete error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
 app.post('/admin/set-tier', async (req: Request, res: Response) => {
   try {
     const user = await getAuthedUser(req);

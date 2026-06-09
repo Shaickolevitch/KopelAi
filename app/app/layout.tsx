@@ -7,6 +7,7 @@ import { useT, useLang } from '@/lib/i18n';
 import { AuthUser, getCurrentUser, signOut } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { identifyUser, resetAnalytics } from '@/lib/analytics';
+import FeedbackButton from './FeedbackButton';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const t = useT();
@@ -110,6 +111,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="flex-1 flex flex-col">{children}</main>
+
+      <FeedbackButton />
 
       <footer className="border-t border-stone-200 dark:border-zinc-800 py-4">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-stone-400 dark:text-zinc-600">
