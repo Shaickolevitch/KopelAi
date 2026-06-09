@@ -10,6 +10,7 @@ const PEOPLE = [
     key: 'kopel',
     photo: '/kopel.jpg',
     contact: '052-583-8686' as string | null,
+    website: null as string | null,
     he: {
       name: 'קופל אליעזר',
       role: 'פסיכואנליטיקאי',
@@ -33,12 +34,14 @@ const PEOPLE = [
     key: 'shai',
     photo: '/shai.jpg',
     contact: '050-204-2507 · shaigian1@gmail.com',
+    website: 'https://www.shaigian.com',
     he: {
       name: 'שי חי גיאן',
       role: 'המייסד והמפתח',
       bio: [
         'אני שי חי גיאן, היזם והמפתח של קופלAI. אני מאמין שמטפלים זקוקים למרחב פרטי לעצור, לחשוב, ולהבין את עצמם — לצד הבנת המטופלים.',
         'לקחתי את הדרך שבה קופל מתבונן בנפש, והפכתי אותה למרחב אישי ומתמשך שכל מטפל יכול לחזור אליו בין מפגש למפגש.',
+        'אני גם מלווה תהליכים אישיים בפורמט שנקרא "חברותא לעשייה".',
       ],
     },
     en: {
@@ -47,6 +50,7 @@ const PEOPLE = [
       bio: [
         'I’m Shai Hay Gian, the founder and developer of KopelAi. I believe therapists need a private space to pause, reflect, and understand themselves — alongside understanding their clients.',
         'I took the way Kopel looks at the psyche and turned it into a personal, ongoing space any therapist can return to between sessions.',
+        'I also accompany personal processes in a format called "Chevruta for Action" (חברותא לעשייה).',
       ],
     },
   },
@@ -111,6 +115,20 @@ export default function AboutUsPage() {
                   <div className="mt-3 text-sm text-stone-500 dark:text-zinc-500">
                     {isHebrew ? 'ליצירת קשר: ' : 'Contact: '}
                     <span dir="ltr" className="inline-block align-middle">{person.contact}</span>
+                  </div>
+                )}
+                {person.website && (
+                  <div className="mt-1 text-sm text-stone-500 dark:text-zinc-500">
+                    {isHebrew ? 'אתר: ' : 'Website: '}
+                    <a
+                      href={person.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      dir="ltr"
+                      className="inline-block align-middle text-indigo-700 dark:text-indigo-400 underline underline-offset-2 hover:opacity-80"
+                    >
+                      {person.website.replace(/^https?:\/\//, '')}
+                    </a>
                   </div>
                 )}
               </div>
