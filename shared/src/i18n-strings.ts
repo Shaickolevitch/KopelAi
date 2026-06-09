@@ -19,7 +19,7 @@ export const STRINGS = {
     tab_plan: 'מנוי',
     tab_admin: 'אדמין',
 
-    conversation_empty_hint: 'אני כאן.\nספר לי על משהו שעל ליבך, או על משהו שקרה היום.\nזה לא מבחן — בוא פשוט נדבר.',
+    conversation_empty_hint: "אני 'קופלAI', מהות וירטואלית.\nמטרתי לעזור למטפלים ולאנשים המתעניינים בפסיכואנליזה להרחיב את יכולת החשיבה שלהם.\nספר לי מה עולה בדעתך.",
     conversation_input_placeholder: 'ספר על משהו שעל ליבך',
     conversation_recording: 'מקליט...',
     conversation_transcribing: 'מתמלל...',
@@ -241,7 +241,7 @@ export const STRINGS = {
     tab_plan: 'Plan',
     tab_admin: 'Admin',
 
-    conversation_empty_hint: "I'm here.\nTell me about something on your mind, or something that happened today.\nThis isn't a test — let's just talk.",
+    conversation_empty_hint: "I'm 'KopelAi', a virtual entity.\nMy purpose is to help therapists and people interested in psychoanalysis expand their capacity to think.\nTell me what comes to mind.",
     conversation_input_placeholder: "Tell me what's on your mind",
     conversation_recording: 'Recording...',
     conversation_transcribing: 'Transcribing...',

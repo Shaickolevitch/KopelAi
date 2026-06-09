@@ -15,6 +15,26 @@ import {
 
 type DisplayMessage = ChatMessage & { id: string; attachmentName?: string };
 
+// Render message text with clickable links (e.g. the Kopel lectures URL).
+function renderWithLinks(text: string) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline underline-offset-2 break-all hover:opacity-80"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+}
+
 // ─── Upgrade nudge modal ───────────────────────────────────────────────────────
 function UpgradeNudgeModal({
   onViewInsights,
@@ -517,7 +537,7 @@ export default function ConversationPage() {
                   ? 'bg-indigo-950 dark:bg-indigo-600 text-white rounded-2xl rounded-br-sm'
                   : 'bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-stone-900 dark:text-zinc-100 rounded-2xl rounded-bl-sm'
               }`}>
-                <p className="whitespace-pre-wrap">{msg.content}</p>
+                <p className="whitespace-pre-wrap">{renderWithLinks(msg.content)}</p>
                 {msg.attachmentName && (
                   <div className="mt-1.5 flex items-center gap-1 text-xs opacity-80">
                     <span>📎</span><span className="truncate">{msg.attachmentName}</span>
