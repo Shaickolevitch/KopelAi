@@ -7,6 +7,25 @@ if (dsn) {
   Sentry.init({
     dsn,
     tracesSampleRate: 0.1,
+    // Filter out non-actionable noise: analytics requests blocked by ad/privacy
+    // extensions (PostHog "Failed to fetch"), and errors thrown by injected
+    // browser-extension scripts — none of these are bugs in KopelAi.
+    ignoreErrors: [
+      'Failed to fetch',
+      'Load failed',
+      'NetworkError when attempting to fetch resource',
+      'TypeError: Failed to fetch',
+      'The network connection was lost',
+    ],
+    denyUrls: [
+      /eu\.i\.posthog\.com/,
+      /eu-assets\.i\.posthog\.com/,
+      /\/scripts\/content\//,
+      /^chrome-extension:\/\//,
+      /^moz-extension:\/\//,
+      /^safari-extension:\/\//,
+      /extensions\//,
+    ],
   });
 }
 
