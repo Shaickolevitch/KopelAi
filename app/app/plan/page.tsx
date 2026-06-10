@@ -117,10 +117,15 @@ export default function PlanPage() {
       <div className="font-semibold text-stone-900 dark:text-zinc-100 mb-1">
         {isPro ? (isHebrew ? 'החלפת תוכנית' : 'Switch plan') : isHebrew ? 'בחירת תוכנית' : 'Choose a plan'}
       </div>
-      <p className="text-sm text-stone-500 dark:text-zinc-400 mb-4">
+      <p className="text-sm text-stone-500 dark:text-zinc-400 mb-2">
         {isHebrew
           ? 'ההבדל בין חינם לפרו: בחינם כל שיחה עומדת בפני עצמה. בפרו קופלAI זוכר אותך לאורך זמן ובונה ניתוח מצטבר.'
           : 'Free vs Pro: on Free each conversation stands alone. On Pro, KopelAi remembers you over time and builds cumulative analysis.'}
+      </p>
+      <p className="text-sm text-stone-600 dark:text-zinc-300 mb-4">
+        {isHebrew
+          ? 'כאילו שילמת על מפגש אחד בחודש — ומקבלים את קופלAI תמיד.'
+          : 'About the price of one therapy hour a month — and you get KopelAi always.'}
       </p>
       <div className="grid sm:grid-cols-3 gap-4">
         {/* Free */}
@@ -157,8 +162,13 @@ export default function PlanPage() {
           <div className="font-semibold text-stone-900 dark:text-zinc-100">
             {isHebrew ? 'חודשי' : 'Monthly'} · {isHebrew ? 'פרו' : 'Pro'}
           </div>
-          <div className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mt-1">
-            ₪25<span className="text-sm font-normal text-stone-500"> / {isHebrew ? 'חודש' : 'mo'}</span>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className="text-2xl font-bold text-stone-900 dark:text-zinc-100">₪99</span>
+            <span className="text-base text-stone-400 dark:text-zinc-600 line-through">₪350</span>
+            <span className="text-sm font-normal text-stone-500"> / {isHebrew ? 'חודש' : 'mo'}</span>
+          </div>
+          <div className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+            {isHebrew ? 'מחיר פיילוט לחברים הראשונים' : 'Pilot price for first members'}
           </div>
           <ul className="mt-3 space-y-1.5 text-sm text-stone-600 dark:text-zinc-400 flex-1">
             <li>✓ {isHebrew ? 'זיכרון לאורך זמן — קופלAI זוכר אותך בין שיחות' : 'Long-term memory — KopelAi remembers you between sessions'}</li>
@@ -186,11 +196,13 @@ export default function PlanPage() {
           <div className="font-semibold text-stone-900 dark:text-zinc-100">
             {isHebrew ? 'שנתי' : 'Annual'} · {isHebrew ? 'פרו' : 'Pro'}
           </div>
-          <div className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mt-1">
-            ₪250<span className="text-sm font-normal text-stone-500"> / {isHebrew ? 'שנה' : 'yr'}</span>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className="text-2xl font-bold text-stone-900 dark:text-zinc-100">₪990</span>
+            <span className="text-base text-stone-400 dark:text-zinc-600 line-through">₪3,500</span>
+            <span className="text-sm font-normal text-stone-500"> / {isHebrew ? 'שנה' : 'yr'}</span>
           </div>
           <div className="text-xs text-indigo-700 dark:text-indigo-300 mt-1">
-            {isHebrew ? '12 חודשים במחיר של 10 · כ-₪21 לחודש' : '12 months for the price of 10 · ~₪21/mo'}
+            {isHebrew ? 'מחיר פיילוט · כ-₪82 לחודש' : 'Pilot price · ~₪82/mo'}
           </div>
           <ul className="mt-3 space-y-1.5 text-sm text-stone-600 dark:text-zinc-400 flex-1">
             <li>✓ {isHebrew ? 'זיכרון לאורך זמן — קופלAI זוכר אותך בין שיחות' : 'Long-term memory — KopelAi remembers you between sessions'}</li>

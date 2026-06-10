@@ -200,11 +200,11 @@ export const STRINGS = {
 
     pricing_monthly_label: 'חודשי',
     pricing_annual_label: 'שנתי',
-    pricing_annual_saving: 'חיסכון של חודשיים',
-    pricing_monthly_price_nis: '₪25 לחודש',
-    pricing_annual_price_nis: '₪250 לשנה',
-    pricing_monthly_price_usd: '$8 לחודש',
-    pricing_annual_price_usd: '$80 לשנה',
+    pricing_annual_saving: 'חיסכון של כחודשיים',
+    pricing_monthly_price_nis: '₪99 לחודש',
+    pricing_annual_price_nis: '₪990 לשנה',
+    pricing_monthly_price_usd: '₪99 לחודש',
+    pricing_annual_price_usd: '₪990 לשנה',
     pricing_cta: 'שדרג עכשיו',
     pricing_cta_loading: 'מכין את הקופה...',
 
@@ -420,11 +420,11 @@ export const STRINGS = {
 
     pricing_monthly_label: 'Monthly',
     pricing_annual_label: 'Annual',
-    pricing_annual_saving: '2 months free',
-    pricing_monthly_price_nis: '₪25 / month',
-    pricing_annual_price_nis: '₪250 / year',
-    pricing_monthly_price_usd: '$8 / month',
-    pricing_annual_price_usd: '$80 / year',
+    pricing_annual_saving: '~2 months free',
+    pricing_monthly_price_nis: '₪99 / month',
+    pricing_annual_price_nis: '₪990 / year',
+    pricing_monthly_price_usd: '₪99 / month',
+    pricing_annual_price_usd: '₪990 / year',
     pricing_cta: 'Upgrade now',
     pricing_cta_loading: 'Preparing checkout...',
 

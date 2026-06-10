@@ -72,9 +72,10 @@ export function verifyWebhookSignature(rawBody: string, signature: string): bool
   return crypto.timingSafeEqual(Buffer.from(expected, 'utf8'), Buffer.from(signature, 'utf8'));
 }
 
+// Pilot pricing: regular ₪350/mo (₪3,500/yr), discounted to ₪99/mo (₪990/yr).
 export const PLANS = {
-  monthly: { priceId: 'price_kHXx2kyMLcJi', nis: 25, usd: 8 },
-  annual:  { priceId: 'price_8VBXWskcTRB_', nis: 250, usd: 80 },
+  monthly: { priceId: 'price_6JY_rosMd47o', nis: 99, usd: 99, regularNis: 350 },
+  annual:  { priceId: 'price_e5Z00_n0qYO9', nis: 990, usd: 990, regularNis: 3500 },
 } as const;
 
 export type PlanKey = keyof typeof PLANS;

@@ -230,7 +230,17 @@ export default function HomePage() {
       {/* Pricing */}
       <section className="px-5 py-16">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold tracking-tight mb-6 text-center">{he ? 'תוכניות' : 'Plans'}</h2>
+          <h2 className="text-2xl font-bold tracking-tight mb-2 text-center">{he ? 'תוכניות' : 'Plans'}</h2>
+          <p className="text-center text-stone-500 dark:text-zinc-400 max-w-lg mx-auto mb-7 text-[15px]">
+            {he
+              ? 'כאילו שילמת על מפגש אחד בחודש — ומקבלים את קופלAI תמיד, מסביב לשעון.'
+              : 'About the price of one therapy hour a month — and you get KopelAi always, around the clock.'}
+          </p>
+          <div className="flex justify-center mb-6">
+            <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300">
+              {he ? '🎉 מחיר פיילוט — לחברים הראשונים בלבד' : '🎉 Pilot price — for our first members only'}
+            </span>
+          </div>
           <div className="grid sm:grid-cols-2 gap-5">
             {/* Free */}
             <div className="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
@@ -247,7 +257,11 @@ export default function HomePage() {
             <div className="rounded-2xl border-2 border-indigo-500 bg-white dark:bg-zinc-900 p-6">
               <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300">{he ? 'הכי פופולרי' : 'Most popular'}</span>
               <div className="font-semibold mt-3">{he ? 'פרו' : 'Pro'}</div>
-              <div className="text-3xl font-bold my-2">{he ? '₪25' : '$8'}<span className="text-sm font-normal text-stone-500 dark:text-zinc-400"> {he ? '/ חודש' : '/ mo'}</span></div>
+              <div className="flex items-baseline gap-2 my-2">
+                <span className="text-3xl font-bold">₪99</span>
+                <span className="text-lg text-stone-400 dark:text-zinc-600 line-through">₪350</span>
+                <span className="text-sm font-normal text-stone-500 dark:text-zinc-400">{he ? '/ חודש' : '/ mo'}</span>
+              </div>
               <ul className="space-y-2 mt-3 text-sm text-stone-700 dark:text-zinc-300">
                 <li>✓ {he ? 'זיכרון מלא בין מפגשים' : 'Full memory between sessions'}</li>
                 <li>✓ {he ? 'תובנות אישיות מתמשכות' : 'Ongoing personal insights'}</li>
@@ -256,7 +270,11 @@ export default function HomePage() {
               <Link href="/auth/signup" className="block text-center mt-5 px-4 py-2.5 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors text-sm font-medium">{he ? 'שדרג לפרו' : 'Upgrade to Pro'}</Link>
             </div>
           </div>
-          <p className="text-xs text-center text-stone-400 dark:text-zinc-600 mt-4">{he ? 'שנתי: ₪250 — כחודשיים מתנה.' : 'Annual: $80 — about two months free.'}</p>
+          <p className="text-xs text-center text-stone-400 dark:text-zinc-600 mt-4">
+            {he
+              ? <>שנתי: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> <span className="line-through">₪3,500</span> — כחודשיים מתנה.</>
+              : <>Annual: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> <span className="line-through">₪3,500</span> — about two months free.</>}
+          </p>
         </div>
       </section>
 
