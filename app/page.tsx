@@ -11,8 +11,8 @@ const PILLARS = [
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
     ),
-    he: { title: 'שיחה', body: 'מדברים כמו עם עמית בכיר — לא טופס, לא מבחן.' },
-    en: { title: 'Conversation', body: 'Talk like you would to a senior colleague — not a form, not a test.' },
+    he: { title: 'שיחה', body: 'מדברים כמו עם עמית בכיר - לא טופס, לא מבחן.' },
+    en: { title: 'Conversation', body: 'Talk like you would to a senior colleague - not a form, not a test.' },
   },
   {
     icon: (
@@ -25,8 +25,8 @@ const PILLARS = [
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16" /></svg>
     ),
-    he: { title: 'תובנות', body: 'הדפוסים, החוזקות ונקודות העיוורון — מוצגים מולך.' },
-    en: { title: 'Insights', body: 'Your patterns, strengths, and blind spots — made visible.' },
+    he: { title: 'תובנות', body: 'הדפוסים, החוזקות ונקודות העיוורון - מוצגים מולך.' },
+    en: { title: 'Insights', body: 'Your patterns, strengths, and blind spots - made visible.' },
   },
 ];
 
@@ -34,20 +34,20 @@ const STEPS = [
   { he: { t: 'מדברים', b: 'משהו מהשבוע, מפגש קשה, מחשבה שחוזרת.' }, en: { t: 'Talk', b: 'Something from your week, a hard session, a recurring thought.' } },
   { he: { t: 'מסיימים שיחה', b: 'לחיצה אחת, וקופלAI מנתח את מה שעלה.' }, en: { t: 'End the session', b: 'One tap, and KopelAi analyzes what came up.' } },
   { he: { t: 'מקבלים ניתוח', b: 'דפוסים, חוזקות ונקודות עיוורון בעמוד הניתוח.' }, en: { t: 'Get analysis', b: 'Patterns, strengths, and blind spots on the Analysis page.' } },
-  { he: { t: 'ממשיכים', b: 'בפעם הבאה קופלAI כבר מכיר אותך — והתמונה מתחדדת.' }, en: { t: 'Continue', b: 'Next time KopelAi already knows you — and the picture sharpens.' } },
+  { he: { t: 'ממשיכים', b: 'בפעם הבאה קופלAI כבר מכיר אותך - והתמונה מתחדדת.' }, en: { t: 'Continue', b: 'Next time KopelAi already knows you - and the picture sharpens.' } },
 ];
 
 const AUDIENCE = [
-  { he: 'מטפל/ת שרוצה להיות מודע/ת יותר לעצמו/ה — לחוזקות, לנקודות העיוורון ולדפוסים שחוזרים.', en: 'A therapist who wants to be more self-aware — of their strengths, blind spots, and recurring patterns.' },
+  { he: 'מטפל/ת שרוצה להיות מודע/ת יותר לעצמו/ה - לחוזקות, לנקודות העיוורון ולדפוסים שחוזרים.', en: 'A therapist who wants to be more self-aware - of their strengths, blind spots, and recurring patterns.' },
   { he: 'מי שמרגיש/ה שהעבודה הטיפולית נוגעת בו/ה, ורוצה מרחב פרטי לעבד את זה.', en: 'Someone who feels the work touches them, and wants a private space to process it.' },
-  { he: 'מי שמחפש/ת צמיחה מקצועית מתמשכת — מרחב אישי, מעבר לכלים לניהול מטופלים.', en: 'Someone after ongoing professional growth — a personal space, beyond client-management tools.' },
+  { he: 'מי שמחפש/ת צמיחה מקצועית מתמשכת - מרחב אישי, מעבר לכלים לניהול מטופלים.', en: 'Someone after ongoing professional growth - a personal space, beyond client-management tools.' },
 ];
 
 const PEOPLE = [
   {
     key: 'kopel', photo: '/kopel.jpg',
-    he: { name: 'קופל אליעזר', role: 'ההשראה', line: 'פסיכואנליטיקאי, יוצר מפעל הלמידה "בין שעה לשעה".' },
-    en: { name: 'Kopel Eliezer', role: 'The inspiration', line: 'A psychoanalyst, creator of the "Hour by Hour" learning project.' },
+    he: { name: 'קופל אליעזר', role: 'ההשראה', line: 'פסיכואנליטיקאי עצמאי, עובד בתל אביב. יוצר "פסיכואנליזה - בין שעה לשעה" - 77 הרצאות פסיכואנליטיות.' },
+    en: { name: 'Kopel Eliezer', role: 'The inspiration', line: 'An independent psychoanalyst based in Tel Aviv. Creator of "Psychoanalysis - Hour by Hour" - 77 psychoanalytic lectures.' },
   },
   {
     key: 'shai', photo: '/shai.jpg',
@@ -57,10 +57,10 @@ const PEOPLE = [
 ];
 
 const FAQ = [
-  { he: { q: 'זה טיפול?', a: 'לא. זה מרחב רפלקציה אישי למטפלים — לא תחליף לטיפול או להדרכה פורמלית.' }, en: { q: 'Is this therapy?', a: "No. It's a personal reflective space for therapists — not a substitute for therapy or formal supervision." } },
+  { he: { q: 'זה טיפול?', a: 'לא. זה מרחב רפלקציה אישי למטפלים - לא תחליף לטיפול או להדרכה פורמלית.' }, en: { q: 'Is this therapy?', a: "No. It's a personal reflective space for therapists - not a substitute for therapy or formal supervision." } },
   { he: { q: 'השיחות שלי פרטיות?', a: 'כן. השיחות מוצפנות ופרטיות, ומומלץ לשמור על אנונימיות של מטופלים.' }, en: { q: 'Are my conversations private?', a: 'Yes. Conversations are encrypted and private; we recommend keeping clients anonymous.' } },
   { he: { q: 'מה ההבדל בין חינם לפרו?', a: 'בחינם אפשר לשוחח; בפרו קופלAI זוכר אותך בין מפגשים ומפיק תובנות אישיות.' }, en: { q: 'Free vs Pro?', a: 'Free lets you talk; Pro remembers you between sessions and builds personal insights.' } },
-  { he: { q: 'מי זה קופל?', a: 'קופל אליעזר — פסיכואנליטיקאי שנתן לאפליקציה את שמה, רוחה ודרך החשיבה שלה.' }, en: { q: 'Who is Kopel?', a: 'Kopel Eliezer — a psychoanalyst who gave the app its name, spirit, and way of thinking.' } },
+  { he: { q: 'מי זה קופל?', a: 'קופל אליעזר - פסיכואנליטיקאי שנתן לאפליקציה את שמה, רוחה ודרך החשיבה שלה.' }, en: { q: 'Who is Kopel?', a: 'Kopel Eliezer - a psychoanalyst who gave the app its name, spirit, and way of thinking.' } },
 ];
 
 export default function HomePage() {
@@ -119,18 +119,18 @@ export default function HomePage() {
           <span className="inline-block text-xs font-medium px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300">
             {he ? 'תומך מפגש למטפלים' : 'A session companion for therapists'}
           </span>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mt-6 mb-4">{he ? 'אני־אתה' : 'I–Thou'}</h1>
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mt-6 mb-4">{he ? 'אני-אתה' : 'I-Thou'}</h1>
           <p className="text-lg italic text-stone-600 dark:text-zinc-300 max-w-lg mx-auto mb-5" style={{ fontFamily: 'Georgia, serif' }}>
             {he ? '״כל חיים אמיתיים הם פגישה.״' : '"All real living is meeting."'}{' '}
-            <span className="text-stone-400 dark:text-zinc-500 not-italic text-base">{he ? '— מרטין בובר' : '— Martin Buber'}</span>
+            <span className="text-stone-400 dark:text-zinc-500 not-italic text-base">{he ? '- מרטין בובר' : '- Martin Buber'}</span>
           </p>
           <p className="text-lg text-stone-500 dark:text-zinc-400 leading-relaxed max-w-xl mx-auto mb-8">
             {he
-              ? 'מרחב רפלקציה פרטי שעוזר לך להגיע למטופל מדויק יותר, קוהרנטי יותר, מעובד יותר — לצד הבנת עצמך כמטפל.'
-              : 'A private reflective space that helps you meet your client more precisely, more coherently, more worked-through — alongside understanding yourself as a therapist.'}
+              ? 'מרחב רפלקציה פרטי שעוזר לך להגיע למטופל מדויק יותר, קוהרנטי יותר, מעובד יותר - לצד הבנת עצמך כמטפל.'
+              : 'A private reflective space that helps you meet your client more precisely, more coherently, more worked-through - alongside understanding yourself as a therapist.'}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/auth/signup" className={primaryBtn}>{he ? 'התחל שיחה — חינם' : 'Start a conversation — free'}</Link>
+            <Link href="/auth/signup" className={primaryBtn}>{he ? 'התחל שיחה - חינם' : 'Start a conversation - free'}</Link>
             <Link href="/auth/signin" className={ghostBtn}>{he ? 'יש לי כבר חשבון' : 'I already have an account'}</Link>
           </div>
           <p className="text-xs text-stone-400 dark:text-zinc-600 mt-5">
@@ -198,8 +198,8 @@ export default function HomePage() {
           <p className="text-sm text-stone-400 dark:text-zinc-600 mb-2">{he ? 'העומק שמאחורי השיחה' : 'The depth behind the conversation'}</p>
           <p className="text-lg leading-relaxed">
             {he
-              ? <>עדשה פסיכואנליטית-אינטרסובייקטיבית, כלים מתוך הלוגותרפיה של פרנקל, ומאגר של <span className="font-semibold">77 הרצאות</span> של קופל אליעזר — שקופלAI ממליץ עליהן כשהן מתאימות לשיחה.</>
-              : <>A psychoanalytic, intersubjective lens, tools from Frankl's logotherapy, and a library of <span className="font-semibold">77 lectures</span> by Kopel Eliezer — which KopelAi recommends when they fit the conversation.</>}
+              ? <>עדשה פסיכואנליטית-אינטרסובייקטיבית, כלים מתוך הלוגותרפיה של פרנקל, ומאגר של <span className="font-semibold">77 הרצאות</span> של קופל אליעזר - שקופלAI ממליץ עליהן כשהן מתאימות לשיחה.</>
+              : <>A psychoanalytic, intersubjective lens, tools from Frankl's logotherapy, and a library of <span className="font-semibold">77 lectures</span> by Kopel Eliezer - which KopelAi recommends when they fit the conversation.</>}
           </p>
         </div>
       </section>
@@ -233,12 +233,12 @@ export default function HomePage() {
           <h2 className="text-2xl font-bold tracking-tight mb-2 text-center">{he ? 'תוכניות' : 'Plans'}</h2>
           <p className="text-center text-stone-500 dark:text-zinc-400 max-w-lg mx-auto mb-7 text-[15px]">
             {he
-              ? 'כאילו שילמת על מפגש אחד בחודש — ומקבלים את קופלAI תמיד, מסביב לשעון.'
-              : 'About the price of one therapy hour a month — and you get KopelAi always, around the clock.'}
+              ? 'כאילו שילמת על מפגש אחד בחודש - ומקבלים את קופלAI תמיד, מסביב לשעון.'
+              : 'About the price of one therapy hour a month - and you get KopelAi always, around the clock.'}
           </p>
           <div className="flex justify-center mb-6">
             <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300">
-              {he ? '🎉 מחיר פיילוט — לחברים הראשונים בלבד' : '🎉 Pilot price — for our first members only'}
+              {he ? '🎉 מחיר פיילוט - לחברים הראשונים בלבד' : '🎉 Pilot price - for our first members only'}
             </span>
           </div>
           <div className="grid sm:grid-cols-2 gap-5">
@@ -272,8 +272,8 @@ export default function HomePage() {
           </div>
           <p className="text-xs text-center text-stone-400 dark:text-zinc-600 mt-4">
             {he
-              ? <>שנתי: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> <span className="line-through">₪3,500</span> — כחודשיים מתנה.</>
-              : <>Annual: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> <span className="line-through">₪3,500</span> — about two months free.</>}
+              ? <>שנתי: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> <span className="line-through">₪3,500</span> - כחודשיים מתנה.</>
+              : <>Annual: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> <span className="line-through">₪3,500</span> - about two months free.</>}
           </p>
         </div>
       </section>
@@ -300,7 +300,7 @@ export default function HomePage() {
       <section className="px-5 py-16 text-center">
         <div className="max-w-xl mx-auto">
           <h2 className="text-2xl font-bold tracking-tight mb-3">{he ? 'תורך לשבת מולך' : 'Your turn to sit across from yourself'}</h2>
-          <p className="text-stone-500 dark:text-zinc-400 mb-6">{he ? 'מי שמחזיק אחרים, ראוי למקום להישען בו. התחל שיחה — חינם.' : 'Those who hold others deserve a place to lean. Start a conversation — free.'}</p>
+          <p className="text-stone-500 dark:text-zinc-400 mb-6">{he ? 'מי שמחזיק אחרים, ראוי למקום להישען בו. התחל שיחה - חינם.' : 'Those who hold others deserve a place to lean. Start a conversation - free.'}</p>
           <Link href="/auth/signup" className={`inline-block ${primaryBtn}`}>{he ? 'התחל שיחה עם קופלAI' : 'Start a conversation with KopelAi'}</Link>
         </div>
       </section>
