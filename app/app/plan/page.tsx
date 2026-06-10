@@ -35,12 +35,12 @@ export default function PlanPage() {
       let msg = e instanceof Error ? e.message : 'Something went wrong';
       if (msg.includes('No billing account')) {
         msg = isHebrew
-          ? 'אין חשבון חיוב — גישת הפרו הוענקה ידנית, לא דרך תשלום. למנויים אמיתיים הכפתור יפתח את ניהול החיוב.'
-          : 'No billing account — your Pro access was granted manually, not via payment. For real subscribers this opens the billing portal.';
+          ? 'אין חשבון חיוב - גישת הפרו הוענקה ידנית, לא דרך תשלום. למנויים אמיתיים הכפתור יפתח את ניהול החיוב.'
+          : 'No billing account - your Pro access was granted manually, not via payment. For real subscribers this opens the billing portal.';
       } else if (msg.includes('CHING_SECRET_KEY') || msg.includes('not configured')) {
         msg = isHebrew
-          ? 'התשלומים עדיין לא פעילים — נפעיל אותם בקרוב. תודה על הסבלנות.'
-          : "Payments aren't live yet — we're turning them on soon. Thanks for your patience.";
+          ? 'התשלומים עדיין לא פעילים - נפעיל אותם בקרוב. תודה על הסבלנות.'
+          : "Payments aren't live yet - we're turning them on soon. Thanks for your patience.";
       }
       setError(msg);
       setBusy(null);
@@ -63,8 +63,8 @@ export default function PlanPage() {
       } else {
         setNotice(
           isHebrew
-            ? 'המנוי בוטל — תישאר פרו עד סוף התקופה הנוכחית, ולא יתבצע חיוב נוסף.'
-            : "Cancelled — you'll stay Pro until the end of the current period, with no further charge."
+            ? 'המנוי בוטל - תישאר פרו עד סוף התקופה הנוכחית, ולא יתבצע חיוב נוסף.'
+            : "Cancelled - you'll stay Pro until the end of the current period, with no further charge."
         );
       }
     } catch (e) {
@@ -113,7 +113,7 @@ export default function PlanPage() {
         </div>
       )}
 
-      {/* Plans — switch directly here */}
+      {/* Plans - switch directly here */}
       <div className="font-semibold text-stone-900 dark:text-zinc-100 mb-1">
         {isPro ? (isHebrew ? 'החלפת תוכנית' : 'Switch plan') : isHebrew ? 'בחירת תוכנית' : 'Choose a plan'}
       </div>
@@ -124,8 +124,8 @@ export default function PlanPage() {
       </p>
       <p className="text-sm text-stone-600 dark:text-zinc-300 mb-4">
         {isHebrew
-          ? 'כאילו שילמת על מפגש אחד בחודש — ומקבלים את קופלAI תמיד.'
-          : 'About the price of one therapy hour a month — and you get KopelAi always.'}
+          ? 'כאילו שילמת על מפגש אחד בחודש - ומקבלים את קופלAI תמיד.'
+          : 'About the price of one therapy hour a month - and you get KopelAi always.'}
       </p>
       <div className="grid sm:grid-cols-3 gap-4">
         {/* Free */}
@@ -142,9 +142,9 @@ export default function PlanPage() {
           <div className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mt-1">₪0</div>
           <ul className="mt-3 space-y-1.5 text-sm text-stone-600 dark:text-zinc-400 flex-1">
             <li>✓ {isHebrew ? 'שיחות ללא הגבלה' : 'Unlimited conversations'}</li>
-            <li className="text-stone-400 dark:text-zinc-600">– {isHebrew ? 'כל שיחה עומדת בפני עצמה' : 'Each conversation stands alone'}</li>
-            <li className="text-stone-400 dark:text-zinc-600">– {isHebrew ? 'ללא זיכרון לאורך זמן' : 'No long-term memory'}</li>
-            <li className="text-stone-400 dark:text-zinc-600">– {isHebrew ? 'ללא ניתוח מצטבר' : 'No cumulative analysis'}</li>
+            <li className="text-stone-400 dark:text-zinc-600">- {isHebrew ? 'כל שיחה עומדת בפני עצמה' : 'Each conversation stands alone'}</li>
+            <li className="text-stone-400 dark:text-zinc-600">- {isHebrew ? 'ללא זיכרון לאורך זמן' : 'No long-term memory'}</li>
+            <li className="text-stone-400 dark:text-zinc-600">- {isHebrew ? 'ללא ניתוח מצטבר' : 'No cumulative analysis'}</li>
           </ul>
           {tier === 'free' ? (
             <div className="mt-4 px-5 py-2.5 rounded-xl border border-indigo-300 dark:border-indigo-800 text-center text-sm font-medium text-indigo-800 dark:text-indigo-300">
@@ -171,7 +171,7 @@ export default function PlanPage() {
             {isHebrew ? 'מחיר פיילוט לחברים הראשונים' : 'Pilot price for first members'}
           </div>
           <ul className="mt-3 space-y-1.5 text-sm text-stone-600 dark:text-zinc-400 flex-1">
-            <li>✓ {isHebrew ? 'זיכרון לאורך זמן — קופלAI זוכר אותך בין שיחות' : 'Long-term memory — KopelAi remembers you between sessions'}</li>
+            <li>✓ {isHebrew ? 'זיכרון לאורך זמן - קופלAI זוכר אותך בין שיחות' : 'Long-term memory - KopelAi remembers you between sessions'}</li>
             <li>✓ {isHebrew ? 'ניתוח מצטבר בעמוד הניתוח' : 'Cumulative analysis on the Analysis page'}</li>
             <li>✓ {isHebrew ? 'שיחות ללא הגבלה' : 'Unlimited conversations'}</li>
           </ul>
@@ -205,7 +205,7 @@ export default function PlanPage() {
             {isHebrew ? 'מחיר פיילוט · כ-₪82 לחודש' : 'Pilot price · ~₪82/mo'}
           </div>
           <ul className="mt-3 space-y-1.5 text-sm text-stone-600 dark:text-zinc-400 flex-1">
-            <li>✓ {isHebrew ? 'זיכרון לאורך זמן — קופלAI זוכר אותך בין שיחות' : 'Long-term memory — KopelAi remembers you between sessions'}</li>
+            <li>✓ {isHebrew ? 'זיכרון לאורך זמן - קופלAI זוכר אותך בין שיחות' : 'Long-term memory - KopelAi remembers you between sessions'}</li>
             <li>✓ {isHebrew ? 'ניתוח מצטבר בעמוד הניתוח' : 'Cumulative analysis on the Analysis page'}</li>
             <li>✓ {isHebrew ? 'שיחות ללא הגבלה' : 'Unlimited conversations'}</li>
             <li>✓ {isHebrew ? 'חיסכון של חודשיים בשנה' : 'Two months free vs monthly'}</li>
@@ -230,7 +230,7 @@ export default function PlanPage() {
           : 'Secure payment via Ching · Tax invoice · Cancel anytime'}
       </p>
 
-      {/* Cancel subscription (Pro only) — one click */}
+      {/* Cancel subscription (Pro only) - one click */}
       {isPro && (
         <div className="mt-6 text-center">
           <button

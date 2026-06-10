@@ -14,7 +14,7 @@ export default function AnalyticsProvider({ children }: { children: React.ReactN
 
   useEffect(() => {
     if (initialized) return;
-    // PostHog project API key. This is a PUBLIC (publishable) client key — it is
+    // PostHog project API key. This is a PUBLIC (publishable) client key - it is
     // exposed in the browser bundle by design, so it's safe to keep in code. An
     // env var overrides it if ever needed.
     const key = process.env.NEXT_PUBLIC_POSTHOG_KEY || 'phc_xY6frLwx3HE9MepYsRoo7WWstaoZrknK4fYfDWWkjTEx';
@@ -24,7 +24,7 @@ export default function AnalyticsProvider({ children }: { children: React.ReactN
       person_profiles: 'identified_only',
       capture_pageview: false, // captured manually below for client navigation
       disable_session_recording: true, // privacy: no screen replay of conversations
-      autocapture: true, // clicks/navigation only — input values are masked by default
+      autocapture: true, // clicks/navigation only - input values are masked by default
     });
     initialized = true;
   }, []);

@@ -132,7 +132,7 @@ export default function ResetPasswordConfirmPage() {
     );
   }
 
-  /* ── Ready — show form ── */
+  /* ── Ready - show form ── */
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-12 bg-stone-50 dark:bg-zinc-950">
       <div className="w-full max-w-md">

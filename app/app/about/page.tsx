@@ -2,9 +2,9 @@
 
 import { useLang } from '@/lib/i18n';
 
-// The two people behind KopelAi — expanded version of the homepage section.
+// The two people behind KopelAi - expanded version of the homepage section.
 // To add real photos: drop the image files into /public (e.g. /public/kopel.jpg,
-// /public/shai.jpg) and set `photo` below. Edit the bios freely — they're placeholders.
+// /public/shai.jpg) and set `photo` below. Edit the bios freely - they're placeholders.
 const PEOPLE = [
   {
     key: 'kopel',
@@ -16,8 +16,8 @@ const PEOPLE = [
       role: 'פסיכואנליטיקאי',
       bio: [
         'אני קופל אליעזר, אנליטיקאי עצמאי, הפועל מתוך הבנה שהאדם מתגלה ומתעצב בתוך קשר חי, נוכח ומורכב.',
-        'עבודתי — כמטפל, כמדריך וכיוצר תוכן — נשענת על הפסיכואנליזה הבין-אישית, ומתמקדת בדיאלוג פתוח שבו הקשר קודם לפרשנות, הפעולה הטיפולית חשובה, והנוכחות היא חלק מהטכניקה.',
-        'אני עובד סוציאלי קליני, מקבל בקליניקה שלי במרכז תל אביב, ברחוב בן יהודה 32, ומוביל מרחבי למידה מקצועיים — ביניהם מפעל הלמידה בפייסבוק "פסיכואנליזה בין שעה לשעה".',
+        'עבודתי - כמטפל, כמדריך וכיוצר תוכן - נשענת על הפסיכואנליזה הבין-אישית, ומתמקדת בדיאלוג פתוח שבו הקשר קודם לפרשנות, הפעולה הטיפולית חשובה, והנוכחות היא חלק מהטכניקה.',
+        'אני עובד סוציאלי קליני, מקבל בקליניקה שלי במרכז תל אביב, ברחוב בן יהודה 32, ומוביל מרחבי למידה מקצועיים - ביניהם מפעל הלמידה בפייסבוק "פסיכואנליזה בין שעה לשעה".',
       ],
     },
     en: {
@@ -25,8 +25,8 @@ const PEOPLE = [
       role: 'Psychoanalyst',
       bio: [
         'I’m Kopel Eliezer, an independent analyst, working from the understanding that a person is revealed and shaped within a living, present, and complex relationship.',
-        'My work — as a therapist, supervisor, and content creator — rests on interpersonal psychoanalysis, and centers on an open dialogue in which the relationship comes before interpretation, the therapeutic act matters, and presence is part of the technique.',
-        'I’m a clinical social worker, seeing clients at my clinic in central Tel Aviv, on 32 Ben Yehuda St., and I lead professional learning spaces — among them the Facebook learning project "Psychoanalysis, Hour by Hour".',
+        'My work - as a therapist, supervisor, and content creator - rests on interpersonal psychoanalysis, and centers on an open dialogue in which the relationship comes before interpretation, the therapeutic act matters, and presence is part of the technique.',
+        'I’m a clinical social worker, seeing clients at my clinic in central Tel Aviv, on 32 Ben Yehuda St., and I lead professional learning spaces - among them the Facebook learning project "Psychoanalysis, Hour by Hour".',
       ],
     },
   },
@@ -39,7 +39,7 @@ const PEOPLE = [
       name: 'שי חי גיאן',
       role: 'המייסד והמפתח',
       bio: [
-        'אני שי חי גיאן, היזם והמפתח של קופלAI. אני מאמין שמטפלים זקוקים למרחב פרטי לעצור, לחשוב, ולהבין את עצמם — לצד הבנת המטופלים.',
+        'אני שי חי גיאן, היזם והמפתח של קופלAI. אני מאמין שמטפלים זקוקים למרחב פרטי לעצור, לחשוב, ולהבין את עצמם - לצד הבנת המטופלים.',
         'לקחתי את הדרך שבה קופל מתבונן בנפש, והפכתי אותה למרחב אישי ומתמשך שכל מטפל יכול לחזור אליו בין מפגש למפגש.',
         'אני גם מלווה תהליכים אישיים בפורמט שנקרא "חברותא לעשייה".',
       ],
@@ -48,7 +48,7 @@ const PEOPLE = [
       name: 'Shai Hay Gian',
       role: 'Founder & developer',
       bio: [
-        'I’m Shai Hay Gian, the founder and developer of KopelAi. I believe therapists need a private space to pause, reflect, and understand themselves — alongside understanding their clients.',
+        'I’m Shai Hay Gian, the founder and developer of KopelAi. I believe therapists need a private space to pause, reflect, and understand themselves - alongside understanding their clients.',
         'I took the way Kopel looks at the psyche and turned it into a personal, ongoing space any therapist can return to between sessions.',
         'I also accompany personal processes in a format called "Chevruta for Action" (חברותא לעשייה).',
       ],
@@ -75,8 +75,8 @@ export default function AboutUsPage() {
           {isHebrew ? 'תומך מפגש' : 'Session support'}
         </span>
         {isHebrew
-          ? ' — קופלAI עוזר לך כמטפל להגיע למטופל מדויק יותר, קוהרנטי יותר, מעובד יותר.'
-          : ' — KopelAi helps you, as a therapist, meet your client more precisely, more coherently, more worked-through.'}
+          ? ' - קופלAI עוזר לך כמטפל להגיע למטופל מדויק יותר, קוהרנטי יותר, מעובד יותר.'
+          : ' - KopelAi helps you, as a therapist, meet your client more precisely, more coherently, more worked-through.'}
       </p>
 
       <div className="space-y-10">

@@ -16,8 +16,8 @@ export default function StorePage() {
       </h1>
       <p className="text-stone-500 dark:text-zinc-400 mb-8">
         {isHebrew
-          ? '"בין שעה לשעה" — הרצאות וידאו קצרות על מושגי יסוד בפסיכואנליזה, מאת קופלAI אליעזר.'
-          : '"Between Hour and Hour" — short video lectures on core psychoanalytic concepts, by Kopel Eliezer.'}
+          ? '"בין שעה לשעה" - הרצאות וידאו קצרות על מושגי יסוד בפסיכואנליזה, מאת קופלAI אליעזר.'
+          : '"Between Hour and Hour" - short video lectures on core psychoanalytic concepts, by Kopel Eliezer.'}
       </p>
 
       <div className="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 text-center shadow-sm">

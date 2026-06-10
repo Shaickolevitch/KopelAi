@@ -108,7 +108,7 @@ export default function FeedbackButton() {
                   value={headline}
                   onChange={(e) => setHeadline(e.target.value)}
                   maxLength={200}
-                  placeholder={isHebrew ? 'במשפט אחד — על מה מדובר?' : 'In one line — what is it about?'}
+                  placeholder={isHebrew ? 'במשפט אחד - על מה מדובר?' : 'In one line - what is it about?'}
                   className="w-full mb-3 px-3 py-2 rounded-lg border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm text-stone-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-indigo-900/20 dark:focus:ring-indigo-500/30"
                 />
 

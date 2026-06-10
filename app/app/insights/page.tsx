@@ -94,7 +94,7 @@ export default function InsightsPage() {
 
   const insightByCategory = new Map<string, Insight>();
   insights.forEach((ins) => insightByCategory.set(ins.category, ins));
-  // Only show insights once there's real activity — avoids stale text at 0 sessions.
+  // Only show insights once there's real activity - avoids stale text at 0 sessions.
   const hasActivity = !!stats && (stats.conversation_count > 0 || stats.message_count > 0);
   const hasAnyInsights = hasActivity && (insights.length > 0 || (opener && opener.trim().length > 0));
 
@@ -111,7 +111,7 @@ export default function InsightsPage() {
     );
   }
 
-  // Analysis is a Pro feature — free users see a locked, greyed-out state.
+  // Analysis is a Pro feature - free users see a locked, greyed-out state.
   if (!isPro) {
     return (
       <div className="flex-1 flex items-center justify-center px-6 py-12">
@@ -127,8 +127,8 @@ export default function InsightsPage() {
           </h2>
           <p className="text-stone-500 dark:text-zinc-500 leading-relaxed mb-6 text-sm">
             {language === 'he'
-              ? 'בתוכנית פרו, קופלAI זוכר אותך בין מפגשים ומפיק כאן תובנות אישיות — הדפוסים שלך, החוזקות, ונקודות העיוורון.'
-              : 'With Pro, KopelAi remembers you between sessions and builds your personal insights here — your patterns, strengths, and blind spots.'}
+              ? 'בתוכנית פרו, קופלAI זוכר אותך בין מפגשים ומפיק כאן תובנות אישיות - הדפוסים שלך, החוזקות, ונקודות העיוורון.'
+              : 'With Pro, KopelAi remembers you between sessions and builds your personal insights here - your patterns, strengths, and blind spots.'}
           </p>
           <Link
             href="/app/plan"
@@ -240,7 +240,7 @@ function StatCell({ value, label }: { value: number | string; label: string }) {
 }
 
 function formatRelativeTime(iso: string | null, t: ReturnType<typeof useT>): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const diffMs = Date.now() - new Date(iso).getTime();
   const diffMin = Math.floor(diffMs / 60000);
   const diffHr = Math.floor(diffMs / 3600000);

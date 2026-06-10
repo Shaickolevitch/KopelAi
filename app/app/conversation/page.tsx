@@ -150,7 +150,7 @@ function getNudge(count: number, isHebrew: boolean): Nudge | null {
       egg: true,
       text: isHebrew
         ? '128 הודעות בחינם?! טוב, ניצחת. קופלAI מתרשם עמוקות מהעקשנות שלך 🏆 אולי תשדרג כבר, ולו רק כדי שלא ירגיש מנוצל?'
-        : "128 free messages?! Okay, you win. Kopel is genuinely impressed by your stamina 🏆 Maybe upgrade now — if only so he doesn't feel used?",
+        : "128 free messages?! Okay, you win. Kopel is genuinely impressed by your stamina 🏆 Maybe upgrade now - if only so he doesn't feel used?",
       cta: isHebrew ? 'בסדר, שכנעת' : 'Fine, you got me',
     };
   }
@@ -159,8 +159,8 @@ function getNudge(count: number, isHebrew: boolean): Nudge | null {
       level: 64,
       egg: false,
       text: isHebrew
-        ? '64 הודעות. קופלAI מתחיל להתקשר אליך — חבל שהוא ישכח את הכול ברגע שתסגור. בפרו הוא זוכר.'
-        : "64 messages in. Kopel's getting a little attached — shame he'll forget all of it the moment you close the tab. Pro lets him remember.",
+        ? '64 הודעות. קופלAI מתחיל להתקשר אליך - חבל שהוא ישכח את הכול ברגע שתסגור. בפרו הוא זוכר.'
+        : "64 messages in. Kopel's getting a little attached - shame he'll forget all of it the moment you close the tab. Pro lets him remember.",
       cta: isHebrew ? 'שדרג לפרו' : 'Upgrade to Pro',
     };
   }
@@ -169,8 +169,8 @@ function getNudge(count: number, isHebrew: boolean): Nudge | null {
       level: 32,
       egg: false,
       text: isHebrew
-        ? 'עוד שיחה ארוכה, ועדיין בתוכנית החינמית. בפרו לא תתחיל מאפס בכל פעם — קופלAI ימשיך מאיפה שהפסקתם.'
-        : "Another long session, still on the free plan. With Pro you won't start from scratch each time — Kopel picks up where you left off.",
+        ? 'עוד שיחה ארוכה, ועדיין בתוכנית החינמית. בפרו לא תתחיל מאפס בכל פעם - קופלAI ימשיך מאיפה שהפסקתם.'
+        : "Another long session, still on the free plan. With Pro you won't start from scratch each time - Kopel picks up where you left off.",
       cta: isHebrew ? 'שדרג לפרו' : 'Upgrade to Pro',
     };
   }
@@ -179,8 +179,8 @@ function getNudge(count: number, isHebrew: boolean): Nudge | null {
       level: 16,
       egg: false,
       text: isHebrew
-        ? 'אם השיחה מועילה לך — בתוכנית פרו קופלAI זוכר אותך בין מפגשים ומפיק תובנות אישיות.'
-        : "If you're finding this valuable — Pro lets Kopel remember you between sessions and build personal insights.",
+        ? 'אם השיחה מועילה לך - בתוכנית פרו קופלAI זוכר אותך בין מפגשים ומפיק תובנות אישיות.'
+        : "If you're finding this valuable - Pro lets Kopel remember you between sessions and build personal insights.",
       cta: isHebrew ? 'שדרג לפרו' : 'Upgrade to Pro',
     };
   }
@@ -404,7 +404,7 @@ export default function ConversationPage() {
       // Insert the assistant bubble empty, then type out the response.
       const assistantId = crypto.randomUUID();
       setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '' }]);
-      // Stop the "thinking" dots immediately — the empty bubble + typing animation takes over.
+      // Stop the "thinking" dots immediately - the empty bubble + typing animation takes over.
       setSending(false);
       await typeOutAssistantMessage(assistantId, response.text);
       await persistMessage(convId, user.id, 'assistant', response.text);
@@ -425,7 +425,7 @@ export default function ConversationPage() {
       if (tier === 'free') {
         setShowUpgradeNudge(true);
       } else {
-        // Analysis is ready — take Pro users straight to the Analysis page.
+        // Analysis is ready - take Pro users straight to the Analysis page.
         router.push('/app/insights');
       }
     } catch (err) {
@@ -522,8 +522,8 @@ export default function ConversationPage() {
             </svg>
             <span>
               {language === 'he'
-                ? 'זו הגרסה החינמית — אם תעזוב את העמוד, השיחה תימחק.'
-                : 'This is the free version — if you leave the page, the conversation will be erased.'}
+                ? 'זו הגרסה החינמית - אם תעזוב את העמוד, השיחה תימחק.'
+                : 'This is the free version - if you leave the page, the conversation will be erased.'}
             </span>
           </div>
         )}

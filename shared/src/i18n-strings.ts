@@ -1,6 +1,6 @@
 /**
  * Shared i18n strings between mobile and web.
- * Pure data — no React, no platform code. Each app wraps these in its
+ * Pure data - no React, no platform code. Each app wraps these in its
  * own Provider/Context with its own RTL handling.
  */
 
@@ -23,8 +23,8 @@ export const STRINGS = {
     conversation_input_placeholder: 'ספר על משהו שעל ליבך',
     conversation_recording: 'מקליט...',
     conversation_transcribing: 'מתמלל...',
-    conversation_end_session: 'סיימתי לעכשיו — בוא ננתח',
-    conversation_end_session_hint: 'כשבא לך לעצור — לחצו "סיימתי לעכשיו — בוא ננתח", ונראה יחד מה עלה',
+    conversation_end_session: 'סיימתי לעכשיו - בוא ננתח',
+    conversation_end_session_hint: 'כשבא לך לעצור - לחצו "סיימתי לעכשיו - בוא ננתח", ונראה יחד מה עלה',
     conversation_end_confirm_title: 'לסיים את השיחה?',
     conversation_end_confirm_body: 'אשמור על מה שדיברנו, ובפעם הבאה נמשיך מכאן',
     conversation_end_cancel: 'ביטול',
@@ -42,7 +42,7 @@ export const STRINGS = {
     insights_card_empty: 'קופלAI עוד לומד אותך כאן',
     insights_empty_title: 'הדף הזה מתמלא ככל שאתה מדבר',
     insights_empty_body:
-      'תהיה לך שיחה עם קופלAI, ואז תסיים את הסשן. מה שקופלAI שם לב אליו אצלך יופיע כאן — הדפוסים שלך, מה ממלא לך אנרגיה, מה אתה חוזר אליו. כל תובנה תוכל להצביע לרגע שממנו היא נולדה.',
+      'תהיה לך שיחה עם קופלAI, ואז תסיים את הסשן. מה שקופלAI שם לב אליו אצלך יופיע כאן - הדפוסים שלך, מה ממלא לך אנרגיה, מה אתה חוזר אליו. כל תובנה תוכל להצביע לרגע שממנו היא נולדה.',
     insights_empty_footer: 'אין מבחן. אין פרופיל למלא. פשוט תדבר, ותן לדף הזה לגדול.',
 
     time_now: 'עכשיו',
@@ -154,22 +154,22 @@ export const STRINGS = {
 
     save_prompt_1_title: 'שיחה נחמדה.',
     save_prompt_1_body:
-      'כדי לשמור את מה שאתם בונים יחד — צור חשבון. ככה תוכל להמשיך מהמכשיר הזה או מאחר.',
+      'כדי לשמור את מה שאתם בונים יחד - צור חשבון. ככה תוכל להמשיך מהמכשיר הזה או מאחר.',
     save_prompt_1_emoji: '😐',
 
     save_prompt_2_title: 'קופלAI מתחילה ללמוד אותך.',
     save_prompt_2_body:
-      'עוד קצת והפרופיל שלך יתחיל לקבל צורה. בלי חשבון — זה רק כאן, על המכשיר הזה. תרצה לשמור את זה כדי שזה יישאר?',
+      'עוד קצת והפרופיל שלך יתחיל לקבל צורה. בלי חשבון - זה רק כאן, על המכשיר הזה. תרצה לשמור את זה כדי שזה יישאר?',
     save_prompt_2_emoji: '😕',
 
     save_prompt_3_title: 'אתה משקיע פה זמן ומחשבה.',
     save_prompt_3_body:
-      'קופלAI כבר מבינה דברים עליך — דפוסים, מה שחשוב לך, מה שחוזר. בלי חשבון, אם תאבד את הטלפון או תאפס את האפליקציה — הכל ייעלם. אנחנו ממליצים לשמור עכשיו.',
+      'קופלAI כבר מבינה דברים עליך - דפוסים, מה שחשוב לך, מה שחוזר. בלי חשבון, אם תאבד את הטלפון או תאפס את האפליקציה - הכל ייעלם. אנחנו ממליצים לשמור עכשיו.',
     save_prompt_3_emoji: '😔',
 
     save_prompt_4_title: 'אתה כבר באמת בפנים.',
     save_prompt_4_body:
-      'קופלAI מכירה אותך כבר. דפוסים, חוזקות, פחדים, חלומות. כל זה — רק על המכשיר הזה. בלי חשבון, יום אחד זה ייעלם. זה הרגע לשמור את החשבון שלך.',
+      'קופלAI מכירה אותך כבר. דפוסים, חוזקות, פחדים, חלומות. כל זה - רק על המכשיר הזה. בלי חשבון, יום אחד זה ייעלם. זה הרגע לשמור את החשבון שלך.',
     save_prompt_4_emoji: '😢',
 
     save_prompt_5_title: 'בסדר, הבנתי.',
@@ -196,7 +196,7 @@ export const STRINGS = {
     settings_upgrade_subtitle: 'קופלAI יזכור אותך בין סשנים',
     settings_manage_subscription: 'ניהול מנוי',
     settings_manage_subscription_subtitle: 'ביטול, החלפת כרטיס אשראי ועוד',
-    settings_subscription_pro: 'מנוי פעיל — קופלAI פרו',
+    settings_subscription_pro: 'מנוי פעיל - קופלAI פרו',
 
     pricing_monthly_label: 'חודשי',
     pricing_annual_label: 'שנתי',
@@ -247,8 +247,8 @@ export const STRINGS = {
     conversation_input_placeholder: "Tell me what's on your mind",
     conversation_recording: 'Recording...',
     conversation_transcribing: 'Transcribing...',
-    conversation_end_session: "I'm done for now — let's analyze",
-    conversation_end_session_hint: 'Whenever you want to stop — tap "I\'m done for now — let\'s analyze" and we\'ll look at what came up together',
+    conversation_end_session: "I'm done for now - let's analyze",
+    conversation_end_session_hint: 'Whenever you want to stop - tap "I\'m done for now - let\'s analyze" and we\'ll look at what came up together',
     conversation_end_confirm_title: 'End this session?',
     conversation_end_confirm_body:
       "I'll keep what we talked about, and we'll pick up here next time.",
@@ -268,7 +268,7 @@ export const STRINGS = {
     insights_card_empty: "KopelAi doesn't have enough to say about this yet.",
     insights_empty_title: 'This page fills in as you talk.',
     insights_empty_body:
-      "Have a conversation with KopelAi, then end the session. What it notices about you will show up here — your patterns, what energizes you, what you keep coming back to. Each observation will cite the moment it came from.",
+      "Have a conversation with KopelAi, then end the session. What it notices about you will show up here - your patterns, what energizes you, what you keep coming back to. Each observation will cite the moment it came from.",
     insights_empty_footer:
       "There's no test, no profile to fill in. Just talk, and let this page grow.",
 
@@ -374,7 +374,7 @@ export const STRINGS = {
 
     save_prompt_1_title: 'A nice conversation.',
     save_prompt_1_body:
-      "To save what you're building together — create an account. You'll be able to continue from this device or another.",
+      "To save what you're building together - create an account. You'll be able to continue from this device or another.",
     save_prompt_1_emoji: '😐',
 
     save_prompt_2_title: 'KopelAi is starting to learn you.',
@@ -384,12 +384,12 @@ export const STRINGS = {
 
     save_prompt_3_title: "You're putting in real time and thought here.",
     save_prompt_3_body:
-      'KopelAi already understands things about you — patterns, what matters, what keeps coming back. Without an account, if you lose this phone or reset the app — it all goes. We recommend saving now.',
+      'KopelAi already understands things about you - patterns, what matters, what keeps coming back. Without an account, if you lose this phone or reset the app - it all goes. We recommend saving now.',
     save_prompt_3_emoji: '😔',
 
     save_prompt_4_title: "You're really in this now.",
     save_prompt_4_body:
-      'KopelAi knows you already. Patterns, strengths, fears, dreams. All of that — only on this device. Without an account, one day it disappears. This is the moment to save your account.',
+      'KopelAi knows you already. Patterns, strengths, fears, dreams. All of that - only on this device. Without an account, one day it disappears. This is the moment to save your account.',
     save_prompt_4_emoji: '😢',
 
     save_prompt_5_title: 'OK, I get it.',
@@ -416,7 +416,7 @@ export const STRINGS = {
     settings_upgrade_subtitle: 'KopelAi remembers you across sessions',
     settings_manage_subscription: 'Manage subscription',
     settings_manage_subscription_subtitle: 'Cancel, update payment method, and more',
-    settings_subscription_pro: 'Active subscription — KopelAi Pro',
+    settings_subscription_pro: 'Active subscription - KopelAi Pro',
 
     pricing_monthly_label: 'Monthly',
     pricing_annual_label: 'Annual',

@@ -170,7 +170,7 @@ export default function AdminUsers() {
               users.map((u) => (
                 <tr key={u.id} className="border-t border-stone-100 dark:border-zinc-800">
                   <td className="py-2.5 px-2 text-stone-900 dark:text-zinc-100">
-                    <span className="truncate inline-block max-w-[240px] align-middle">{u.email ?? '—'}</span>
+                    <span className="truncate inline-block max-w-[240px] align-middle">{u.email ?? '-'}</span>
                     {u.deleted_at && (
                       <span className="ms-2 text-xs text-rose-500">{isHebrew ? '(נמחק)' : '(deleted)'}</span>
                     )}
@@ -222,7 +222,7 @@ export default function AdminUsers() {
       {/* Pagination */}
       <div className="flex items-center justify-between mt-4 text-sm text-stone-500 dark:text-zinc-500">
         <span>
-          {isHebrew ? `מציג ${from}–${to} מתוך ${total}` : `Showing ${from}–${to} of ${total}`}
+          {isHebrew ? `מציג ${from}-${to} מתוך ${total}` : `Showing ${from}-${to} of ${total}`}
         </span>
         <div className="flex gap-2">
           <button

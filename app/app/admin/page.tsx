@@ -32,11 +32,11 @@ function fileKind(name: string): string {
   if (lower.endsWith('.docx')) return 'Word';
   if (lower.endsWith('.txt')) return 'Text';
   if (lower.endsWith('.md')) return 'Markdown';
-  return '—';
+  return '-';
 }
 
 function formatSize(bytes: number | null): string {
-  if (!bytes || bytes <= 0) return '—';
+  if (!bytes || bytes <= 0) return '-';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -266,8 +266,8 @@ export default function AdminPage() {
       tab: isHebrew ? 'התנהגות' : 'Behavior',
       title: isHebrew ? 'התנהגות משתמשים' : 'User behavior',
       desc: isHebrew
-        ? 'מי עושה מה באתר — אירועים, משפכים, שימור ומסעות משתמש. דרך PostHog.'
-        : 'Who does what — events, funnels, retention, and user journeys. Via PostHog.',
+        ? 'מי עושה מה באתר - אירועים, משפכים, שימור ומסעות משתמש. דרך PostHog.'
+        : 'Who does what - events, funnels, retention, and user journeys. Via PostHog.',
       url: 'https://eu.posthog.com',
       cta: 'PostHog',
     },
@@ -286,8 +286,8 @@ export default function AdminPage() {
       tab: isHebrew ? 'שגיאות' : 'Errors',
       title: isHebrew ? 'שגיאות וקריסות' : 'Errors & crashes',
       desc: isHebrew
-        ? 'שגיאות באתר ובשרת — מתי, איפה, וכמה משתמשים נפגעו. דרך Sentry.'
-        : 'Front-end and server errors — when, where, and how many users were affected. Via Sentry.',
+        ? 'שגיאות באתר ובשרת - מתי, איפה, וכמה משתמשים נפגעו. דרך Sentry.'
+        : 'Front-end and server errors - when, where, and how many users were affected. Via Sentry.',
       url: 'https://sentry.io',
       cta: 'Sentry',
     },
@@ -296,8 +296,8 @@ export default function AdminPage() {
       tab: isHebrew ? 'נתונים' : 'Data',
       title: isHebrew ? 'מסד הנתונים' : 'Database',
       desc: isHebrew
-        ? 'הנתונים הגולמיים — משתמשים, שיחות ומנויים. שאילתות SQL ולוגים. דרך Supabase.'
-        : 'The raw data — users, conversations, and subscriptions. SQL queries & logs. Via Supabase.',
+        ? 'הנתונים הגולמיים - משתמשים, שיחות ומנויים. שאילתות SQL ולוגים. דרך Supabase.'
+        : 'The raw data - users, conversations, and subscriptions. SQL queries & logs. Via Supabase.',
       url: 'https://supabase.com/dashboard/project/yxioeeuzhdknhpbjjzgq',
       cta: 'Supabase',
     },
@@ -559,7 +559,7 @@ export default function AdminPage() {
               <p className="text-sm text-stone-400 dark:text-zinc-600 mb-4">{isHebrew ? 'טוען נתונים…' : 'Loading…'}</p>
             )}
 
-            {/* Data — own database overview */}
+            {/* Data - own database overview */}
             {monTab === 'data' && monitoring?.supabase && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
                 {[
@@ -578,7 +578,7 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Data — 14-day trend charts */}
+            {/* Data - 14-day trend charts */}
             {monTab === 'data' && monitoring?.supabase?.daily && monitoring.supabase.daily.length > 0 && (
               <div className="grid sm:grid-cols-3 gap-3 mb-5">
                 <MiniBars
@@ -602,7 +602,7 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Behavior — PostHog */}
+            {/* Behavior - PostHog */}
             {monTab === 'behavior' && monitoring && (
               monitoring.posthog.configured ? (
                 monitoring.posthog.error ? (
@@ -630,7 +630,7 @@ export default function AdminPage() {
               ) : null
             )}
 
-            {/* Traffic — pageviews from PostHog */}
+            {/* Traffic - pageviews from PostHog */}
             {monTab === 'traffic' && monitoring && (
               monitoring.posthog.configured && !monitoring.posthog.error ? (
                 <div className="mb-5">
@@ -655,7 +655,7 @@ export default function AdminPage() {
               ) : null
             )}
 
-            {/* Errors — Sentry */}
+            {/* Errors - Sentry */}
             {monTab === 'errors' && monitoring && (
               monitoring.sentry.configured ? (
                 monitoring.sentry.error ? (

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyWebhookSignature } from '@/lib/ching';
 
-// Lazy — createClient runs at request time, not build time, so the
+// Lazy - createClient runs at request time, not build time, so the
 // service role key is available when it's actually needed.
 function adminSupabase() {
   return createClient(
