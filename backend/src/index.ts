@@ -369,6 +369,22 @@ app.get('/admin/monitoring', async (req: Request, res: Response) => {
   }
 });
 
+// Rich analytics (growth, engagement, retention cohorts, funnel, revenue).
+app.get('/admin/analytics', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user || user.id !== ADMIN_USER_ID) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    const { data, error } = await supabaseAdmin.rpc('admin_analytics');
+    if (error) throw error;
+    res.json(data ?? {});
+  } catch (err: any) {
+    console.error('Admin analytics error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
 // ----------------------------------------------------------
 // Feedback: any signed-in user can submit; admin reviews.
 // ----------------------------------------------------------
@@ -724,26 +740,26 @@ app.post('/chat', async (req: Request, res: Response) => {
     const proFeatures = paidPro || onTrial; // memory + insights
     const dailyLimit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;
 
-    if (!paidPro) {
-      const { data: count, error: bumpErr } = await supabaseAdmin.rpc('bump_daily_usage', {
-        p_user: userId,
-      });
-      if (bumpErr) {
-        console.error('bump_daily_usage failed:', bumpErr);
-        // Fail open: never block a paying-customer-to-be on an infra hiccup.
-      } else if (typeof count === 'number') {
-        if (count > dailyLimit) {
-          return res.status(429).json({
-            error: 'Daily message limit reached.',
-            code: 'daily_limit_reached',
-            limit: dailyLimit,
-            trial: onTrial,
-          });
-        }
-        remaining = Math.max(0, dailyLimit - count);
-        // The final allowed message of the day winds down gracefully.
-        windDown = count === dailyLimit;
+    // Always record activity (daily_usage is our canonical, session-wipe-proof
+    // activity log used by analytics). Only ENFORCE the cap for non-paid users.
+    const { data: count, error: bumpErr } = await supabaseAdmin.rpc('bump_daily_usage', {
+      p_user: userId,
+    });
+    if (bumpErr) {
+      console.error('bump_daily_usage failed:', bumpErr);
+      // Fail open: never block a paying-customer-to-be on an infra hiccup.
+    } else if (!paidPro && typeof count === 'number') {
+      if (count > dailyLimit) {
+        return res.status(429).json({
+          error: 'Daily message limit reached.',
+          code: 'daily_limit_reached',
+          limit: dailyLimit,
+          trial: onTrial,
+        });
       }
+      remaining = Math.max(0, dailyLimit - count);
+      // The final allowed message of the day winds down gracefully.
+      windDown = count === dailyLimit;
     }
 
     const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user')?.content;

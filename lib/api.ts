@@ -314,6 +314,36 @@ export async function adminGetMonitoring(): Promise<MonitoringSummary> {
   return response.json();
 }
 
+// ── Admin: rich analytics dashboard ─────────────────────────────────────────
+export type AnalyticsData = {
+  kpis: {
+    total_users: number;
+    pro_users: number;
+    trial_users: number;
+    consented_users: number;
+    dau: number;
+    wau: number;
+    mau: number;
+    new_users_7d: number;
+    new_users_30d: number;
+    messages_30d: number;
+    trials_started: number;
+  };
+  daily: { day: string; new_users: number; active_users: number; messages: number; cumulative_users: number }[];
+  weekly: { week: string; active: number; new: number; returning: number; resurrected: number }[];
+  cohorts: { cohort: string; size: number; retention: { offset: number; retained: number }[] }[];
+  funnel: { signed_up: number; activated: number; trial_started: number; paid: number };
+  revenue: { pro_users: number; est_mrr_nis: number };
+};
+
+export async function adminGetAnalytics(): Promise<AnalyticsData> {
+  const response = await fetch(`${API_URL}/admin/analytics`, {
+    headers: { ...(await authHeaders()) },
+  });
+  if (!response.ok) throw new Error(`Analytics error (${response.status})`);
+  return response.json();
+}
+
 export async function adminSetTier(userId: string, tier: 'free' | 'pro') {
   const response = await fetch(`${API_URL}/admin/set-tier`, {
     method: 'POST',
