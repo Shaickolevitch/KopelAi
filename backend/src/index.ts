@@ -582,12 +582,20 @@ async function getKnowledgeContext(query: string): Promise<string> {
  * Build the system prompt for a /chat request, combining the KopelAi character
  * prompt with this user's profile memory and a language directive.
  */
+// System prompt is returned as Anthropic content blocks so we can prompt-cache
+// the large, static base prompt. The base block is identical across every
+// message in a conversation, so after the first call it's served from cache at
+// ~10% of the input price (cache read $0.30/M vs $3/M) — a real margin saver.
+// The dynamic block (per-query RAG, per-user memory, language, wind-down) is
+// not cached because it changes.
+type SystemBlock = { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } };
+
 async function buildSystemPrompt(
   userId: string | undefined,
   language: 'he' | 'en',
   lastUserMessage?: string,
   windDown = false
-): Promise<string> {
+): Promise<SystemBlock[]> {
   const basePrompt = await getBasePrompt();
   const knowledge = await getKnowledgeContext(lastUserMessage ?? '');
 
@@ -603,8 +611,13 @@ async function buildSystemPrompt(
     ? '\n\n# Closing beat\n\nThis is the last exchange available in this session. Respond fully and warmly, then gently bring this turn to a natural resting point — offer a small thought to sit with, rather than opening a new line of inquiry. Do not mention limits, plans, or payment; just let it land softly.'
     : '';
 
+  // The static base prompt is cached; everything dynamic goes in a second block.
+  const baseBlock: SystemBlock = { type: 'text', text: basePrompt, cache_control: { type: 'ephemeral' } };
+  const dynamic = (rest: string): SystemBlock[] =>
+    rest.trim().length > 0 ? [baseBlock, { type: 'text', text: rest }] : [baseBlock];
+
   if (!userId) {
-    return basePrompt + knowledge + langDirective + windDownDirective;
+    return dynamic(knowledge + langDirective + windDownDirective);
   }
 
   const { data: profile } = await supabaseAdmin
@@ -625,7 +638,7 @@ async function buildSystemPrompt(
     memorySection = `\n\n# What you remember about this person\n\nThis is a fresh session and you have no memory of past conversations with this person. Don't pretend to remember things you don't, and don't claim to recognize them.`;
   }
 
-  return basePrompt + knowledge + memorySection + langDirective + windDownDirective;
+  return dynamic(knowledge + memorySection + langDirective + windDownDirective);
 }
 
 // Try to extract JSON from a Claude response, handling cases where it includes prose
@@ -709,14 +722,21 @@ app.post('/chat', async (req: Request, res: Response) => {
     const systemPrompt = await buildSystemPrompt(userId, language ?? 'he', lastUserMessage, windDown);
     const cappedMessages = messages.slice(-30);
 
+    // Prompt-cache the conversation prefix: marking the last message caches
+    // everything up to it, so the next turn re-reads the shared history at the
+    // cache price instead of full input price. The bulk of per-message cost is
+    // the growing history, so this is the biggest margin lever.
+    const apiMessages = cappedMessages.map((m: any, i: number) =>
+      i === cappedMessages.length - 1
+        ? { role: m.role, content: [{ type: 'text' as const, text: m.content, cache_control: { type: 'ephemeral' as const } }] }
+        : { role: m.role, content: m.content }
+    );
+
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
       max_tokens: 2048,
       system: systemPrompt,
-      messages: cappedMessages.map((m: any) => ({
-        role: m.role,
-        content: m.content,
-      })),
+      messages: apiMessages,
     });
 
     const textBlock = response.content.find((b) => b.type === 'text');

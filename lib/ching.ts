@@ -72,10 +72,14 @@ export function verifyWebhookSignature(rawBody: string, signature: string): bool
   return crypto.timingSafeEqual(Buffer.from(expected, 'utf8'), Buffer.from(signature, 'utf8'));
 }
 
-// Pilot pricing: regular ₪350/mo (₪3,500/yr), discounted to ₪99/mo (₪990/yr).
+// Pricing: ₪99/mo, ₪990/yr. `regularNis` is the HONEST reference price only —
+// for annual it's the genuine monthly-paid equivalent (12 × ₪99 = ₪1,188), used
+// to show real annual savings. Never display a reference price that was never
+// actually charged (Israeli/EU consumer law treats fabricated anchors as
+// deceptive). Monthly has no prior price, so regularNis === nis.
 export const PLANS = {
-  monthly: { priceId: 'price_6JY_rosMd47o', nis: 99, usd: 99, regularNis: 350 },
-  annual:  { priceId: 'price_e5Z00_n0qYO9', nis: 990, usd: 990, regularNis: 3500 },
+  monthly: { priceId: 'price_6JY_rosMd47o', nis: 99, usd: 99, regularNis: 99 },
+  annual:  { priceId: 'price_e5Z00_n0qYO9', nis: 990, usd: 990, regularNis: 1188 },
 } as const;
 
 export type PlanKey = keyof typeof PLANS;

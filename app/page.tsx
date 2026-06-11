@@ -259,9 +259,9 @@ export default function HomePage() {
               <div className="font-semibold mt-3">{he ? 'פרו' : 'Pro'}</div>
               <div className="flex items-baseline gap-2 my-2">
                 <span className="text-3xl font-bold">₪99</span>
-                <span className="text-lg text-stone-400 dark:text-zinc-600 line-through">₪350</span>
                 <span className="text-sm font-normal text-stone-500 dark:text-zinc-400">{he ? '/ חודש' : '/ mo'}</span>
               </div>
+              <p className="text-xs text-stone-500 dark:text-zinc-400 -mt-1 mb-1">{he ? 'פחות משליש ממחיר מפגש אחד · כולל מע"מ' : 'Less than a third of one session · VAT incl.'}</p>
               <ul className="space-y-2 mt-3 text-sm text-stone-700 dark:text-zinc-300">
                 <li>✓ {he ? 'זיכרון מלא בין מפגשים' : 'Full memory between sessions'}</li>
                 <li>✓ {he ? 'תובנות אישיות מתמשכות' : 'Ongoing personal insights'}</li>
@@ -272,8 +272,8 @@ export default function HomePage() {
           </div>
           <p className="text-xs text-center text-stone-400 dark:text-zinc-600 mt-4">
             {he
-              ? <>שנתי: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> <span className="line-through">₪3,500</span> - כחודשיים מתנה.</>
-              : <>Annual: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> <span className="line-through">₪3,500</span> - about two months free.</>}
+              ? <>שנתי: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> במקום <span className="line-through">₪1,188</span> - כחודשיים מתנה.</>
+              : <>Annual: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> instead of <span className="line-through">₪1,188</span> - about two months free.</>}
           </p>
         </div>
       </section>

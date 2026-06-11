@@ -164,11 +164,10 @@ export default function PlanPage() {
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-bold text-stone-900 dark:text-zinc-100">₪99</span>
-            <span className="text-base text-stone-400 dark:text-zinc-600 line-through">₪350</span>
             <span className="text-sm font-normal text-stone-500"> / {isHebrew ? 'חודש' : 'mo'}</span>
           </div>
           <div className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-            {isHebrew ? 'מחיר פיילוט לחברים הראשונים' : 'Pilot price for first members'}
+            {isHebrew ? 'פחות משליש ממחיר מפגש אחד · מחיר השקה' : 'Less than a third of one session · launch price'}
           </div>
           <ul className="mt-3 space-y-1.5 text-sm text-stone-600 dark:text-zinc-400 flex-1">
             <li>✓ {isHebrew ? 'זיכרון לאורך זמן - קופלAI זוכר אותך בין שיחות' : 'Long-term memory - KopelAi remembers you between sessions'}</li>
@@ -198,11 +197,11 @@ export default function PlanPage() {
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-bold text-stone-900 dark:text-zinc-100">₪990</span>
-            <span className="text-base text-stone-400 dark:text-zinc-600 line-through">₪3,500</span>
+            <span className="text-base text-stone-400 dark:text-zinc-600 line-through">₪1,188</span>
             <span className="text-sm font-normal text-stone-500"> / {isHebrew ? 'שנה' : 'yr'}</span>
           </div>
           <div className="text-xs text-indigo-700 dark:text-indigo-300 mt-1">
-            {isHebrew ? 'מחיר פיילוט · כ-₪82 לחודש' : 'Pilot price · ~₪82/mo'}
+            {isHebrew ? 'כ-₪82 לחודש · כחודשיים מתנה' : '~₪82/mo · about two months free'}
           </div>
           <ul className="mt-3 space-y-1.5 text-sm text-stone-600 dark:text-zinc-400 flex-1">
             <li>✓ {isHebrew ? 'זיכרון לאורך זמן - קופלAI זוכר אותך בין שיחות' : 'Long-term memory - KopelAi remembers you between sessions'}</li>
