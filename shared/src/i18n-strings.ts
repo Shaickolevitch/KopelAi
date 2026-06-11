@@ -31,6 +31,10 @@ export const STRINGS = {
     conversation_end_confirm: 'סיים',
     conversation_end_failed: 'לא הצלחתי לסיים את השיחה',
     conversation_send_failed: 'לא הצלחתי לשלוח',
+    daily_limit_title: 'הגענו לסוף המכסה היומית',
+    daily_limit_body: 'דיברנו לא מעט היום, ויפה שכך. בגרסה החינמית אפשר להמשיך מחר - ואם בא לך להישאר עכשיו, בפרו השיחה נמשכת בלי הגבלה.',
+    daily_limit_cta_upgrade: 'המשיכו עכשיו עם פרו',
+    daily_limit_cta_tomorrow: 'נתראה מחר',
 
     mic_permission_title: 'נדרשת גישה למיקרופון',
     mic_permission_body: 'קופלAI משתמש במיקרופון כדי שתוכל לדבר במקום להקליד. אפשר להפעיל בהגדרות.',
@@ -256,6 +260,10 @@ export const STRINGS = {
     conversation_end_confirm: 'End',
     conversation_end_failed: 'Could not end session',
     conversation_send_failed: 'Send failed',
+    daily_limit_title: "That's today's free conversation",
+    daily_limit_body: "We covered real ground today - and that's a good thing. On the free plan you can pick this back up tomorrow. If you'd rather stay now, Pro keeps the conversation going without limits.",
+    daily_limit_cta_upgrade: 'Continue now with Pro',
+    daily_limit_cta_tomorrow: 'See you tomorrow',
 
     mic_permission_title: 'Microphone access needed',
     mic_permission_body:

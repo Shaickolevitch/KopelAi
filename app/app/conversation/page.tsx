@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useT, useLang } from '@/lib/i18n';
-import { sendChat, endConversation, understandFile, transcribeAudio, ChatMessage } from '@/lib/api';
+import { sendChat, endConversation, understandFile, transcribeAudio, getUsage, DailyLimitError, ChatMessage } from '@/lib/api';
 import Onboarding from './Onboarding';
 import { getCurrentUser, AuthUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -207,6 +207,7 @@ export default function ConversationPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [tier, setTier] = useState<'free' | 'pro' | null>(null);
   const [dismissedNudgeLevel, setDismissedNudgeLevel] = useState(0);
+  const [limitReached, setLimitReached] = useState(false);
   const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
   const [attaching, setAttaching] = useState(false);
   const [composerDragOver, setComposerDragOver] = useState(false);
@@ -287,6 +288,11 @@ export default function ConversationPage() {
       if (tier === 'free') {
         // Wipe previous session data so free users start clean each time.
         await clearPreviousSession(u.id);
+        // If they already used up today's quota, lock the composer on load.
+        try {
+          const usage = await getUsage();
+          if (usage.reached) setLimitReached(true);
+        } catch { /* fail open */ }
       } else {
         // Pro users: restore any active conversation.
         const { data: activeConvo } = await supabase()
@@ -408,7 +414,16 @@ export default function ConversationPage() {
       setSending(false);
       await typeOutAssistantMessage(assistantId, response.text);
       await persistMessage(convId, user.id, 'assistant', response.text);
+      // That was the last message in today's free quota — the reply already
+      // wound down gracefully on the server, so now show the wall.
+      if (response.remaining === 0) setLimitReached(true);
     } catch (err) {
+      if (err instanceof DailyLimitError) {
+        // Hit the wall (e.g. returning user, or a race). Lock without an error toast.
+        setLimitReached(true);
+        setSending(false);
+        return;
+      }
       console.error('Send failed:', err);
       setError(t.conversation_send_failed);
       setSending(false);
@@ -661,6 +676,27 @@ export default function ConversationPage() {
           );
         })()}
 
+        {/* Daily hard wall for free users */}
+        {limitReached && (
+          <div className="rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/40 p-5 text-center space-y-3">
+            <div className="w-11 h-11 rounded-full bg-indigo-950 dark:bg-indigo-600 flex items-center justify-center mx-auto">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+              </svg>
+            </div>
+            <h2 className="text-base font-semibold text-stone-900 dark:text-zinc-100">{t.daily_limit_title}</h2>
+            <p className="text-sm text-stone-600 dark:text-zinc-300 leading-relaxed max-w-md mx-auto">{t.daily_limit_body}</p>
+            <button
+              onClick={() => setShowPlanPicker(true)}
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors"
+            >
+              {t.daily_limit_cta_upgrade}
+            </button>
+            <p className="text-xs text-stone-400 dark:text-zinc-600">{t.daily_limit_cta_tomorrow}</p>
+          </div>
+        )}
+
+        {!limitReached && (<>
         <div
           onDragOver={(e) => { e.preventDefault(); if (!sending && !attaching) setComposerDragOver(true); }}
           onDragLeave={(e) => { e.preventDefault(); setComposerDragOver(false); }}
@@ -738,8 +774,9 @@ export default function ConversationPage() {
         <p className="mt-2 text-center text-sm text-stone-400 dark:text-zinc-600">
           {language === 'he' ? '🔒 השיחות שלך פרטיות ומוצפנות' : '🔒 Your conversations are private and encrypted'}
         </p>
+        </>)}
 
-        {messages.length > 0 && (
+        {messages.length > 0 && !limitReached && (
           <div className="mt-3 text-center space-y-2">
             <p className="text-sm text-stone-500 dark:text-zinc-500 leading-snug px-4">
               {tier === 'free'

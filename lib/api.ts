@@ -20,7 +20,20 @@ export type ChatMessage = {
 
 export type ChatResponse = {
   text: string;
+  // For free users: messages left today after this one (null for Pro / unknown).
+  remaining?: number | null;
 };
+
+// Thrown when a free user hits the daily message wall (HTTP 429 + code).
+// The conversation page catches this specifically to show the wall UI.
+export class DailyLimitError extends Error {
+  limit: number;
+  constructor(limit: number) {
+    super('daily_limit_reached');
+    this.name = 'DailyLimitError';
+    this.limit = limit;
+  }
+}
 
 export async function sendChat(
   messages: ChatMessage[],
@@ -34,9 +47,35 @@ export async function sendChat(
 
   if (!response.ok) {
     const errorText = await response.text();
+    if (response.status === 429) {
+      try {
+        const body = JSON.parse(errorText);
+        if (body?.code === 'daily_limit_reached') {
+          throw new DailyLimitError(body.limit ?? 0);
+        }
+      } catch (e) {
+        if (e instanceof DailyLimitError) throw e;
+      }
+    }
     throw new Error(`Chat API error (${response.status}): ${errorText}`);
   }
 
+  return response.json();
+}
+
+export type UsageInfo = {
+  tier: 'free' | 'pro';
+  count: number;
+  limit: number | null;
+  reached: boolean;
+};
+
+// Today's free-tier usage, so the chat UI can lock the composer on load.
+export async function getUsage(): Promise<UsageInfo> {
+  const response = await fetch(`${API_URL}/usage`, {
+    headers: { ...(await authHeaders()) },
+  });
+  if (!response.ok) throw new Error(`Usage error (${response.status})`);
   return response.json();
 }
 

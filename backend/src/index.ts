@@ -79,6 +79,12 @@ async function getAuthedUser(req: Request) {
   return data.user;
 }
 
+// How many messages a free user may send per Israel-calendar day before the
+// hard wall. Tuned to land just past the first upgrade nudge (16), while the
+// user is invested but the urge to continue is strongest. Change this one
+// number to adjust the wall; the daily_usage counter and UI follow it.
+const FREE_DAILY_MESSAGE_LIMIT = 25;
+
 // ── Simple per-user fixed-window rate limiter (in-memory) ──
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 function rateLimited(key: string, limit: number, windowMs: number): boolean {
@@ -579,7 +585,8 @@ async function getKnowledgeContext(query: string): Promise<string> {
 async function buildSystemPrompt(
   userId: string | undefined,
   language: 'he' | 'en',
-  lastUserMessage?: string
+  lastUserMessage?: string,
+  windDown = false
 ): Promise<string> {
   const basePrompt = await getBasePrompt();
   const knowledge = await getKnowledgeContext(lastUserMessage ?? '');
@@ -589,8 +596,15 @@ async function buildSystemPrompt(
       ? '\n\nThe user prefers Hebrew. Respond in Hebrew unless they switch to English.'
       : '\n\nThe user prefers English. Respond in English unless they switch to Hebrew.';
 
+  // On a free user's last allowed message of the day, ask Kopel to bring this
+  // turn to a warm, natural resting point instead of opening new threads — so
+  // the daily wall lands at a closing beat rather than mid-thought.
+  const windDownDirective = windDown
+    ? '\n\n# Closing beat\n\nThis is the last exchange available in this session. Respond fully and warmly, then gently bring this turn to a natural resting point — offer a small thought to sit with, rather than opening a new line of inquiry. Do not mention limits, plans, or payment; just let it land softly.'
+    : '';
+
   if (!userId) {
-    return basePrompt + knowledge + langDirective;
+    return basePrompt + knowledge + langDirective + windDownDirective;
   }
 
   const { data: profile } = await supabaseAdmin
@@ -611,7 +625,7 @@ async function buildSystemPrompt(
     memorySection = `\n\n# What you remember about this person\n\nThis is a fresh session and you have no memory of past conversations with this person. Don't pretend to remember things you don't, and don't claim to recognize them.`;
   }
 
-  return basePrompt + knowledge + memorySection + langDirective;
+  return basePrompt + knowledge + memorySection + langDirective + windDownDirective;
 }
 
 // Try to extract JSON from a Claude response, handling cases where it includes prose
@@ -657,8 +671,42 @@ app.post('/chat', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'messages array is required' });
     }
 
+    // ── Free-tier daily hard wall ────────────────────────────────────────────
+    // Free users get FREE_DAILY_MESSAGE_LIMIT messages per Israel-calendar day.
+    // The counter lives in daily_usage (server-side, untouched by the session
+    // wipe), so it can't be reset by reloading. Pro is unlimited.
+    let windDown = false;
+    let remaining: number | null = null;
+    const { data: tierRow } = await supabaseAdmin
+      .from('user_profile')
+      .select('subscription_tier')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const isPro = tierRow?.subscription_tier === 'pro';
+
+    if (!isPro) {
+      const { data: count, error: bumpErr } = await supabaseAdmin.rpc('bump_daily_usage', {
+        p_user: userId,
+      });
+      if (bumpErr) {
+        console.error('bump_daily_usage failed:', bumpErr);
+        // Fail open: never block a paying-customer-to-be on an infra hiccup.
+      } else if (typeof count === 'number') {
+        if (count > FREE_DAILY_MESSAGE_LIMIT) {
+          return res.status(429).json({
+            error: 'Daily free message limit reached.',
+            code: 'daily_limit_reached',
+            limit: FREE_DAILY_MESSAGE_LIMIT,
+          });
+        }
+        remaining = Math.max(0, FREE_DAILY_MESSAGE_LIMIT - count);
+        // The final allowed message of the day winds down gracefully.
+        windDown = count === FREE_DAILY_MESSAGE_LIMIT;
+      }
+    }
+
     const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user')?.content;
-    const systemPrompt = await buildSystemPrompt(userId, language ?? 'he', lastUserMessage);
+    const systemPrompt = await buildSystemPrompt(userId, language ?? 'he', lastUserMessage, windDown);
     const cappedMessages = messages.slice(-30);
 
     const response = await anthropic.messages.create({
@@ -674,9 +722,41 @@ app.post('/chat', async (req: Request, res: Response) => {
     const textBlock = response.content.find((b) => b.type === 'text');
     const text = textBlock && textBlock.type === 'text' ? textBlock.text : '';
 
-    res.json({ text, usage: response.usage });
+    res.json({ text, usage: response.usage, remaining });
   } catch (err: any) {
     console.error('Chat error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// ----------------------------------------------------------
+// Daily usage — lets the chat UI lock the composer on load if a free user has
+// already hit today's wall (e.g. returned later the same day).
+// ----------------------------------------------------------
+app.get('/usage', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { data: tierRow } = await supabaseAdmin
+      .from('user_profile')
+      .select('subscription_tier')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (tierRow?.subscription_tier === 'pro') {
+      return res.json({ tier: 'pro', count: 0, limit: null, reached: false });
+    }
+
+    const { data: count } = await supabaseAdmin.rpc('get_daily_usage', { p_user: user.id });
+    const used = typeof count === 'number' ? count : 0;
+    res.json({
+      tier: 'free',
+      count: used,
+      limit: FREE_DAILY_MESSAGE_LIMIT,
+      reached: used >= FREE_DAILY_MESSAGE_LIMIT,
+    });
+  } catch (err: any) {
+    console.error('usage error:', err);
     res.status(500).json({ error: err.message ?? 'Internal server error' });
   }
 });
