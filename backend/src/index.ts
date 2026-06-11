@@ -1483,6 +1483,11 @@ const WA = {
   displayNumber: process.env.WHATSAPP_NUMBER || '', // digits only, e.g. 972500000000 (for wa.me links)
 };
 const waConfigured = () => Boolean(WA.token && WA.phoneNumberId);
+// Public visibility switch: keep the "Connect WhatsApp" UI hidden from regular
+// users until WhatsApp is verified + live. Flip WHATSAPP_LIVE=1 on Railway to
+// reveal it to everyone. The bot itself (webhook/replies) works regardless, so
+// allowlisted test numbers keep functioning while this is off.
+const waLiveFlag = () => process.env.WHATSAPP_LIVE === '1' || process.env.WHATSAPP_LIVE === 'true';
 const isHe = (t: string) => /[֐-׿]/.test(t);
 
 async function sendWhatsApp(to: string, body: string) {
@@ -1641,7 +1646,9 @@ app.get('/whatsapp/status', async (req: Request, res: Response) => {
   const user = await getAuthedUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   const { data: link } = await supabaseAdmin.from('whatsapp_links').select('phone, linked_at').eq('user_id', user.id).maybeSingle();
-  res.json({ configured: waConfigured(), linked: Boolean(link), phone: link?.phone ?? null, number: WA.displayNumber || null });
+  // Visible to the public only when live; admin always sees it (for testing).
+  const visible = waConfigured() && (waLiveFlag() || user.id === ADMIN_USER_ID);
+  res.json({ configured: visible, linked: Boolean(link), phone: link?.phone ?? null, number: WA.displayNumber || null });
 });
 
 // Web: generate a one-time link code + a wa.me deep link to send it.
