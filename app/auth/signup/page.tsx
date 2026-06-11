@@ -35,6 +35,13 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [marketingConsent, setMarketingConsent] = useState(true); // pre-checked
+
+  // Stash the consent choice so it can be saved once the user is authenticated
+  // (works for both the email flow and the Google redirect flow).
+  function stashConsent() {
+    try { localStorage.setItem('kopelai.pending_consent', marketingConsent ? '1' : '0'); } catch {}
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,6 +58,7 @@ export default function SignupPage() {
     }
 
     setSubmitting(true);
+    stashConsent();
     try {
       await signUpWithEmail(trimmedEmail, password);
       router.push('/app/conversation');
@@ -66,6 +74,7 @@ export default function SignupPage() {
   async function handleGoogle() {
     setError(null);
     setSubmitting(true);
+    stashConsent();
     try {
       await signInWithGoogle();
     } catch {
@@ -169,6 +178,21 @@ export default function SignupPage() {
               {error}
             </div>
           )}
+
+          <label className="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+              disabled={submitting}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 dark:border-zinc-600 text-indigo-600 focus:ring-indigo-500/40 accent-indigo-600"
+            />
+            <span className="text-xs text-stone-500 dark:text-zinc-400 leading-snug">
+              {language === 'he'
+                ? 'אני מאשר/ת לקבל דברי תוכן, עדכונים ותזכורות מקופל אליעזר ושי חי גיאן. אפשר להסיר את ההסכמה בכל עת.'
+                : 'I agree to receive content, updates and reminders from Kopel Eliezer and Shai Hay Gian. You can opt out anytime.'}
+            </span>
+          </label>
 
           <button
             type="submit"

@@ -158,14 +158,15 @@ export default function AdminUsers() {
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'תוכנית' : 'Plan'}</th>
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'נוצר' : 'Joined'}</th>
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'פעילות אחרונה' : 'Last active'}</th>
+              <th className="text-start font-medium py-2 px-2">{isHebrew ? 'דיוור' : 'Marketing'}</th>
               <th className="text-start font-medium py-2 px-2"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="py-6 text-center text-stone-400 dark:text-zinc-600">…</td></tr>
+              <tr><td colSpan={6} className="py-6 text-center text-stone-400 dark:text-zinc-600">…</td></tr>
             ) : users.length === 0 ? (
-              <tr><td colSpan={5} className="py-6 text-center text-stone-400 dark:text-zinc-600">{isHebrew ? 'לא נמצאו משתמשים' : 'No users found'}</td></tr>
+              <tr><td colSpan={6} className="py-6 text-center text-stone-400 dark:text-zinc-600">{isHebrew ? 'לא נמצאו משתמשים' : 'No users found'}</td></tr>
             ) : (
               users.map((u) => (
                 <tr key={u.id} className="border-t border-stone-100 dark:border-zinc-800">
@@ -202,6 +203,11 @@ export default function AdminUsers() {
                         </span>
                       );
                     })()}
+                  </td>
+                  <td className="py-2.5 px-2 text-xs">
+                    {u.marketing_consent
+                      ? <span className="text-emerald-600 dark:text-emerald-400">{isHebrew ? '✓ הסכים' : '✓ Yes'}</span>
+                      : <span className="text-stone-400 dark:text-zinc-600">{isHebrew ? '✕ לא' : '✕ No'}</span>}
                   </td>
                   <td className="py-2.5 px-2 text-end">
                     <button

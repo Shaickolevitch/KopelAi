@@ -275,6 +275,7 @@ app.get('/admin/users', async (req: Request, res: Response) => {
         tier: r.tier,
         deleted_at: r.deleted_at,
         last_active: r.last_active,
+        marketing_consent: r.marketing_consent ?? false,
       })),
       total,
       page,
@@ -815,6 +816,29 @@ app.get('/usage', async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error('usage error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// ----------------------------------------------------------
+// Record marketing/content consent (the signup checkbox). Stored on profiles.
+// ----------------------------------------------------------
+app.post('/marketing-consent', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const consent = req.body?.consent === true;
+    const { error } = await supabaseAdmin
+      .from('profiles')
+      .update({ marketing_consent: consent })
+      .eq('id', user.id);
+    if (error) {
+      console.error('marketing-consent update failed:', error);
+      return res.status(500).json({ error: 'Could not save consent' });
+    }
+    res.json({ ok: true, marketing_consent: consent });
+  } catch (err: any) {
+    console.error('marketing-consent error:', err);
     res.status(500).json({ error: err.message ?? 'Internal server error' });
   }
 });

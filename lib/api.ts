@@ -87,6 +87,16 @@ export async function getUsage(): Promise<UsageInfo> {
   return response.json();
 }
 
+// Record the user's marketing/content consent (from the signup checkbox).
+export async function submitMarketingConsent(consent: boolean): Promise<void> {
+  const response = await fetch(`${API_URL}/marketing-consent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ consent }),
+  });
+  if (!response.ok) throw new Error(`Consent error (${response.status})`);
+}
+
 // Activate the opt-in 14-day Pro trial (one-time per user).
 export async function startTrial(): Promise<{ trialEndsAt: string; trialDaysLeft: number }> {
   const response = await fetch(`${API_URL}/start-trial`, {
@@ -179,6 +189,7 @@ export type AdminUser = {
   tier: 'free' | 'pro';
   deleted_at: string | null;
   last_active: string | null;
+  marketing_consent: boolean;
 };
 
 export async function adminListUsers(params: {

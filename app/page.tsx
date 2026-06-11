@@ -287,6 +287,11 @@ export default function HomePage() {
               </span>
             </div>
           </div>
+          <p className="text-xs text-center text-stone-500 dark:text-zinc-400 mt-3">
+            {he
+              ? <>סטודנטים ומתמחים: יש קוד הטבה - לקבלתו <a href="/contact-he" className="underline hover:text-stone-700 dark:hover:text-zinc-200">פנו ישירות לשי או לקופל</a>.</>
+              : <>Students & trainees: a discount code is available - <a href="/contact" className="underline hover:text-stone-700 dark:hover:text-zinc-200">reach out to Shai or Kopel directly</a> to get it.</>}
+          </p>
         </div>
       </section>
 

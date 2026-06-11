@@ -330,7 +330,7 @@ export default function PlanPage() {
               onClick={() => setShowStudent(true)}
               className="text-xs text-stone-400 dark:text-zinc-500 hover:underline"
             >
-              {isHebrew ? 'סטודנט/ית או מתמחה? יש לכם קוד הטבה?' : 'Student or trainee? Have a discount code?'}
+              {isHebrew ? 'סטודנט/ית או מתמחה? יש קוד הטבה - לחצו לפרטים' : 'Student or trainee? A discount code is available - tap for details'}
             </button>
           ) : (
             <div className="inline-flex flex-col items-center gap-2">
