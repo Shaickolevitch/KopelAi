@@ -229,7 +229,12 @@ export default function PlanPage() {
         </div>
       </div>
 
-      <p className="mt-4 text-center text-xs text-stone-400 dark:text-zinc-600">
+      <p className="mt-4 text-center text-xs text-amber-700 dark:text-amber-400">
+        {isHebrew
+          ? 'מחיר השקה ראשוני וזמני - עשוי להתעדכן בהמשך. המצטרפים עכשיו נשארים במחיר הזה.'
+          : 'Introductory launch price - may change later. Join now and keep this price.'}
+      </p>
+      <p className="mt-2 text-center text-xs text-stone-400 dark:text-zinc-600">
         {isHebrew
           ? 'תשלום מאובטח דרך Ching · חשבונית מס · ניתן לבטל בכל עת'
           : 'Secure payment via Ching · Tax invoice · Cancel anytime'}

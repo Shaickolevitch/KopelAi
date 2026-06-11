@@ -275,6 +275,11 @@ export default function HomePage() {
               ? <>שנתי: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> במקום <span className="line-through">₪1,188</span> - כחודשיים מתנה.</>
               : <>Annual: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> instead of <span className="line-through">₪1,188</span> - about two months free.</>}
           </p>
+          <p className="text-xs text-center text-amber-700 dark:text-amber-400 mt-2">
+            {he
+              ? 'מחיר השקה ראשוני וזמני - עשוי להתעדכן בהמשך. המצטרפים עכשיו נשארים במחיר הזה.'
+              : 'Introductory launch price - may change later. Join now and keep this price.'}
+          </p>
         </div>
       </section>
 
