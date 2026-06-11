@@ -43,10 +43,10 @@ export default function PlanPage() {
         msg = isHebrew
           ? 'התשלומים עדיין לא פעילים - נפעיל אותם בקרוב. תודה על הסבלנות.'
           : "Payments aren't live yet - we're turning them on soon. Thanks for your patience.";
-      } else if (msg.includes('invalid_student_code')) {
+      } else if (/coupon|discount|not_found|invalid/i.test(msg)) {
         msg = isHebrew
-          ? 'הקוד אינו תקין. כדי לקבל קוד סטודנט, פנו אלינו דרך עמוד יצירת הקשר.'
-          : 'That code isn\'t valid. To get a student code, reach out via our contact page.';
+          ? 'הקוד אינו תקין או שפג תוקפו. כדי לקבל קוד הטבה, פנו אלינו דרך עמוד יצירת הקשר.'
+          : "That code isn't valid or has expired. To get a discount code, reach out via our contact page.";
       }
       setError(msg);
       setBusy(null);
@@ -254,8 +254,8 @@ export default function PlanPage() {
             <div className="inline-flex flex-col items-center gap-2">
               <p className="text-xs text-stone-500 dark:text-zinc-400 max-w-xs leading-snug">
                 {isHebrew
-                  ? 'מחיר סטודנט: ₪39 לחודש. כדי לקבל קוד, פנו אלינו דרך עמוד יצירת הקשר.'
-                  : 'Student price: ₪39/mo. To get a code, reach out via our contact page.'}
+                  ? 'יש לכם קוד הטבה לסטודנטים/מתמחים? הזינו אותו וההנחה תחול על המנוי. לקבלת קוד, פנו אלינו דרך עמוד יצירת הקשר.'
+                  : 'Have a student/trainee discount code? Enter it and the discount applies to your subscription. To get a code, reach out via our contact page.'}
               </p>
               <div className="flex gap-2">
                 <input
@@ -265,7 +265,7 @@ export default function PlanPage() {
                   className="px-3 py-2 rounded-lg border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm text-stone-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-indigo-900/20 dark:focus:ring-indigo-500/30"
                 />
                 <button
-                  onClick={() => go(() => startCheckout('student', studentCode), 'student')}
+                  onClick={() => go(() => startCheckout('monthly', studentCode), 'student')}
                   disabled={busy !== null || loading || !studentCode.trim()}
                   className="px-4 py-2 rounded-lg bg-indigo-950 dark:bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors disabled:opacity-50"
                 >

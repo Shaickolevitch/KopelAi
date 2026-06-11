@@ -48,12 +48,13 @@ export async function clearPreviousSession(userId: string) {
 }
 
 // Starts the ching checkout flow: POSTs to our API route and redirects the browser.
-// `code` is only used for the student plan (the coupon people request from us).
-export async function startCheckout(planKey: 'monthly' | 'annual' | 'student', code?: string) {
+// `couponCode` (optional) is passed to Ching to apply a discount (e.g. the
+// student coupon people request from us) to the chosen plan.
+export async function startCheckout(planKey: 'monthly' | 'annual', couponCode?: string) {
   const res = await fetch('/api/ching/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ planKey, code }),
+    body: JSON.stringify({ planKey, couponCode }),
   });
   if (!res.ok) {
     let text = await res.text();

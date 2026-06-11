@@ -41,18 +41,24 @@ export async function createCheckoutSession({
   priceId,
   successUrl,
   cancelUrl,
+  couponCodes,
 }: {
   customerId: string;
   priceId: string;
   successUrl: string;
   cancelUrl: string;
+  // Optional Ching discount codes to apply (e.g. the student coupon). Ching
+  // validates them and applies the discount to the price at checkout.
+  couponCodes?: string[];
 }) {
-  return chingFetch('/checkout_sessions', {
+  const body: Record<string, unknown> = {
     customer: customerId,
     price: priceId,
     success_url: successUrl,
     cancel_url: cancelUrl,
-  });
+  };
+  if (couponCodes && couponCodes.length > 0) body.coupon_codes = couponCodes;
+  return chingFetch('/checkout_sessions', body);
 }
 
 export async function createBillingPortalSession(customerId: string, returnUrl: string) {
@@ -80,9 +86,8 @@ export function verifyWebhookSignature(rawBody: string, signature: string): bool
 export const PLANS = {
   monthly: { priceId: 'price_6JY_rosMd47o', nis: 99, usd: 99, regularNis: 99 },
   annual:  { priceId: 'price_e5Z00_n0qYO9', nis: 990, usd: 990, regularNis: 1188 },
-  // Student/trainee rate. Not shown publicly — unlocked with a coupon code that
-  // people request from Shai/Kopel directly (see the checkout route's code gate).
-  student: { priceId: 'price_HAXqCp2o4kbM', nis: 39, usd: 39, regularNis: 99 },
 } as const;
+// The student rate is a Ching discount coupon applied to the normal plan at
+// checkout (not a separate price) — people request the code from us directly.
 
 export type PlanKey = keyof typeof PLANS;

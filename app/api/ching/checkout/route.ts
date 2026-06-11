@@ -6,20 +6,9 @@ import { createCustomer, createCheckoutSession, PLANS, type PlanKey } from '@/li
 
 export async function POST(request: NextRequest) {
   try {
-    const { planKey, code }: { planKey: PlanKey; code?: string } = await request.json();
+    const { planKey, couponCode }: { planKey: PlanKey; couponCode?: string } = await request.json();
     if (!PLANS[planKey]) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
-    }
-
-    // The student rate is gated by a coupon code people request from us directly.
-    // The valid code lives in STUDENT_COUPON_CODE (server-only env). Compared
-    // case-insensitively; never expose the code to the client.
-    if (planKey === 'student') {
-      const valid = (process.env.STUDENT_COUPON_CODE ?? '').trim().toLowerCase();
-      const given = (code ?? '').trim().toLowerCase();
-      if (!valid || given !== valid) {
-        return NextResponse.json({ error: 'invalid_student_code' }, { status: 403 });
-      }
     }
 
     if (!process.env.CHING_SECRET_KEY) {
@@ -74,11 +63,13 @@ export async function POST(request: NextRequest) {
     }
 
     const origin = request.headers.get('origin') ?? 'https://kopelai.app';
+    const trimmedCoupon = couponCode?.trim();
     const session = await createCheckoutSession({
       customerId,
       priceId: PLANS[planKey].priceId,
       successUrl: `${origin}/app/checkout/success`,
       cancelUrl: `${origin}/app/plan`,
+      couponCodes: trimmedCoupon ? [trimmedCoupon] : undefined,
     });
 
     return NextResponse.json({ url: session.url });
