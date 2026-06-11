@@ -85,6 +85,24 @@ async function getAuthedUser(req: Request) {
 // number to adjust the wall; the daily_usage counter and UI follow it.
 const FREE_DAILY_MESSAGE_LIMIT = 25;
 
+// New registered users get full Pro (memory, insights, no daily wall) for this
+// many days from signup, so they can feel the paid value before deciding. The
+// clock is the auth user's created_at — no DB column needed, and it can't be
+// reset by the user. Anonymous users don't get a trial (signing up starts it).
+const PRO_TRIAL_DAYS = 14;
+function trialActive(user: any): boolean {
+  if (!user || user.is_anonymous) return false;
+  const created = user.created_at ? new Date(user.created_at).getTime() : NaN;
+  if (Number.isNaN(created)) return false;
+  return Date.now() < created + PRO_TRIAL_DAYS * 86_400_000;
+}
+function trialDaysLeft(user: any): number {
+  if (!trialActive(user)) return 0;
+  const created = new Date(user.created_at).getTime();
+  const msLeft = created + PRO_TRIAL_DAYS * 86_400_000 - Date.now();
+  return Math.max(0, Math.ceil(msLeft / 86_400_000));
+}
+
 // ── Simple per-user fixed-window rate limiter (in-memory) ──
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 function rateLimited(key: string, limit: number, windowMs: number): boolean {
@@ -594,7 +612,8 @@ async function buildSystemPrompt(
   userId: string | undefined,
   language: 'he' | 'en',
   lastUserMessage?: string,
-  windDown = false
+  windDown = false,
+  isProEffective = false
 ): Promise<SystemBlock[]> {
   const basePrompt = await getBasePrompt();
   const knowledge = await getKnowledgeContext(lastUserMessage ?? '');
@@ -629,7 +648,8 @@ async function buildSystemPrompt(
 
   // Cross-session memory is a paid feature. Free users get a fresh start every
   // session — never inject a remembered profile, even if one exists in the DB.
-  const isPro = profile?.subscription_tier === 'pro';
+  // Trial users (isProEffective) get memory too, so they feel the paid value.
+  const isPro = isProEffective || profile?.subscription_tier === 'pro';
 
   let memorySection = '';
   if (isPro && profile?.prompt_summary && profile.prompt_summary.trim().length > 0) {
@@ -695,9 +715,11 @@ app.post('/chat', async (req: Request, res: Response) => {
       .select('subscription_tier')
       .eq('user_id', userId)
       .maybeSingle();
-    const isPro = tierRow?.subscription_tier === 'pro';
+    // Effective Pro = paid OR within the 14-day trial. Trial users skip the wall
+    // and get memory/insights, so they experience the full paid product.
+    const effectivePro = tierRow?.subscription_tier === 'pro' || trialActive(user);
 
-    if (!isPro) {
+    if (!effectivePro) {
       const { data: count, error: bumpErr } = await supabaseAdmin.rpc('bump_daily_usage', {
         p_user: userId,
       });
@@ -719,7 +741,7 @@ app.post('/chat', async (req: Request, res: Response) => {
     }
 
     const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user')?.content;
-    const systemPrompt = await buildSystemPrompt(userId, language ?? 'he', lastUserMessage, windDown);
+    const systemPrompt = await buildSystemPrompt(userId, language ?? 'he', lastUserMessage, windDown, effectivePro);
     const cappedMessages = messages.slice(-30);
 
     // Prompt-cache the conversation prefix: marking the last message caches
@@ -763,8 +785,20 @@ app.get('/usage', async (req: Request, res: Response) => {
       .select('subscription_tier')
       .eq('user_id', user.id)
       .maybeSingle();
-    if (tierRow?.subscription_tier === 'pro') {
-      return res.json({ tier: 'pro', count: 0, limit: null, reached: false });
+    const paidPro = tierRow?.subscription_tier === 'pro';
+    const onTrial = !paidPro && trialActive(user);
+
+    if (paidPro || onTrial) {
+      // Effective Pro (paid or trial): no wall. Surface trial info so the UI can
+      // show a countdown + upgrade nudge during the trial.
+      return res.json({
+        tier: 'pro',
+        count: 0,
+        limit: null,
+        reached: false,
+        trial: onTrial,
+        trialDaysLeft: onTrial ? trialDaysLeft(user) : 0,
+      });
     }
 
     const { data: count } = await supabaseAdmin.rpc('get_daily_usage', { p_user: user.id });
@@ -774,6 +808,8 @@ app.get('/usage', async (req: Request, res: Response) => {
       count: used,
       limit: FREE_DAILY_MESSAGE_LIMIT,
       reached: used >= FREE_DAILY_MESSAGE_LIMIT,
+      trial: false,
+      trialDaysLeft: 0,
     });
   } catch (err: any) {
     console.error('usage error:', err);
@@ -936,7 +972,8 @@ app.post('/end-conversation', async (req: Request, res: Response) => {
       .select('subscription_tier')
       .eq('user_id', userId)
       .maybeSingle();
-    const isPro = tierRow?.subscription_tier === 'pro';
+    // Trial users get memory + insights too (effective Pro).
+    const isPro = tierRow?.subscription_tier === 'pro' || trialActive(user);
 
     if (!isPro) {
       await supabaseAdmin

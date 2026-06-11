@@ -68,6 +68,9 @@ export type UsageInfo = {
   count: number;
   limit: number | null;
   reached: boolean;
+  // True while the user is in their 14-day Pro trial; days remaining.
+  trial?: boolean;
+  trialDaysLeft?: number;
 };
 
 // Today's free-tier usage, so the chat UI can lock the composer on load.

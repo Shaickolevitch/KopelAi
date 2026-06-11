@@ -6,6 +6,11 @@ export type SubscriptionTier = 'free' | 'pro';
 let _cachedTier: SubscriptionTier | null = null;
 let _cachedUserId: string | null = null;
 
+// New registered users get a 14-day Pro trial (full features, no daily wall),
+// measured from auth signup. Keep this in sync with PRO_TRIAL_DAYS in the
+// backend — the backend is the real gate; this is for UI behavior.
+const PRO_TRIAL_DAYS = 14;
+
 export async function getSubscriptionTier(userId: string): Promise<SubscriptionTier> {
   if (_cachedTier && _cachedUserId === userId) return _cachedTier;
   const { data } = await supabase()
@@ -13,7 +18,20 @@ export async function getSubscriptionTier(userId: string): Promise<SubscriptionT
     .select('subscription_tier')
     .eq('user_id', userId)
     .maybeSingle();
-  const tier: SubscriptionTier = data?.subscription_tier === 'pro' ? 'pro' : 'free';
+  let tier: SubscriptionTier = data?.subscription_tier === 'pro' ? 'pro' : 'free';
+
+  // During the trial window, treat the user as Pro so all paid features work.
+  if (tier === 'free') {
+    try {
+      const { data: auth } = await supabase().auth.getUser();
+      const u = auth.user;
+      if (u && !u.is_anonymous && u.created_at) {
+        const endsAt = new Date(u.created_at).getTime() + PRO_TRIAL_DAYS * 86_400_000;
+        if (Date.now() < endsAt) tier = 'pro';
+      }
+    } catch { /* ignore - fall back to free */ }
+  }
+
   _cachedTier = tier;
   _cachedUserId = userId;
   return tier;
@@ -41,15 +59,17 @@ export async function clearPreviousSession(userId: string) {
 }
 
 // Starts the ching checkout flow: POSTs to our API route and redirects the browser.
-export async function startCheckout(planKey: 'monthly' | 'annual') {
+// `code` is only used for the student plan (the coupon people request from us).
+export async function startCheckout(planKey: 'monthly' | 'annual' | 'student', code?: string) {
   const res = await fetch('/api/ching/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ planKey }),
+    body: JSON.stringify({ planKey, code }),
   });
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Checkout failed: ${text}`);
+    let text = await res.text();
+    try { text = JSON.parse(text).error ?? text; } catch {}
+    throw new Error(text || `Checkout failed`);
   }
   const { url } = await res.json();
   if (!url) throw new Error('No checkout URL returned');

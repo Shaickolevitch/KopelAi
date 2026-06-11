@@ -208,6 +208,7 @@ export default function ConversationPage() {
   const [tier, setTier] = useState<'free' | 'pro' | null>(null);
   const [dismissedNudgeLevel, setDismissedNudgeLevel] = useState(0);
   const [limitReached, setLimitReached] = useState(false);
+  const [trialDaysLeft, setTrialDaysLeft] = useState(0);
   const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
   const [attaching, setAttaching] = useState(false);
   const [composerDragOver, setComposerDragOver] = useState(false);
@@ -285,14 +286,16 @@ export default function ConversationPage() {
       const tier = await getSubscriptionTier(u.id);
       setTier(tier);
 
+      // Trial countdown + daily-wall state (works for all authed users).
+      try {
+        const usage = await getUsage();
+        if (usage.trial && (usage.trialDaysLeft ?? 0) > 0) setTrialDaysLeft(usage.trialDaysLeft ?? 0);
+        if (usage.tier === 'free' && usage.reached) setLimitReached(true);
+      } catch { /* fail open */ }
+
       if (tier === 'free') {
         // Wipe previous session data so free users start clean each time.
         await clearPreviousSession(u.id);
-        // If they already used up today's quota, lock the composer on load.
-        try {
-          const usage = await getUsage();
-          if (usage.reached) setLimitReached(true);
-        } catch { /* fail open */ }
       } else {
         // Pro users: restore any active conversation.
         const { data: activeConvo } = await supabase()
@@ -529,6 +532,23 @@ export default function ConversationPage() {
       )}
 
       <div className="flex-1 flex flex-col max-w-3xl w-full mx-auto px-4 sm:px-6 py-4">
+        {/* Trial countdown (shown while the 14-day Pro trial is active) */}
+        {trialDaysLeft > 0 && (
+          <div className="mb-3 flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 text-xs leading-snug">
+            <span className="flex-1">
+              {language === 'he'
+                ? `נותרו ${trialDaysLeft} ימים בתקופת הניסיון - אחר כך קופלAI ישכח את מה שדיברתם. בפרו הוא ממשיך לזכור.`
+                : `${trialDaysLeft} days left in your trial - after that Kopel forgets what you shared. Pro keeps the memory.`}
+            </span>
+            <button
+              onClick={() => setShowPlanPicker(true)}
+              className="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-950 dark:bg-indigo-600 text-white font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors"
+            >
+              {language === 'he' ? 'שדרגו לפרו' : 'Upgrade to Pro'}
+            </button>
+          </div>
+        )}
+
         {/* Permanent free-tier notice */}
         {tier === 'free' && (
           <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300 text-xs leading-snug">

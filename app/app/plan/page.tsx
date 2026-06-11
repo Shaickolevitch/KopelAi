@@ -18,6 +18,8 @@ export default function PlanPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [showStudent, setShowStudent] = useState(false);
+  const [studentCode, setStudentCode] = useState('');
 
   useEffect(() => {
     getCurrentUser().then((u) => {
@@ -41,6 +43,10 @@ export default function PlanPage() {
         msg = isHebrew
           ? 'התשלומים עדיין לא פעילים - נפעיל אותם בקרוב. תודה על הסבלנות.'
           : "Payments aren't live yet - we're turning them on soon. Thanks for your patience.";
+      } else if (msg.includes('invalid_student_code')) {
+        msg = isHebrew
+          ? 'הקוד אינו תקין. כדי לקבל קוד סטודנט, פנו אלינו דרך עמוד יצירת הקשר.'
+          : 'That code isn\'t valid. To get a student code, reach out via our contact page.';
       }
       setError(msg);
       setBusy(null);
@@ -228,6 +234,43 @@ export default function PlanPage() {
           ? 'תשלום מאובטח דרך Ching · חשבונית מס · ניתן לבטל בכל עת'
           : 'Secure payment via Ching · Tax invoice · Cancel anytime'}
       </p>
+
+      {/* Student / trainee rate - unlocked with a code requested from us directly */}
+      {!isPro && (
+        <div className="mt-5 text-center">
+          {!showStudent ? (
+            <button
+              onClick={() => setShowStudent(true)}
+              className="text-xs text-stone-400 dark:text-zinc-500 hover:underline"
+            >
+              {isHebrew ? 'סטודנט/ית או מתמחה? יש לכם קוד הטבה?' : 'Student or trainee? Have a discount code?'}
+            </button>
+          ) : (
+            <div className="inline-flex flex-col items-center gap-2">
+              <p className="text-xs text-stone-500 dark:text-zinc-400 max-w-xs leading-snug">
+                {isHebrew
+                  ? 'מחיר סטודנט: ₪39 לחודש. כדי לקבל קוד, פנו אלינו דרך עמוד יצירת הקשר.'
+                  : 'Student price: ₪39/mo. To get a code, reach out via our contact page.'}
+              </p>
+              <div className="flex gap-2">
+                <input
+                  value={studentCode}
+                  onChange={(e) => setStudentCode(e.target.value)}
+                  placeholder={isHebrew ? 'קוד הטבה' : 'Discount code'}
+                  className="px-3 py-2 rounded-lg border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm text-stone-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-indigo-900/20 dark:focus:ring-indigo-500/30"
+                />
+                <button
+                  onClick={() => go(() => startCheckout('student', studentCode), 'student')}
+                  disabled={busy !== null || loading || !studentCode.trim()}
+                  className="px-4 py-2 rounded-lg bg-indigo-950 dark:bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors disabled:opacity-50"
+                >
+                  {busy === 'student' ? (isHebrew ? 'מעביר…' : '…') : (isHebrew ? 'הפעלת קוד' : 'Apply')}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Cancel subscription (Pro only) - one click */}
       {isPro && (
