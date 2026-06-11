@@ -7,7 +7,10 @@ import { createServerClient } from '@supabase/ssr';
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/app/conversation';
+  // New (and returning) OAuth users land on /app/welcome, which offers the
+  // one-tap WhatsApp connect and auto-skips anyone already linked or who's
+  // seen it before.
+  const next = searchParams.get('next') ?? '/app/welcome';
 
   if (code) {
     const cookieStore = await cookies();

@@ -1518,8 +1518,8 @@ async function handleWhatsAppMessage(phone: string, text: string) {
       await supabaseAdmin.from('whatsapp_links').upsert({ phone, user_id: codeRow.user_id }, { onConflict: 'phone' });
       await supabaseAdmin.from('whatsapp_link_codes').delete().eq('user_id', codeRow.user_id);
       await sendWhatsApp(phone, lang === 'he'
-        ? 'מצוין! חיברתי את הוואטסאפ לחשבון שלך. אני קופלAI - כתוב/י לי בכל עת, ואני אזכור אותך מפעם לפעם.'
-        : "Great — your WhatsApp is now linked. I'm KopelAi; message me anytime and I'll remember you between conversations.");
+        ? 'היי, אני קופלAI. עכשיו אפשר לשוחח איתי גם כאן בוואטסאפ, ולא רק דרך האתר - כתוב/י לי מתי שבא לך, ואני כאן.'
+        : "Hi, I'm KopelAi. You can now talk with me right here on WhatsApp, not only through the website — message me whenever you like, I'm here.");
       return;
     }
     await sendWhatsApp(phone, lang === 'he'

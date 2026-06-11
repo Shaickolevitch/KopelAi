@@ -61,7 +61,7 @@ export default function SignupPage() {
     stashConsent();
     try {
       await signUpWithEmail(trimmedEmail, password);
-      router.push('/app/conversation');
+      router.push('/app/welcome');
     } catch (err: unknown) {
       const key = authErrorToMessageKey(err);
       const message = (t as Record<string, unknown>)[key];
