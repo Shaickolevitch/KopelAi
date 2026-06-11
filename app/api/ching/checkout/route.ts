@@ -63,7 +63,9 @@ export async function POST(request: NextRequest) {
     }
 
     const origin = request.headers.get('origin') ?? 'https://kopelai.app';
-    const trimmedCoupon = couponCode?.trim();
+    // Ching normalizes coupon codes to UPPERCASE, so match that regardless of
+    // how the user typed it.
+    const trimmedCoupon = couponCode?.trim().toUpperCase();
     const session = await createCheckoutSession({
       customerId,
       priceId: PLANS[planKey].priceId,
