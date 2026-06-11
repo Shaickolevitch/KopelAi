@@ -7,8 +7,10 @@ import {
   getSubscriptionTier,
   startCheckout,
   cancelSubscription,
+  invalidateSubscriptionCache,
   type SubscriptionTier,
 } from '@/lib/subscription';
+import { getUsage, startTrial } from '@/lib/api';
 
 export default function PlanPage() {
   const { language } = useLang();
@@ -20,13 +22,47 @@ export default function PlanPage() {
   const [notice, setNotice] = useState('');
   const [showStudent, setShowStudent] = useState(false);
   const [studentCode, setStudentCode] = useState('');
+  // Trial status: 'available' (can start), 'active' (running), 'used' (over), or null while loading.
+  const [trialStatus, setTrialStatus] = useState<'available' | 'active' | 'used' | 'paid' | null>(null);
+  const [trialDaysLeft, setTrialDaysLeft] = useState(0);
+  const [startingTrial, setStartingTrial] = useState(false);
+
+  async function loadTrial() {
+    try {
+      const usage = await getUsage();
+      if (usage.trial) { setTrialStatus('active'); setTrialDaysLeft(usage.trialDaysLeft ?? 0); }
+      else if (usage.trialAvailable) setTrialStatus('available');
+      else if (usage.tier === 'pro') setTrialStatus('paid'); // real paid subscriber
+      else setTrialStatus('used');
+    } catch { setTrialStatus(null); }
+  }
 
   useEffect(() => {
     getCurrentUser().then((u) => {
       if (u) getSubscriptionTier(u.id).then(setTier).catch(() => setTier('free'));
       else setTier('free');
     });
+    loadTrial();
   }, []);
+
+  async function handleStartTrial() {
+    if (startingTrial) return;
+    setStartingTrial(true);
+    setError('');
+    setNotice('');
+    try {
+      const { trialDaysLeft: days } = await startTrial();
+      invalidateSubscriptionCache();
+      setTier('pro');
+      setTrialStatus('active');
+      setTrialDaysLeft(days);
+      setNotice(isHebrew ? 'תקופת הניסיון הופעלה. נהנים מכל יכולות פרו!' : 'Your trial is on. Enjoy all of Pro!');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : (isHebrew ? 'לא הצלחנו להתחיל את הניסיון.' : 'Could not start the trial.'));
+    } finally {
+      setStartingTrial(false);
+    }
+  }
 
   async function go(action: () => Promise<void>, key: string) {
     setBusy(key);
@@ -112,6 +148,52 @@ export default function PlanPage() {
             : 'Single conversations, without memory over time.'}
         </p>
       </div>
+
+      {/* Pro trial status + manual start (hidden for paid subscribers) */}
+      {trialStatus && trialStatus !== 'paid' && (
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm mb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-stone-900 dark:text-zinc-100">
+                {isHebrew ? 'תקופת ניסיון פרו · 14 ימים' : 'Pro trial · 14 days'}
+              </div>
+              <div className="text-xs text-stone-500 dark:text-zinc-400 mt-0.5 leading-snug">
+                {trialStatus === 'active'
+                  ? (isHebrew ? `נותרו ${trialDaysLeft} ימים · בסיום חוזרים לחינמית` : `${trialDaysLeft} days left · reverts to Free after`)
+                  : trialStatus === 'available'
+                  ? (isHebrew ? 'זיכרון, תובנות ועד 50 הודעות ביום - חינם, ללא כרטיס אשראי' : 'Memory, insights, up to 50 messages/day - free, no card')
+                  : (isHebrew ? 'תקופת הניסיון כבר נוצלה' : 'Your trial has already been used')}
+              </div>
+            </div>
+            <span
+              className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${
+                trialStatus === 'active'
+                  ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
+                  : trialStatus === 'available'
+                  ? 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400'
+                  : 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
+              }`}
+            >
+              {trialStatus === 'active'
+                ? (isHebrew ? 'פעיל' : 'On')
+                : trialStatus === 'available'
+                ? (isHebrew ? 'כבוי' : 'Off')
+                : (isHebrew ? 'נוצל' : 'Used')}
+            </span>
+          </div>
+          {trialStatus === 'available' && (
+            <button
+              onClick={handleStartTrial}
+              disabled={startingTrial}
+              className="mt-4 w-full px-5 py-2.5 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors disabled:opacity-60"
+            >
+              {startingTrial
+                ? (isHebrew ? 'מפעילים…' : 'Starting…')
+                : (isHebrew ? 'הפעילו 14 ימי ניסיון חינם' : 'Start 14-day free trial')}
+            </button>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-sm p-3 mb-4">
