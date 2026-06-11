@@ -208,6 +208,7 @@ export default function ConversationPage() {
   const [tier, setTier] = useState<'free' | 'pro' | null>(null);
   const [dismissedNudgeLevel, setDismissedNudgeLevel] = useState(0);
   const [limitReached, setLimitReached] = useState(false);
+  const [wallIsTrial, setWallIsTrial] = useState(false);
   const [trialDaysLeft, setTrialDaysLeft] = useState(0);
   const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
   const [attaching, setAttaching] = useState(false);
@@ -290,7 +291,7 @@ export default function ConversationPage() {
       try {
         const usage = await getUsage();
         if (usage.trial && (usage.trialDaysLeft ?? 0) > 0) setTrialDaysLeft(usage.trialDaysLeft ?? 0);
-        if (usage.tier === 'free' && usage.reached) setLimitReached(true);
+        if (usage.reached) { setLimitReached(true); setWallIsTrial(!!usage.trial); }
       } catch { /* fail open */ }
 
       if (tier === 'free') {
@@ -423,6 +424,7 @@ export default function ConversationPage() {
     } catch (err) {
       if (err instanceof DailyLimitError) {
         // Hit the wall (e.g. returning user, or a race). Lock without an error toast.
+        setWallIsTrial(err.trial);
         setLimitReached(true);
         setSending(false);
         return;
@@ -704,13 +706,13 @@ export default function ConversationPage() {
                 <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
               </svg>
             </div>
-            <h2 className="text-base font-semibold text-stone-900 dark:text-zinc-100">{t.daily_limit_title}</h2>
-            <p className="text-sm text-stone-600 dark:text-zinc-300 leading-relaxed max-w-md mx-auto">{t.daily_limit_body}</p>
+            <h2 className="text-base font-semibold text-stone-900 dark:text-zinc-100">{wallIsTrial ? t.trial_limit_title : t.daily_limit_title}</h2>
+            <p className="text-sm text-stone-600 dark:text-zinc-300 leading-relaxed max-w-md mx-auto">{wallIsTrial ? t.trial_limit_body : t.daily_limit_body}</p>
             <button
               onClick={() => setShowPlanPicker(true)}
               className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors"
             >
-              {t.daily_limit_cta_upgrade}
+              {wallIsTrial ? t.trial_limit_cta_upgrade : t.daily_limit_cta_upgrade}
             </button>
             <p className="text-xs text-stone-400 dark:text-zinc-600">{t.daily_limit_cta_tomorrow}</p>
           </div>

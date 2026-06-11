@@ -84,6 +84,9 @@ async function getAuthedUser(req: Request) {
 // user is invested but the urge to continue is strongest. Change this one
 // number to adjust the wall; the daily_usage counter and UI follow it.
 const FREE_DAILY_MESSAGE_LIMIT = 25;
+// Trial users keep Pro features (memory, insights) but are metered at a higher
+// daily cap to bound cost during the 14-day trial. Paid Pro is uncapped.
+const TRIAL_DAILY_MESSAGE_LIMIT = 50;
 
 // New registered users get full Pro (memory, insights, no daily wall) for this
 // many days from signup, so they can feel the paid value before deciding. The
@@ -715,11 +718,14 @@ app.post('/chat', async (req: Request, res: Response) => {
       .select('subscription_tier')
       .eq('user_id', userId)
       .maybeSingle();
-    // Effective Pro = paid OR within the 14-day trial. Trial users skip the wall
-    // and get memory/insights, so they experience the full paid product.
-    const effectivePro = tierRow?.subscription_tier === 'pro' || trialActive(user);
+    // Paid Pro is uncapped. Trial users get Pro features (memory/insights) but
+    // are metered at the higher trial cap. Free users get the lower free cap.
+    const paidPro = tierRow?.subscription_tier === 'pro';
+    const onTrial = !paidPro && trialActive(user);
+    const proFeatures = paidPro || onTrial; // memory + insights
+    const dailyLimit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;
 
-    if (!effectivePro) {
+    if (!paidPro) {
       const { data: count, error: bumpErr } = await supabaseAdmin.rpc('bump_daily_usage', {
         p_user: userId,
       });
@@ -727,21 +733,22 @@ app.post('/chat', async (req: Request, res: Response) => {
         console.error('bump_daily_usage failed:', bumpErr);
         // Fail open: never block a paying-customer-to-be on an infra hiccup.
       } else if (typeof count === 'number') {
-        if (count > FREE_DAILY_MESSAGE_LIMIT) {
+        if (count > dailyLimit) {
           return res.status(429).json({
-            error: 'Daily free message limit reached.',
+            error: 'Daily message limit reached.',
             code: 'daily_limit_reached',
-            limit: FREE_DAILY_MESSAGE_LIMIT,
+            limit: dailyLimit,
+            trial: onTrial,
           });
         }
-        remaining = Math.max(0, FREE_DAILY_MESSAGE_LIMIT - count);
+        remaining = Math.max(0, dailyLimit - count);
         // The final allowed message of the day winds down gracefully.
-        windDown = count === FREE_DAILY_MESSAGE_LIMIT;
+        windDown = count === dailyLimit;
       }
     }
 
     const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user')?.content;
-    const systemPrompt = await buildSystemPrompt(userId, language ?? 'he', lastUserMessage, windDown, effectivePro);
+    const systemPrompt = await buildSystemPrompt(userId, language ?? 'he', lastUserMessage, windDown, proFeatures);
     const cappedMessages = messages.slice(-30);
 
     // Prompt-cache the conversation prefix: marking the last message caches
@@ -788,28 +795,22 @@ app.get('/usage', async (req: Request, res: Response) => {
     const paidPro = tierRow?.subscription_tier === 'pro';
     const onTrial = !paidPro && trialActive(user);
 
-    if (paidPro || onTrial) {
-      // Effective Pro (paid or trial): no wall. Surface trial info so the UI can
-      // show a countdown + upgrade nudge during the trial.
-      return res.json({
-        tier: 'pro',
-        count: 0,
-        limit: null,
-        reached: false,
-        trial: onTrial,
-        trialDaysLeft: onTrial ? trialDaysLeft(user) : 0,
-      });
+    if (paidPro) {
+      // Paid Pro is uncapped — no wall.
+      return res.json({ tier: 'pro', count: 0, limit: null, reached: false, trial: false, trialDaysLeft: 0 });
     }
 
+    // Free and trial are both metered (trial at the higher cap, with Pro features).
+    const limit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;
     const { data: count } = await supabaseAdmin.rpc('get_daily_usage', { p_user: user.id });
     const used = typeof count === 'number' ? count : 0;
     res.json({
-      tier: 'free',
+      tier: onTrial ? 'pro' : 'free', // 'pro' keeps the UI in full-feature mode
       count: used,
-      limit: FREE_DAILY_MESSAGE_LIMIT,
-      reached: used >= FREE_DAILY_MESSAGE_LIMIT,
-      trial: false,
-      trialDaysLeft: 0,
+      limit,
+      reached: used >= limit,
+      trial: onTrial,
+      trialDaysLeft: onTrial ? trialDaysLeft(user) : 0,
     });
   } catch (err: any) {
     console.error('usage error:', err);

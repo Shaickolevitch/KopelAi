@@ -28,10 +28,12 @@ export type ChatResponse = {
 // The conversation page catches this specifically to show the wall UI.
 export class DailyLimitError extends Error {
   limit: number;
-  constructor(limit: number) {
+  trial: boolean;
+  constructor(limit: number, trial = false) {
     super('daily_limit_reached');
     this.name = 'DailyLimitError';
     this.limit = limit;
+    this.trial = trial;
   }
 }
 
@@ -51,7 +53,7 @@ export async function sendChat(
       try {
         const body = JSON.parse(errorText);
         if (body?.code === 'daily_limit_reached') {
-          throw new DailyLimitError(body.limit ?? 0);
+          throw new DailyLimitError(body.limit ?? 0, body.trial ?? false);
         }
       } catch (e) {
         if (e instanceof DailyLimitError) throw e;

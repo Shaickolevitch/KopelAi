@@ -35,6 +35,9 @@ export const STRINGS = {
     daily_limit_body: 'דיברנו לא מעט היום, ויפה שכך. בגרסה החינמית אפשר להמשיך מחר - ואם בא לך להישאר עכשיו, בפרו השיחה נמשכת בלי הגבלה.',
     daily_limit_cta_upgrade: 'המשיכו עכשיו עם פרו',
     daily_limit_cta_tomorrow: 'נתראה מחר',
+    trial_limit_title: 'הגעתם למכסת 50 ההודעות להיום',
+    trial_limit_body: 'בתקופת הניסיון אפשר עד 50 הודעות ביום - והזיכרון והתובנות שלכם נשמרים. נתראה מחר להמשך, או עברו לפרו לשיחות ללא הגבלה.',
+    trial_limit_cta_upgrade: 'לפרו - ללא הגבלה',
 
     mic_permission_title: 'נדרשת גישה למיקרופון',
     mic_permission_body: 'קופלAI משתמש במיקרופון כדי שתוכל לדבר במקום להקליד. אפשר להפעיל בהגדרות.',
@@ -264,6 +267,9 @@ export const STRINGS = {
     daily_limit_body: "We covered real ground today - and that's a good thing. On the free plan you can pick this back up tomorrow. If you'd rather stay now, Pro keeps the conversation going without limits.",
     daily_limit_cta_upgrade: 'Continue now with Pro',
     daily_limit_cta_tomorrow: 'See you tomorrow',
+    trial_limit_title: "That's 50 messages for today",
+    trial_limit_body: "Your trial allows up to 50 messages a day - and your memory and insights are saved. Come back tomorrow to continue, or go Pro for unlimited conversations.",
+    trial_limit_cta_upgrade: 'Go Pro - unlimited',
 
     mic_permission_title: 'Microphone access needed',
     mic_permission_body:
