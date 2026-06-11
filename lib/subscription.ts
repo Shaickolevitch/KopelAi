@@ -6,30 +6,19 @@ export type SubscriptionTier = 'free' | 'pro';
 let _cachedTier: SubscriptionTier | null = null;
 let _cachedUserId: string | null = null;
 
-// New registered users get a 14-day Pro trial (full features, no daily wall),
-// measured from auth signup. Keep this in sync with PRO_TRIAL_DAYS in the
-// backend — the backend is the real gate; this is for UI behavior.
-const PRO_TRIAL_DAYS = 14;
-
 export async function getSubscriptionTier(userId: string): Promise<SubscriptionTier> {
   if (_cachedTier && _cachedUserId === userId) return _cachedTier;
   const { data } = await supabase()
     .from('user_profile')
-    .select('subscription_tier')
+    .select('subscription_tier, trial_ends_at')
     .eq('user_id', userId)
     .maybeSingle();
   let tier: SubscriptionTier = data?.subscription_tier === 'pro' ? 'pro' : 'free';
 
-  // During the trial window, treat the user as Pro so all paid features work.
-  if (tier === 'free') {
-    try {
-      const { data: auth } = await supabase().auth.getUser();
-      const u = auth.user;
-      if (u && !u.is_anonymous && u.created_at) {
-        const endsAt = new Date(u.created_at).getTime() + PRO_TRIAL_DAYS * 86_400_000;
-        if (Date.now() < endsAt) tier = 'pro';
-      }
-    } catch { /* ignore - fall back to free */ }
+  // While the opt-in trial is active, treat the user as Pro so paid features
+  // work. The backend is the real gate; this just drives UI behavior.
+  if (tier === 'free' && data?.trial_ends_at && Date.now() < new Date(data.trial_ends_at).getTime()) {
+    tier = 'pro';
   }
 
   _cachedTier = tier;

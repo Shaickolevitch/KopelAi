@@ -73,14 +73,31 @@ export type UsageInfo = {
   // True while the user is in their 14-day Pro trial; days remaining.
   trial?: boolean;
   trialDaysLeft?: number;
+  // True for a free user who has never started a trial (can opt in).
+  trialAvailable?: boolean;
 };
 
-// Today's free-tier usage, so the chat UI can lock the composer on load.
+// Today's usage + trial state, so the chat UI can lock the composer on load and
+// show the right banner.
 export async function getUsage(): Promise<UsageInfo> {
   const response = await fetch(`${API_URL}/usage`, {
     headers: { ...(await authHeaders()) },
   });
   if (!response.ok) throw new Error(`Usage error (${response.status})`);
+  return response.json();
+}
+
+// Activate the opt-in 14-day Pro trial (one-time per user).
+export async function startTrial(): Promise<{ trialEndsAt: string; trialDaysLeft: number }> {
+  const response = await fetch(`${API_URL}/start-trial`, {
+    method: 'POST',
+    headers: { ...(await authHeaders()) },
+  });
+  if (!response.ok) {
+    let text = await response.text();
+    try { text = JSON.parse(text).error ?? text; } catch {}
+    throw new Error(text || 'Could not start trial');
+  }
   return response.json();
 }
 

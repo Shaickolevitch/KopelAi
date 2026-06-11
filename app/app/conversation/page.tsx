@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useT, useLang } from '@/lib/i18n';
-import { sendChat, endConversation, understandFile, transcribeAudio, getUsage, DailyLimitError, ChatMessage } from '@/lib/api';
+import { sendChat, endConversation, understandFile, transcribeAudio, getUsage, startTrial, DailyLimitError, ChatMessage } from '@/lib/api';
 import Onboarding from './Onboarding';
 import { getCurrentUser, AuthUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -11,6 +11,7 @@ import {
   getSubscriptionTier,
   clearPreviousSession,
   startCheckout,
+  invalidateSubscriptionCache,
 } from '@/lib/subscription';
 import { track } from '@/lib/analytics';
 
@@ -210,6 +211,8 @@ export default function ConversationPage() {
   const [limitReached, setLimitReached] = useState(false);
   const [wallIsTrial, setWallIsTrial] = useState(false);
   const [trialDaysLeft, setTrialDaysLeft] = useState(0);
+  const [trialAvailable, setTrialAvailable] = useState(false);
+  const [startingTrial, setStartingTrial] = useState(false);
   const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
   const [attaching, setAttaching] = useState(false);
   const [composerDragOver, setComposerDragOver] = useState(false);
@@ -291,6 +294,7 @@ export default function ConversationPage() {
       try {
         const usage = await getUsage();
         if (usage.trial && (usage.trialDaysLeft ?? 0) > 0) setTrialDaysLeft(usage.trialDaysLeft ?? 0);
+        if (usage.trialAvailable) setTrialAvailable(true);
         if (usage.reached) { setLimitReached(true); setWallIsTrial(!!usage.trial); }
       } catch { /* fail open */ }
 
@@ -456,6 +460,27 @@ export default function ConversationPage() {
     }
   }
 
+  async function handleStartTrial() {
+    if (startingTrial) return;
+    setStartingTrial(true);
+    setError(null);
+    try {
+      const { trialDaysLeft: days } = await startTrial();
+      invalidateSubscriptionCache();
+      track('trial_started');
+      // Switch the UI into trial (Pro) mode without a reload.
+      setTier('pro');
+      setTrialAvailable(false);
+      setTrialDaysLeft(days);
+      setLimitReached(false);
+    } catch (err) {
+      console.error('Start trial failed:', err);
+      setError(language === 'he' ? 'לא הצלחנו להתחיל את הניסיון. נסו שוב.' : "Couldn't start the trial. Please try again.");
+    } finally {
+      setStartingTrial(false);
+    }
+  }
+
   async function handleSelectPlan(plan: 'monthly' | 'annual') {
     setCheckoutLoading(true);
     track('checkout_started', { plan });
@@ -547,6 +572,26 @@ export default function ConversationPage() {
               className="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-950 dark:bg-indigo-600 text-white font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors"
             >
               {language === 'he' ? 'שדרגו לפרו' : 'Upgrade to Pro'}
+            </button>
+          </div>
+        )}
+
+        {/* Opt-in Pro trial offer (free users who haven't started one) */}
+        {tier === 'free' && trialAvailable && (
+          <div className="mb-3 flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 text-xs leading-snug">
+            <span className="flex-1">
+              {language === 'he'
+                ? 'רוצים לנסות את פרו? 14 ימי ניסיון חינם - זיכרון בין מפגשים, תובנות אישיות ועד 50 הודעות ביום.'
+                : 'Want to try Pro? 14 free days - memory between sessions, personal insights, and up to 50 messages a day.'}
+            </span>
+            <button
+              onClick={handleStartTrial}
+              disabled={startingTrial}
+              className="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-950 dark:bg-indigo-600 text-white font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors disabled:opacity-60"
+            >
+              {startingTrial
+                ? (language === 'he' ? 'מתחילים…' : 'Starting…')
+                : (language === 'he' ? 'התחילו ניסיון חינם' : 'Start free trial')}
             </button>
           </div>
         )}

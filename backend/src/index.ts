@@ -88,21 +88,19 @@ const FREE_DAILY_MESSAGE_LIMIT = 25;
 // daily cap to bound cost during the 14-day trial. Paid Pro is uncapped.
 const TRIAL_DAILY_MESSAGE_LIMIT = 50;
 
-// New registered users get full Pro (memory, insights, no daily wall) for this
-// many days from signup, so they can feel the paid value before deciding. The
-// clock is the auth user's created_at — no DB column needed, and it can't be
-// reset by the user. Anonymous users don't get a trial (signing up starts it).
+// Opt-in 14-day Pro trial: users start free and explicitly activate the trial,
+// which stamps user_profile.trial_ends_at. The clock is that timestamp (not
+// signup), it's set once, and it's never cleared — so a trial can't be
+// restarted. Trial users get Pro features (memory, insights) but are metered
+// at the higher daily cap.
 const PRO_TRIAL_DAYS = 14;
-function trialActive(user: any): boolean {
-  if (!user || user.is_anonymous) return false;
-  const created = user.created_at ? new Date(user.created_at).getTime() : NaN;
-  if (Number.isNaN(created)) return false;
-  return Date.now() < created + PRO_TRIAL_DAYS * 86_400_000;
+function trialActiveFrom(trialEndsAt: string | null | undefined): boolean {
+  if (!trialEndsAt) return false;
+  return Date.now() < new Date(trialEndsAt).getTime();
 }
-function trialDaysLeft(user: any): number {
-  if (!trialActive(user)) return 0;
-  const created = new Date(user.created_at).getTime();
-  const msLeft = created + PRO_TRIAL_DAYS * 86_400_000 - Date.now();
+function trialDaysLeftFrom(trialEndsAt: string | null | undefined): number {
+  if (!trialActiveFrom(trialEndsAt)) return 0;
+  const msLeft = new Date(trialEndsAt as string).getTime() - Date.now();
   return Math.max(0, Math.ceil(msLeft / 86_400_000));
 }
 
@@ -715,13 +713,13 @@ app.post('/chat', async (req: Request, res: Response) => {
     let remaining: number | null = null;
     const { data: tierRow } = await supabaseAdmin
       .from('user_profile')
-      .select('subscription_tier')
+      .select('subscription_tier, trial_ends_at')
       .eq('user_id', userId)
       .maybeSingle();
     // Paid Pro is uncapped. Trial users get Pro features (memory/insights) but
     // are metered at the higher trial cap. Free users get the lower free cap.
     const paidPro = tierRow?.subscription_tier === 'pro';
-    const onTrial = !paidPro && trialActive(user);
+    const onTrial = !paidPro && trialActiveFrom(tierRow?.trial_ends_at);
     const proFeatures = paidPro || onTrial; // memory + insights
     const dailyLimit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;
 
@@ -789,15 +787,17 @@ app.get('/usage', async (req: Request, res: Response) => {
 
     const { data: tierRow } = await supabaseAdmin
       .from('user_profile')
-      .select('subscription_tier')
+      .select('subscription_tier, trial_ends_at')
       .eq('user_id', user.id)
       .maybeSingle();
     const paidPro = tierRow?.subscription_tier === 'pro';
-    const onTrial = !paidPro && trialActive(user);
+    const onTrial = !paidPro && trialActiveFrom(tierRow?.trial_ends_at);
+    // Trial can be started only if never started before (and not anonymous/pro).
+    const trialAvailable = !paidPro && !onTrial && !tierRow?.trial_ends_at && !user.is_anonymous;
 
     if (paidPro) {
       // Paid Pro is uncapped — no wall.
-      return res.json({ tier: 'pro', count: 0, limit: null, reached: false, trial: false, trialDaysLeft: 0 });
+      return res.json({ tier: 'pro', count: 0, limit: null, reached: false, trial: false, trialDaysLeft: 0, trialAvailable: false });
     }
 
     // Free and trial are both metered (trial at the higher cap, with Pro features).
@@ -810,10 +810,52 @@ app.get('/usage', async (req: Request, res: Response) => {
       limit,
       reached: used >= limit,
       trial: onTrial,
-      trialDaysLeft: onTrial ? trialDaysLeft(user) : 0,
+      trialDaysLeft: onTrial ? trialDaysLeftFrom(tierRow?.trial_ends_at) : 0,
+      trialAvailable,
     });
   } catch (err: any) {
     console.error('usage error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// ----------------------------------------------------------
+// Start the opt-in 14-day Pro trial. One-time per user; can't be restarted.
+// ----------------------------------------------------------
+app.post('/start-trial', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (user.is_anonymous) {
+      return res.status(403).json({ error: 'Sign up to start a trial', code: 'signup_required' });
+    }
+
+    const { data: tierRow } = await supabaseAdmin
+      .from('user_profile')
+      .select('subscription_tier, trial_ends_at')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (tierRow?.subscription_tier === 'pro') {
+      return res.status(400).json({ error: 'Already on Pro', code: 'already_pro' });
+    }
+    if (tierRow?.trial_ends_at) {
+      // Already started (or used) — never restart.
+      return res.status(409).json({ error: 'Trial already used', code: 'trial_used' });
+    }
+
+    const endsAt = new Date(Date.now() + PRO_TRIAL_DAYS * 86_400_000).toISOString();
+    const { error: upErr } = await supabaseAdmin
+      .from('user_profile')
+      .upsert({ user_id: user.id, trial_ends_at: endsAt }, { onConflict: 'user_id' });
+    if (upErr) {
+      console.error('start-trial upsert failed:', upErr);
+      return res.status(500).json({ error: 'Could not start trial' });
+    }
+
+    res.json({ trialEndsAt: endsAt, trialDaysLeft: PRO_TRIAL_DAYS });
+  } catch (err: any) {
+    console.error('start-trial error:', err);
     res.status(500).json({ error: err.message ?? 'Internal server error' });
   }
 });
@@ -970,11 +1012,11 @@ app.post('/end-conversation', async (req: Request, res: Response) => {
     // that would be remembered next session.
     const { data: tierRow } = await supabaseAdmin
       .from('user_profile')
-      .select('subscription_tier')
+      .select('subscription_tier, trial_ends_at')
       .eq('user_id', userId)
       .maybeSingle();
     // Trial users get memory + insights too (effective Pro).
-    const isPro = tierRow?.subscription_tier === 'pro' || trialActive(user);
+    const isPro = tierRow?.subscription_tier === 'pro' || trialActiveFrom(tierRow?.trial_ends_at);
 
     if (!isPro) {
       await supabaseAdmin
