@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import './instrument'; // Sentry init — must come before other imports
 import * as Sentry from '@sentry/node';
+import crypto from 'crypto';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import Anthropic from '@anthropic-ai/sdk';
@@ -31,7 +32,8 @@ const upload = multer({
 });
 
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+// Capture the raw body so we can verify WhatsApp webhook signatures.
+app.use(express.json({ limit: '1mb', verify: (req, _res, buf) => { (req as any).rawBody = buf; } }));
 
 // ----------------------------------------------------------
 // Insight categories — keep in sync with the frontend
@@ -631,7 +633,8 @@ async function buildSystemPrompt(
   language: 'he' | 'en',
   lastUserMessage?: string,
   windDown = false,
-  isProEffective = false
+  isProEffective = false,
+  channel: 'web' | 'whatsapp' = 'web'
 ): Promise<SystemBlock[]> {
   const basePrompt = await getBasePrompt();
   const knowledge = await getKnowledgeContext(lastUserMessage ?? '');
@@ -648,13 +651,18 @@ async function buildSystemPrompt(
     ? '\n\n# Closing beat\n\nThis is the last exchange available in this session. Respond fully and warmly, then gently bring this turn to a natural resting point — offer a small thought to sit with, rather than opening a new line of inquiry. Do not mention limits, plans, or payment; just let it land softly.'
     : '';
 
+  // WhatsApp replies should read like thoughtful texts, not web-length essays.
+  const channelDirective = channel === 'whatsapp'
+    ? '\n\n# WhatsApp\n\nYou are replying over WhatsApp. Keep it short and conversational — usually 1–4 sentences, like a warm text message. No headings, no long lists. Offer one gentle reflection or question at a time.'
+    : '';
+
   // The static base prompt is cached; everything dynamic goes in a second block.
   const baseBlock: SystemBlock = { type: 'text', text: basePrompt, cache_control: { type: 'ephemeral' } };
   const dynamic = (rest: string): SystemBlock[] =>
     rest.trim().length > 0 ? [baseBlock, { type: 'text', text: rest }] : [baseBlock];
 
   if (!userId) {
-    return dynamic(knowledge + langDirective + windDownDirective);
+    return dynamic(knowledge + langDirective + windDownDirective + channelDirective);
   }
 
   const { data: profile } = await supabaseAdmin
@@ -676,7 +684,7 @@ async function buildSystemPrompt(
     memorySection = `\n\n# What you remember about this person\n\nThis is a fresh session and you have no memory of past conversations with this person. Don't pretend to remember things you don't, and don't claim to recognize them.`;
   }
 
-  return dynamic(knowledge + memorySection + langDirective + windDownDirective);
+  return dynamic(knowledge + memorySection + langDirective + windDownDirective + channelDirective);
 }
 
 // Try to extract JSON from a Claude response, handling cases where it includes prose
@@ -1004,32 +1012,20 @@ app.post('/understand-file', upload.single('file'), async (req: Request, res: Re
 });
 
 // ----------------------------------------------------------
-// End conversation — summary, profile update, and insight extraction
+// Consolidate a conversation into memory + insights (the "end session" brain).
+// Self-contained; reused by /end-conversation (web) and the WhatsApp idle
+// sweeper. Pro/trial get memory + insights; free users just get it closed.
 // ----------------------------------------------------------
-app.post('/end-conversation', async (req: Request, res: Response) => {
-  try {
-    const user = await getAuthedUser(req);
-    if (!user) return res.status(401).json({ error: 'Unauthorized' });
-    if (rateLimited(`end:${user.id}`, 20, 60_000)) {
-      return res.status(429).json({ error: 'Too many requests, slow down a moment.' });
-    }
-
-    const { conversationId } = req.body;
-    const userId = user.id;
-
-    if (!conversationId) {
-      return res.status(400).json({ error: 'conversationId is required' });
-    }
-
-    // Verify this conversation belongs to the caller.
+type ConsolidateResult = { status: string; tier: 'free' | 'pro'; insights_count: number; summary?: string };
+async function consolidateConversation(conversationId: string): Promise<ConsolidateResult> {
+  {
     const { data: convo } = await supabaseAdmin
       .from('conversations')
       .select('user_id')
       .eq('id', conversationId)
       .maybeSingle();
-    if (!convo || convo.user_id !== userId) {
-      return res.status(403).json({ error: 'Not your conversation' });
-    }
+    if (!convo) return { status: 'not_found', tier: 'free', insights_count: 0 };
+    const userId = convo.user_id as string;
 
     // 1. Fetch all messages from this conversation
     const { data: messages, error: msgErr } = await supabaseAdmin
@@ -1040,7 +1036,8 @@ app.post('/end-conversation', async (req: Request, res: Response) => {
 
     if (msgErr) throw msgErr;
     if (!messages || messages.length === 0) {
-      return res.json({ status: 'ok', skipped: 'no messages' });
+      await supabaseAdmin.from('conversations').update({ ended_at: new Date().toISOString() }).eq('id', conversationId);
+      return { status: 'ok', tier: 'free', insights_count: 0 };
     }
 
     const transcript = messages
@@ -1063,7 +1060,7 @@ app.post('/end-conversation', async (req: Request, res: Response) => {
         .from('conversations')
         .update({ ended_at: new Date().toISOString(), message_count: messages.length })
         .eq('id', conversationId);
-      return res.json({ status: 'ok', tier: 'free', memory: false, insights_count: 0 });
+      return { status: 'ok', tier: 'free', insights_count: 0 };
     }
 
     // 2. Generate session summary
@@ -1269,11 +1266,33 @@ Return only the opener, with no headers or explanations.`;
       { onConflict: 'user_id' }
     );
 
+    return { status: 'ok', tier: 'pro', insights_count: validInsights.length, summary };
+  }
+}
+
+// ----------------------------------------------------------
+// End conversation (web): verify ownership, then consolidate.
+// ----------------------------------------------------------
+app.post('/end-conversation', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (rateLimited(`end:${user.id}`, 20, 60_000)) {
+      return res.status(429).json({ error: 'Too many requests, slow down a moment.' });
+    }
+    const { conversationId } = req.body;
+    if (!conversationId) return res.status(400).json({ error: 'conversationId is required' });
+    const { data: convo } = await supabaseAdmin
+      .from('conversations').select('user_id').eq('id', conversationId).maybeSingle();
+    if (!convo || convo.user_id !== user.id) return res.status(403).json({ error: 'Not your conversation' });
+
+    const result = await consolidateConversation(conversationId);
     res.json({
-      status: 'ok',
-      summary,
-      profile_updated: true,
-      insights_count: validInsights.length,
+      status: result.status,
+      summary: result.summary,
+      profile_updated: result.tier === 'pro',
+      insights_count: result.insights_count,
+      tier: result.tier,
     });
   } catch (err: any) {
     console.error('End conversation error:', err);
@@ -1451,6 +1470,219 @@ app.get('/export-data', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Server error', details: err.message });
   }
 });
+
+// =====================================================
+// WhatsApp agent — a second doorway into the same Kopel.
+// Inert until WHATSAPP_* env vars are set (see docs/whatsapp-setup.md).
+// =====================================================
+const WA = {
+  token: process.env.WHATSAPP_ACCESS_TOKEN || '',
+  phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
+  verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || '',
+  appSecret: process.env.WHATSAPP_APP_SECRET || '',
+  displayNumber: process.env.WHATSAPP_NUMBER || '', // digits only, e.g. 972500000000 (for wa.me links)
+};
+const waConfigured = () => Boolean(WA.token && WA.phoneNumberId);
+const isHe = (t: string) => /[֐-׿]/.test(t);
+
+async function sendWhatsApp(to: string, body: string) {
+  if (!waConfigured() || !body) return;
+  try {
+    const r = await fetch(`https://graph.facebook.com/v21.0/${WA.phoneNumberId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${WA.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body: body.slice(0, 4096) } }),
+    });
+    if (!r.ok) console.error('WhatsApp send failed:', r.status, await r.text());
+  } catch (e) {
+    console.error('WhatsApp send error:', e);
+  }
+}
+
+// The brain: same memory/tier/wall logic as /chat, just over WhatsApp.
+async function handleWhatsAppMessage(phone: string, text: string) {
+  const lang: 'he' | 'en' = isHe(text) ? 'he' : 'en';
+  const trimmed = (text || '').trim();
+  if (!trimmed) return;
+
+  // 1. Who is this? Resolve phone → account.
+  const { data: link } = await supabaseAdmin
+    .from('whatsapp_links').select('user_id').eq('phone', phone).maybeSingle();
+
+  // 2. Not linked → try to redeem a link code, else send onboarding.
+  if (!link) {
+    const candidate = trimmed.toUpperCase().replace(/\s+/g, '');
+    const { data: codeRow } = await supabaseAdmin
+      .from('whatsapp_link_codes').select('user_id, created_at').eq('code', candidate).maybeSingle();
+    if (codeRow && Date.now() - new Date(codeRow.created_at).getTime() < 30 * 60_000) {
+      await supabaseAdmin.from('whatsapp_links').upsert({ phone, user_id: codeRow.user_id }, { onConflict: 'phone' });
+      await supabaseAdmin.from('whatsapp_link_codes').delete().eq('user_id', codeRow.user_id);
+      await sendWhatsApp(phone, lang === 'he'
+        ? 'מצוין! חיברתי את הוואטסאפ לחשבון שלך. אני קופלAI - כתוב/י לי בכל עת, ואני אזכור אותך מפעם לפעם.'
+        : "Great — your WhatsApp is now linked. I'm KopelAi; message me anytime and I'll remember you between conversations.");
+      return;
+    }
+    await sendWhatsApp(phone, lang === 'he'
+      ? 'היי, כאן קופלAI. כדי שאלווה אותך לאורך זמן צריך לחבר את הוואטסאפ לחשבון: היכנס/י ל-kopelai.com ← "מנוי" ← "חיבור וואטסאפ", ושלח/י לי את הקוד שתקבל/י.'
+      : 'Hi, this is KopelAi. To accompany you over time, link your WhatsApp: go to kopelai.com → "Plan" → "Connect WhatsApp", and send me the code you get.');
+    return;
+  }
+
+  const userId = link.user_id as string;
+
+  // 3. Shared tier + daily wall (same counter as web).
+  const { data: tierRow } = await supabaseAdmin
+    .from('user_profile').select('subscription_tier, trial_ends_at').eq('user_id', userId).maybeSingle();
+  const paidPro = tierRow?.subscription_tier === 'pro';
+  const onTrial = !paidPro && trialActiveFrom(tierRow?.trial_ends_at);
+  const proFeatures = paidPro || onTrial;
+  const dailyLimit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;
+
+  const { data: count } = await supabaseAdmin.rpc('bump_daily_usage', { p_user: userId });
+  if (!paidPro && typeof count === 'number' && count > dailyLimit) {
+    await sendWhatsApp(phone, lang === 'he'
+      ? (onTrial ? 'הגענו למכסת ההודעות להיום 🙏 נתראה מחר להמשך.' : 'הגענו לסוף המכסה היומית בגרסה החינמית. נתראה מחר - או לשיחה ללא הגבלה, שדרגו לפרו ב-kopelai.com')
+      : (onTrial ? "That's our messages for today 🙏 see you tomorrow." : "That's today's free limit. See you tomorrow — or go Pro for unlimited at kopelai.com"));
+    return;
+  }
+  const windDown = !paidPro && typeof count === 'number' && count === dailyLimit;
+
+  // 4. Find or open this user's active WhatsApp conversation.
+  const { data: openConvo } = await supabaseAdmin
+    .from('conversations').select('id')
+    .eq('user_id', userId).eq('channel', 'whatsapp').is('ended_at', null).is('deleted_at', null)
+    .order('started_at', { ascending: false }).limit(1).maybeSingle();
+  let conversationId = openConvo?.id as string | undefined;
+  if (!conversationId) {
+    const { data: created } = await supabaseAdmin
+      .from('conversations')
+      .insert({ user_id: userId, language: lang, channel: 'whatsapp', started_at: new Date().toISOString() })
+      .select('id').single();
+    conversationId = created?.id;
+  }
+  if (!conversationId) {
+    await sendWhatsApp(phone, lang === 'he' ? 'משהו השתבש, נסה/י שוב בעוד רגע.' : 'Something went wrong, please try again in a moment.');
+    return;
+  }
+
+  // 5. Persist the user message.
+  await supabaseAdmin.from('messages').insert({
+    conversation_id: conversationId, user_id: userId, role: 'user', content: trimmed, language: lang, created_at: new Date().toISOString(),
+  });
+
+  // 6. Build context from the last messages of this thread.
+  const { data: history } = await supabaseAdmin
+    .from('messages').select('role, content').eq('conversation_id', conversationId)
+    .is('deleted_at', null).order('created_at', { ascending: true }).limit(60);
+  const recent = (history ?? []).slice(-30);
+
+  // 7. Same brain — system prompt (with memory if Pro/trial) + model.
+  const systemPrompt = await buildSystemPrompt(userId, lang, trimmed, windDown, proFeatures, 'whatsapp');
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5',
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: recent.map((m: any) => ({ role: m.role, content: m.content })),
+  });
+  const block = response.content.find((b) => b.type === 'text');
+  const reply = block && block.type === 'text' ? block.text : '';
+
+  // 8. Persist + send the reply.
+  if (reply) {
+    await supabaseAdmin.from('messages').insert({
+      conversation_id: conversationId, user_id: userId, role: 'assistant', content: reply, language: lang, created_at: new Date().toISOString(),
+    });
+    await sendWhatsApp(phone, reply);
+  }
+}
+
+// Webhook verification (Meta calls this once when you register the webhook).
+app.get('/whatsapp/webhook', (req: Request, res: Response) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+  if (mode === 'subscribe' && WA.verifyToken && token === WA.verifyToken) {
+    return res.status(200).send(challenge);
+  }
+  return res.sendStatus(403);
+});
+
+// Incoming WhatsApp messages.
+app.post('/whatsapp/webhook', async (req: Request, res: Response) => {
+  // Verify the payload really came from Meta (when the app secret is set).
+  if (WA.appSecret) {
+    const sig = req.header('x-hub-signature-256') || '';
+    const raw = ((req as any).rawBody as Buffer) ?? Buffer.from('');
+    const expected = 'sha256=' + crypto.createHmac('sha256', WA.appSecret).update(raw).digest('hex');
+    if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+      return res.sendStatus(401);
+    }
+  }
+  res.sendStatus(200); // ack fast; process after
+  try {
+    for (const entry of req.body?.entry ?? []) {
+      for (const change of entry.changes ?? []) {
+        for (const msg of change.value?.messages ?? []) {
+          if (msg.type === 'text' && msg.text?.body) {
+            await handleWhatsAppMessage(msg.from, msg.text.body);
+          } else if (msg.from) {
+            await sendWhatsApp(msg.from, 'כרגע אני קורא רק הודעות טקסט - כתוב/י לי במילים 🙂 / I can read text messages for now.');
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('WhatsApp webhook processing error:', e);
+  }
+});
+
+// Web: is this account linked to WhatsApp, and is the feature live?
+app.get('/whatsapp/status', async (req: Request, res: Response) => {
+  const user = await getAuthedUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  const { data: link } = await supabaseAdmin.from('whatsapp_links').select('phone, linked_at').eq('user_id', user.id).maybeSingle();
+  res.json({ configured: waConfigured(), linked: Boolean(link), phone: link?.phone ?? null, number: WA.displayNumber || null });
+});
+
+// Web: generate a one-time link code + a wa.me deep link to send it.
+app.post('/whatsapp/link-code', async (req: Request, res: Response) => {
+  const user = await getAuthedUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!waConfigured()) return res.status(503).json({ error: 'whatsapp_not_configured' });
+  const code = 'KOPEL-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+  await supabaseAdmin.from('whatsapp_link_codes').delete().eq('user_id', user.id); // one active code per user
+  const { error } = await supabaseAdmin.from('whatsapp_link_codes').insert({ code, user_id: user.id });
+  if (error) return res.status(500).json({ error: 'Could not create code' });
+  const waLink = WA.displayNumber ? `https://wa.me/${WA.displayNumber}?text=${encodeURIComponent(code)}` : null;
+  res.json({ code, waLink, number: WA.displayNumber || null });
+});
+
+// Every 5 minutes: close WhatsApp threads idle for >30 min and consolidate
+// their memory/insights (the WhatsApp equivalent of pressing "end session").
+const WA_IDLE_MS = 30 * 60_000;
+async function sweepIdleWhatsApp() {
+  try {
+    const cutoff = new Date(Date.now() - WA_IDLE_MS).toISOString();
+    const { data: convos } = await supabaseAdmin
+      .from('conversations').select('id')
+      .eq('channel', 'whatsapp').is('ended_at', null).is('deleted_at', null).limit(50);
+    for (const c of convos ?? []) {
+      const { data: last } = await supabaseAdmin
+        .from('messages').select('created_at').eq('conversation_id', c.id)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (!last) {
+        await supabaseAdmin.from('conversations').update({ ended_at: new Date().toISOString() }).eq('id', c.id);
+      } else if (last.created_at < cutoff) {
+        await consolidateConversation(c.id);
+      }
+    }
+  } catch (e) {
+    console.error('WhatsApp idle sweep error:', e);
+  }
+}
+if (waConfigured()) {
+  setInterval(sweepIdleWhatsApp, 5 * 60_000);
+}
 
 // Sentry error handler — must be after all routes, before listen.
 Sentry.setupExpressErrorHandler(app);

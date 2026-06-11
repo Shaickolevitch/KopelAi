@@ -11,6 +11,7 @@ import {
   type SubscriptionTier,
 } from '@/lib/subscription';
 import { getUsage, startTrial } from '@/lib/api';
+import ConnectWhatsApp from './ConnectWhatsApp';
 
 export default function PlanPage() {
   const { language } = useLang();
@@ -321,6 +322,8 @@ export default function PlanPage() {
           ? 'תשלום מאובטח דרך Ching · חשבונית מס · ניתן לבטל בכל עת'
           : 'Secure payment via Ching · Tax invoice · Cancel anytime'}
       </p>
+
+      <ConnectWhatsApp />
 
       {/* Student / trainee rate - unlocked with a code requested from us directly */}
       {!isPro && (

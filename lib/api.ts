@@ -97,6 +97,28 @@ export async function submitMarketingConsent(consent: boolean): Promise<void> {
   if (!response.ok) throw new Error(`Consent error (${response.status})`);
 }
 
+// ── WhatsApp linking ────────────────────────────────────────────────────────
+export type WhatsappStatus = { configured: boolean; linked: boolean; phone: string | null; number: string | null };
+
+export async function getWhatsappStatus(): Promise<WhatsappStatus> {
+  const response = await fetch(`${API_URL}/whatsapp/status`, { headers: { ...(await authHeaders()) } });
+  if (!response.ok) throw new Error(`WhatsApp status error (${response.status})`);
+  return response.json();
+}
+
+export async function getWhatsappLinkCode(): Promise<{ code: string; waLink: string | null; number: string | null }> {
+  const response = await fetch(`${API_URL}/whatsapp/link-code`, {
+    method: 'POST',
+    headers: { ...(await authHeaders()) },
+  });
+  if (!response.ok) {
+    let t = await response.text();
+    try { t = JSON.parse(t).error ?? t; } catch {}
+    throw new Error(t || 'Could not create link code');
+  }
+  return response.json();
+}
+
 // Activate the opt-in 14-day Pro trial (one-time per user).
 export async function startTrial(): Promise<{ trialEndsAt: string; trialDaysLeft: number }> {
   const response = await fetch(`${API_URL}/start-trial`, {
