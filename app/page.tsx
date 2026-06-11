@@ -275,11 +275,18 @@ export default function HomePage() {
               ? <>שנתי: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> במקום <span className="line-through">₪1,188</span> - כחודשיים מתנה.</>
               : <>Annual: <span className="font-medium text-stone-500 dark:text-zinc-400">₪990</span> instead of <span className="line-through">₪1,188</span> - about two months free.</>}
           </p>
-          <p className="text-xs text-center text-amber-700 dark:text-amber-400 mt-2">
-            {he
-              ? 'מחיר השקה ראשוני וזמני - עשוי להתעדכן בהמשך. המצטרפים עכשיו נשארים במחיר הזה.'
-              : 'Introductory launch price - may change later. Join now and keep this price.'}
-          </p>
+          <div className="mt-5 flex justify-center">
+            <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 text-sm font-medium shadow-sm">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+              </svg>
+              <span>
+                {he
+                  ? <><strong className="font-bold">מחיר השקה ראשוני וזמני</strong> - עשוי להתעדכן בהמשך. המצטרפים עכשיו נשארים במחיר הזה.</>
+                  : <><strong className="font-bold">Introductory launch price</strong> - may change later. Join now and keep this price.</>}
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
