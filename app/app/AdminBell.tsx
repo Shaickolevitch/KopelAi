@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/i18n';
-import { getAdminNotifications, type AdminNotifications } from '@/lib/api';
+import { getAdminNotifications, markAdminEventsSeen, type AdminNotifications } from '@/lib/api';
 
 export default function AdminBell() {
   const { language } = useLang();
@@ -28,18 +28,27 @@ export default function AdminBell() {
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
 
-  const total = n ? n.feedback_new + n.reviews_pending + n.sentry_open : 0;
+  const total = n ? n.feedback_new + n.reviews_pending + n.sentry_open + n.pro_new : 0;
 
   const rows = [
+    { key: 'pro', tab: 'users', count: n?.pro_new ?? 0, label: he ? 'מנוי פרו חדש 🎉' : 'New Pro purchase 🎉' },
     { key: 'feedback', tab: 'feedback', count: n?.feedback_new ?? 0, label: he ? 'משוב חדש' : 'New feedback' },
     { key: 'reviews', tab: 'reviews', count: n?.reviews_pending ?? 0, label: he ? 'המלצות לאישור' : 'Reviews to approve' },
     { key: 'sentry', tab: 'monitoring', count: n?.sentry_open ?? 0, label: he ? 'שגיאות פתוחות (Sentry)' : 'Open errors (Sentry)' },
   ];
 
+  // Opening the bell acknowledges one-off events (new Pro purchases) so they
+  // clear on the next refresh — outstanding items (feedback/reviews/errors) stay.
+  function handleToggle() {
+    const willOpen = !open;
+    setOpen(willOpen);
+    if (willOpen) { load(); if (n && n.pro_new > 0) markAdminEventsSeen().catch(() => {}); }
+  }
+
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => { setOpen((v) => !v); if (!open) load(); }}
+        onClick={handleToggle}
         className="relative p-2 rounded-lg text-stone-500 dark:text-zinc-400 hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-800 dark:hover:text-zinc-200 transition-colors"
         aria-label={he ? 'התראות' : 'Notifications'}
       >

@@ -395,9 +395,10 @@ app.get('/admin/notifications', async (req: Request, res: Response) => {
     const user = await getAuthedUser(req);
     if (!user || user.id !== ADMIN_USER_ID) return res.status(403).json({ error: 'Not authorized' });
 
-    const [fb, rv] = await Promise.all([
+    const [fb, rv, pp] = await Promise.all([
       supabaseAdmin.from('feedback').select('*', { count: 'exact', head: true }).eq('status', 'new'),
       supabaseAdmin.from('reviews').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabaseAdmin.from('admin_events').select('*', { count: 'exact', head: true }).eq('type', 'pro_purchase').eq('seen', false),
     ]);
     let sentry_open = 0;
     try {
@@ -409,9 +410,23 @@ app.get('/admin/notifications', async (req: Request, res: Response) => {
       feedback_new: fb.count ?? 0,
       reviews_pending: rv.count ?? 0,
       sentry_open,
+      pro_new: pp.count ?? 0,
     });
   } catch (err: any) {
     console.error('Admin notifications error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// Mark one-off admin events (e.g. pro purchases) as seen — they clear on view.
+app.post('/admin/events/seen', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user || user.id !== ADMIN_USER_ID) return res.status(403).json({ error: 'Not authorized' });
+    await supabaseAdmin.from('admin_events').update({ seen: true }).eq('seen', false);
+    res.json({ status: 'ok' });
+  } catch (err: any) {
+    console.error('Admin events seen error:', err);
     res.status(500).json({ error: err.message ?? 'Internal server error' });
   }
 });

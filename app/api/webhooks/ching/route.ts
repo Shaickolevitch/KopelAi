@@ -36,10 +36,10 @@ export async function POST(request: NextRequest) {
 async function findUserByCustomer(chingCustomerId: string) {
   const { data } = await adminSupabase()
     .from('user_profile')
-    .select('user_id')
+    .select('user_id, subscription_tier')
     .eq('ching_customer_id', chingCustomerId)
     .maybeSingle();
-  return data?.user_id ?? null;
+  return data ? { userId: data.user_id as string, tier: data.subscription_tier as string | null } : null;
 }
 
 async function handleSubscriptionActive(subscription: Record<string, unknown>) {
@@ -47,11 +47,12 @@ async function handleSubscriptionActive(subscription: Record<string, unknown>) {
   const subscriptionId = subscription.id as string;
   const periodEnd = subscription.current_period_end as string | null;
 
-  const userId = await findUserByCustomer(customerId);
-  if (!userId) {
+  const found = await findUserByCustomer(customerId);
+  if (!found) {
     console.error('Webhook: no user found for ching customer', customerId);
     return;
   }
+  const { userId, tier: prevTier } = found;
 
   await adminSupabase().from('user_profile').upsert({
     user_id: userId,
@@ -59,6 +60,18 @@ async function handleSubscriptionActive(subscription: Record<string, unknown>) {
     ching_subscription_id: subscriptionId,
     subscription_current_period_end: periodEnd ?? null,
   });
+
+  // Notify the admin only on a real free→pro conversion (not renewals/updates).
+  if (prevTier !== 'pro') {
+    try {
+      const admin = adminSupabase();
+      const { data: authUser } = await admin.auth.admin.getUserById(userId);
+      const email = authUser?.user?.email ?? 'משתמש';
+      await admin.from('admin_events').insert({ type: 'pro_purchase', title: email });
+    } catch (e) {
+      console.error('Webhook: failed to log pro_purchase event', e);
+    }
+  }
 }
 
 async function handleSubscriptionCanceled(subscription: Record<string, unknown>) {

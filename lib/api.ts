@@ -501,10 +501,15 @@ export async function adminDeleteReview(id: string) {
 }
 
 // ── Admin notifications ──────────────────────────────────────────────────────
-export type AdminNotifications = { feedback_new: number; reviews_pending: number; sentry_open: number };
+export type AdminNotifications = { feedback_new: number; reviews_pending: number; sentry_open: number; pro_new: number };
 
 export async function getAdminNotifications(): Promise<AdminNotifications> {
   const r = await fetch(`${API_URL}/admin/notifications`, { headers: { ...(await authHeaders()) } });
   if (!r.ok) throw new Error(`Notifications error (${r.status})`);
   return r.json();
+}
+
+// Clears one-off events (e.g. new Pro purchases) once the admin has seen them.
+export async function markAdminEventsSeen(): Promise<void> {
+  await fetch(`${API_URL}/admin/events/seen`, { method: 'POST', headers: { ...(await authHeaders()) } });
 }
