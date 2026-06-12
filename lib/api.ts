@@ -350,6 +350,7 @@ export type AnalyticsData = {
     new_users_30d: number;
     messages_30d: number;
     trials_started: number;
+    trial_converted: number;
   };
   daily: { day: string; new_users: number; active_users: number; messages: number; cumulative_users: number }[];
   weekly: { week: string; active: number; new: number; returning: number; resurrected: number }[];

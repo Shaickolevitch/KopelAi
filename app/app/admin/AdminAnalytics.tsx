@@ -97,7 +97,7 @@ export default function AdminAnalytics() {
   const k = data.kpis;
   const stickiness = k.mau > 0 ? Math.round((k.dau / k.mau) * 100) : 0;
   const consentRate = k.total_users > 0 ? Math.round((k.consented_users / k.total_users) * 100) : 0;
-  const trialConv = k.trials_started > 0 ? Math.round((k.pro_users / k.trials_started) * 100) : 0;
+  const trialConv = k.trials_started > 0 ? Math.round((k.trial_converted / k.trials_started) * 100) : 0;
 
   const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
   const f = data.funnel;
@@ -132,7 +132,9 @@ export default function AdminAnalytics() {
         <Kpi label={he ? 'פעילים חודשי (MAU)' : 'Monthly active (MAU)'} value={k.mau} />
         <Kpi label={he ? 'דביקות (DAU/MAU)' : 'Stickiness (DAU/MAU)'} value={`${stickiness}%`} sub={he ? 'כמה מהחודשיים חוזרים יומית' : 'how many monthly users return daily'} />
         <Kpi label={he ? 'מנויי פרו' : 'Pro subscribers'} value={k.pro_users} />
-        <Kpi label={he ? 'בתקופת ניסיון' : 'On trial'} value={k.trial_users} />
+        <Kpi label={he ? 'בתקופת ניסיון כעת' : 'On trial now'} value={k.trial_users} />
+        <Kpi label={he ? 'התחילו ניסיון (סה״כ)' : 'Trials started (all-time)'} value={k.trials_started} />
+        <Kpi label={he ? 'המרות ניסיון → פרו' : 'Trial → Pro conversions'} value={k.trial_converted} sub={`${trialConv}% ${he ? 'מהמתחילים' : 'of starters'}`} />
         <Kpi label={he ? 'הכנסה חודשית (הערכה)' : 'Est. MRR'} value={`₪${data.revenue.est_mrr_nis.toLocaleString()}`} sub={he ? `${data.revenue.pro_users} × ₪99` : `${data.revenue.pro_users} × ₪99`} />
       </div>
 
