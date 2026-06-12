@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLang } from '@/lib/i18n';
 import { getCurrentUser } from '@/lib/auth';
+import Testimonials from './Testimonials';
 
 const PILLARS = [
   {
@@ -307,6 +308,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Reviews / testimonials */}
+      <Testimonials />
 
       {/* Final CTA */}
       <section className="px-5 py-16 text-center">

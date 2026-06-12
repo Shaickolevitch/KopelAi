@@ -1472,6 +1472,114 @@ app.get('/export-data', async (req: Request, res: Response) => {
 });
 
 // =====================================================
+// Reviews / testimonials. Anyone logged in can leave one (proof = real account);
+// moderated by admin before they show publicly on the landing page.
+// =====================================================
+const REVIEW_STATUSES = ['pending', 'approved', 'hidden'];
+
+// Public: approved reviews for the landing page (no auth).
+app.get('/reviews', async (_req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('reviews')
+      .select('id, display_name, rating, content, created_at')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    const reviews = data ?? [];
+    const count = reviews.length;
+    const average = count > 0 ? reviews.reduce((s, r) => s + (r.rating || 0), 0) / count : 0;
+    res.json({ reviews, count, average: Math.round(average * 10) / 10 });
+  } catch (err: any) {
+    console.error('reviews list error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// Auth: submit/update your own review (one per account). Always lands as pending.
+app.post('/reviews', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (user.is_anonymous) return res.status(403).json({ error: 'Sign in to leave a review', code: 'signup_required' });
+    if (rateLimited(`review:${user.id}`, 5, 60_000)) return res.status(429).json({ error: 'Slow down a moment.' });
+
+    const rating = Number(req.body?.rating);
+    const content = typeof req.body?.content === 'string' ? req.body.content.trim() : '';
+    let displayName = typeof req.body?.displayName === 'string' ? req.body.displayName.trim() : '';
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) return res.status(400).json({ error: 'rating must be 1-5' });
+    if (content.length === 0) return res.status(400).json({ error: 'content required' });
+
+    if (!displayName) {
+      const meta = (user as any).user_metadata || {};
+      displayName = meta.full_name || meta.name || (user.email ? user.email.split('@')[0] : 'משתמש');
+    }
+
+    const { error } = await supabaseAdmin.from('reviews').upsert({
+      user_id: user.id,
+      display_name: displayName.slice(0, 80),
+      rating,
+      content: content.slice(0, 1000),
+      status: 'pending',
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+    if (error) throw error;
+    res.json({ status: 'ok', moderation: 'pending' });
+  } catch (err: any) {
+    console.error('review submit error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// Admin: list all reviews (optionally by status).
+app.get('/admin/reviews', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user || user.id !== ADMIN_USER_ID) return res.status(403).json({ error: 'Not authorized' });
+    const status = (req.query.status as string) || 'all';
+    let q = supabaseAdmin.from('reviews').select('id, user_id, display_name, rating, content, status, created_at').order('created_at', { ascending: false }).limit(200);
+    if (REVIEW_STATUSES.includes(status)) q = q.eq('status', status);
+    const { data, error } = await q;
+    if (error) throw error;
+    res.json({ reviews: data ?? [] });
+  } catch (err: any) {
+    console.error('admin reviews list error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+app.post('/admin/reviews/status', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user || user.id !== ADMIN_USER_ID) return res.status(403).json({ error: 'Not authorized' });
+    const { id, status } = req.body;
+    if (!id || !REVIEW_STATUSES.includes(status)) return res.status(400).json({ error: 'id and valid status required' });
+    const { error } = await supabaseAdmin.from('reviews').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+    res.json({ status: 'ok' });
+  } catch (err: any) {
+    console.error('admin review status error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+app.post('/admin/reviews/delete', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user || user.id !== ADMIN_USER_ID) return res.status(403).json({ error: 'Not authorized' });
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'id required' });
+    const { error } = await supabaseAdmin.from('reviews').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ status: 'ok' });
+  } catch (err: any) {
+    console.error('admin review delete error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// =====================================================
 // WhatsApp agent — a second doorway into the same Kopel.
 // Inert until WHATSAPP_* env vars are set (see docs/whatsapp-setup.md).
 // =====================================================

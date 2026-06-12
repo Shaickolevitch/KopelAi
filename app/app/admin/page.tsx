@@ -17,6 +17,7 @@ import {
 import AdminUsers from './AdminUsers';
 import AdminFeedback from './AdminFeedback';
 import AdminAnalytics from './AdminAnalytics';
+import AdminReviews from './AdminReviews';
 
 // Admin-only (Shai): live-edit the system prompt + manage the knowledge base (RAG).
 // TODO: replace the hard-coded admin email with a real role flag, and enforce on the server.
@@ -150,7 +151,7 @@ export default function AdminPage() {
   const [kbListOpen, setKbListOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [tab, setTab] = useState<'users' | 'analytics' | 'feedback' | 'prompt' | 'kb' | 'monitoring'>('users');
+  const [tab, setTab] = useState<'users' | 'analytics' | 'feedback' | 'reviews' | 'prompt' | 'kb' | 'monitoring'>('users');
   const [monTab, setMonTab] = useState<'behavior' | 'traffic' | 'errors' | 'data'>('data');
   const [monitoring, setMonitoring] = useState<MonitoringSummary | null>(null);
   const [monLoading, setMonLoading] = useState(false);
@@ -317,6 +318,7 @@ export default function AdminPage() {
           { key: 'users', label: isHebrew ? 'משתמשים' : 'Users' },
           { key: 'analytics', label: isHebrew ? 'נתונים' : 'Analytics' },
           { key: 'feedback', label: isHebrew ? 'משוב' : 'Feedback' },
+          { key: 'reviews', label: isHebrew ? 'המלצות' : 'Reviews' },
           { key: 'prompt', label: isHebrew ? 'הנחיית AI' : 'AI prompt' },
           { key: 'kb', label: isHebrew ? 'בסיס ידע' : 'Knowledge base' },
           { key: 'monitoring', label: isHebrew ? 'ניטור' : 'Monitoring' },
@@ -340,6 +342,8 @@ export default function AdminPage() {
       {tab === 'analytics' && <AdminAnalytics />}
 
       {tab === 'feedback' && <AdminFeedback />}
+
+      {tab === 'reviews' && <AdminReviews />}
 
       {tab === 'prompt' && (
       <div className="rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm">

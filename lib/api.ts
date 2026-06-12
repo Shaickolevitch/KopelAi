@@ -444,3 +444,58 @@ export async function endConversation(conversationId: string) {
 
   return response.json();
 }
+
+// ── Reviews / testimonials ───────────────────────────────────────────────────
+export type PublicReview = { id: string; display_name: string; rating: number; content: string; created_at: string };
+
+export async function getPublicReviews(): Promise<{ reviews: PublicReview[]; count: number; average: number }> {
+  const r = await fetch(`${API_URL}/reviews`);
+  if (!r.ok) throw new Error(`Reviews error (${r.status})`);
+  return r.json();
+}
+
+export async function submitReview(rating: number, content: string, displayName?: string) {
+  const r = await fetch(`${API_URL}/reviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ rating, content, displayName }),
+  });
+  if (!r.ok) {
+    let t = await r.text();
+    try { t = JSON.parse(t).error ?? t; } catch {}
+    throw new Error(t || 'Could not submit review');
+  }
+  return r.json();
+}
+
+export type AdminReview = {
+  id: string; user_id: string; display_name: string; rating: number;
+  content: string; status: 'pending' | 'approved' | 'hidden'; created_at: string;
+};
+
+export async function adminListReviews(status?: string): Promise<{ reviews: AdminReview[] }> {
+  const q = status && status !== 'all' ? `?status=${status}` : '';
+  const r = await fetch(`${API_URL}/admin/reviews${q}`, { headers: { ...(await authHeaders()) } });
+  if (!r.ok) throw new Error(`Admin reviews error (${r.status})`);
+  return r.json();
+}
+
+export async function adminSetReviewStatus(id: string, status: 'pending' | 'approved' | 'hidden') {
+  const r = await fetch(`${API_URL}/admin/reviews/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ id, status }),
+  });
+  if (!r.ok) throw new Error(`Review status error (${r.status})`);
+  return r.json();
+}
+
+export async function adminDeleteReview(id: string) {
+  const r = await fetch(`${API_URL}/admin/reviews/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ id }),
+  });
+  if (!r.ok) throw new Error(`Review delete error (${r.status})`);
+  return r.json();
+}
