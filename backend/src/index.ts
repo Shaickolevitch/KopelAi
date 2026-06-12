@@ -387,6 +387,35 @@ app.get('/admin/analytics', async (req: Request, res: Response) => {
   }
 });
 
+// Admin notifications: outstanding items needing attention. Counts clear
+// themselves as the admin handles each (triage feedback, approve reviews,
+// resolve Sentry issues).
+app.get('/admin/notifications', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user || user.id !== ADMIN_USER_ID) return res.status(403).json({ error: 'Not authorized' });
+
+    const [fb, rv] = await Promise.all([
+      supabaseAdmin.from('feedback').select('*', { count: 'exact', head: true }).eq('status', 'new'),
+      supabaseAdmin.from('reviews').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+    ]);
+    let sentry_open = 0;
+    try {
+      const s = await getSentrySummary();
+      if ((s as any).configured && typeof (s as any).openIssues === 'number') sentry_open = (s as any).openIssues;
+    } catch { /* ignore sentry hiccups */ }
+
+    res.json({
+      feedback_new: fb.count ?? 0,
+      reviews_pending: rv.count ?? 0,
+      sentry_open,
+    });
+  } catch (err: any) {
+    console.error('Admin notifications error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
 // ----------------------------------------------------------
 // Feedback: any signed-in user can submit; admin reviews.
 // ----------------------------------------------------------

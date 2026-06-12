@@ -152,6 +152,16 @@ export default function AdminPage() {
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [tab, setTab] = useState<'users' | 'analytics' | 'feedback' | 'reviews' | 'prompt' | 'kb' | 'monitoring'>('users');
+
+  // Open a specific tab when linked from the notification bell (?tab=reviews).
+  useEffect(() => {
+    try {
+      const t = new URLSearchParams(window.location.search).get('tab');
+      if (t && ['users', 'analytics', 'feedback', 'reviews', 'prompt', 'kb', 'monitoring'].includes(t)) {
+        setTab(t as typeof tab);
+      }
+    } catch { /* ignore */ }
+  }, []);
   const [monTab, setMonTab] = useState<'behavior' | 'traffic' | 'errors' | 'data'>('data');
   const [monitoring, setMonitoring] = useState<MonitoringSummary | null>(null);
   const [monLoading, setMonLoading] = useState(false);

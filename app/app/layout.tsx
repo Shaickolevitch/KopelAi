@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { identifyUser, resetAnalytics } from '@/lib/analytics';
 import { submitMarketingConsent } from '@/lib/api';
 import FeedbackButton from './FeedbackButton';
+import AdminBell from './AdminBell';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const t = useT();
@@ -105,6 +106,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 );
               })}
             </nav>
+            {isAdmin && <AdminBell />}
             <button
               onClick={() => setLanguage(language === 'he' ? 'en' : 'he')}
               className="px-3 py-2 text-sm rounded-lg text-stone-500 dark:text-zinc-500 hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-800 dark:hover:text-zinc-200 transition-colors"

@@ -499,3 +499,12 @@ export async function adminDeleteReview(id: string) {
   if (!r.ok) throw new Error(`Review delete error (${r.status})`);
   return r.json();
 }
+
+// ── Admin notifications ──────────────────────────────────────────────────────
+export type AdminNotifications = { feedback_new: number; reviews_pending: number; sentry_open: number };
+
+export async function getAdminNotifications(): Promise<AdminNotifications> {
+  const r = await fetch(`${API_URL}/admin/notifications`, { headers: { ...(await authHeaders()) } });
+  if (!r.ok) throw new Error(`Notifications error (${r.status})`);
+  return r.json();
+}
