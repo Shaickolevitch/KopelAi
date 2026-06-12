@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useT, useLang } from '@/lib/i18n';
 import { sendChat, endConversation, understandFile, transcribeAudio, getUsage, startTrial, DailyLimitError, ChatMessage } from '@/lib/api';
 import Onboarding from './Onboarding';
+import ChatTabs from '../ChatTabs';
 import { getCurrentUser, AuthUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import {
@@ -559,6 +560,8 @@ export default function ConversationPage() {
       )}
 
       <div className="flex-1 flex flex-col max-w-3xl w-full mx-auto px-4 sm:px-6 py-4">
+        <ChatTabs active="chat" />
+
         {/* Trial countdown (shown while the 14-day Pro trial is active) */}
         {trialDaysLeft > 0 && (
           <div className="mb-3 flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 text-xs leading-snug">

@@ -513,3 +513,25 @@ export async function getAdminNotifications(): Promise<AdminNotifications> {
 export async function markAdminEventsSeen(): Promise<void> {
   await fetch(`${API_URL}/admin/events/seen`, { method: 'POST', headers: { ...(await authHeaders()) } });
 }
+
+// ── Conversation history ─────────────────────────────────────────────────────
+export type HistoryConversation = {
+  id: string; started_at: string; ended_at: string | null;
+  summary: string | null; channel: string; message_count: number; snippet: string;
+};
+
+export async function getHistory(params: { q?: string; from?: string; to?: string }): Promise<{ conversations: HistoryConversation[] }> {
+  const sp = new URLSearchParams();
+  if (params.q) sp.set('q', params.q);
+  if (params.from) sp.set('from', params.from);
+  if (params.to) sp.set('to', params.to);
+  const r = await fetch(`${API_URL}/history?${sp.toString()}`, { headers: { ...(await authHeaders()) } });
+  if (!r.ok) throw new Error(`History error (${r.status})`);
+  return r.json();
+}
+
+export async function getHistoryMessages(conversationId: string): Promise<{ messages: { role: 'user' | 'assistant'; content: string; created_at: string }[] }> {
+  const r = await fetch(`${API_URL}/history/messages?conversationId=${encodeURIComponent(conversationId)}`, { headers: { ...(await authHeaders()) } });
+  if (!r.ok) throw new Error(`History messages error (${r.status})`);
+  return r.json();
+}

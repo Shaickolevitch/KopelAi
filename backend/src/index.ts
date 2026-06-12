@@ -1516,6 +1516,103 @@ app.get('/export-data', async (req: Request, res: Response) => {
 });
 
 // =====================================================
+// Conversation history — the user's own past sessions, searchable.
+// (Free users' sessions are wiped each visit, so history is effectively Pro.)
+// =====================================================
+app.get('/history', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const userId = user.id;
+    const q = ((req.query.q as string) || '').trim();
+    const from = (req.query.from as string) || '';
+    const to = (req.query.to as string) || '';
+
+    let cq = supabaseAdmin
+      .from('conversations')
+      .select('id, started_at, ended_at, summary, channel, message_count')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .order('started_at', { ascending: false })
+      .limit(200);
+    if (from) cq = cq.gte('started_at', from);
+    if (to) cq = cq.lte('started_at', `${to}T23:59:59`);
+    const { data: convos, error } = await cq;
+    if (error) throw error;
+    let list = convos ?? [];
+
+    // Text search: keep only conversations that have a matching message.
+    if (q) {
+      const { data: hits } = await supabaseAdmin
+        .from('messages')
+        .select('conversation_id')
+        .eq('user_id', userId)
+        .is('deleted_at', null)
+        .ilike('content', `%${q}%`)
+        .limit(2000);
+      const ids = new Set((hits ?? []).map((m: any) => m.conversation_id));
+      list = list.filter((c: any) => ids.has(c.id));
+    }
+
+    // Add a short preview (first user message) per conversation.
+    const ids = list.slice(0, 100).map((c: any) => c.id);
+    const snippet: Record<string, string> = {};
+    if (ids.length) {
+      const { data: msgs } = await supabaseAdmin
+        .from('messages')
+        .select('conversation_id, role, content, created_at')
+        .in('conversation_id', ids)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true });
+      for (const m of msgs ?? []) {
+        if (m.role === 'user' && !snippet[m.conversation_id]) {
+          snippet[m.conversation_id] = (m.content as string).slice(0, 120);
+        }
+      }
+    }
+
+    res.json({
+      conversations: list.slice(0, 100).map((c: any) => ({
+        id: c.id,
+        started_at: c.started_at,
+        ended_at: c.ended_at,
+        summary: c.summary ?? null,
+        channel: c.channel ?? 'web',
+        message_count: c.message_count ?? 0,
+        snippet: snippet[c.id] ?? '',
+      })),
+    });
+  } catch (err: any) {
+    console.error('history error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+app.get('/history/messages', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const conversationId = (req.query.conversationId as string) || '';
+    if (!conversationId) return res.status(400).json({ error: 'conversationId required' });
+
+    const { data: convo } = await supabaseAdmin
+      .from('conversations').select('user_id').eq('id', conversationId).maybeSingle();
+    if (!convo || convo.user_id !== user.id) return res.status(403).json({ error: 'Not your conversation' });
+
+    const { data: messages } = await supabaseAdmin
+      .from('messages')
+      .select('role, content, created_at')
+      .eq('conversation_id', conversationId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true });
+    res.json({ messages: messages ?? [] });
+  } catch (err: any) {
+    console.error('history messages error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// =====================================================
 // Reviews / testimonials. Anyone logged in can leave one (proof = real account);
 // moderated by admin before they show publicly on the landing page.
 // =====================================================
