@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KopelAi · דוגמאות עיצוב</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Assistant',sans-serif;background:#ECECEC;color:#222;padding:26px 14px 70px}
+  .wrap{max-width:960px;margin:0 auto}
+  .intro{text-align:center;margin-bottom:26px}
+  .intro h1{font-family:'Frank Ruhl Libre',serif;font-size:30px;font-weight:700;margin-bottom:6px}
+  .intro p{color:#555;font-size:15px;line-height:1.7}
+  .seclabel{display:flex;align-items:baseline;gap:10px;margin:34px 4px 12px;border-top:2px solid #d8d8d8;padding-top:18px}
+  .seclabel .ltr{font-family:'Frank Ruhl Libre',serif;font-weight:700;font-size:26px}
+  .seclabel .name{font-weight:600;font-size:18px}
+  .seclabel .vibe{color:#777;font-size:13px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .examples{display:flex;flex-direction:column;gap:14px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>KopelAi · דוגמאות לכל כיוון</h1>
+    <p>כל כיוון (A / B / C / D) מוצג על כמה מסכים: נחיתה, תמחור, צ׳אט, תובנה, רכיבים והמלצה.<br>בחר/י אות ואחיל אותה על כל האפליקציה.</p>
+  </div>
+  <div id="out"></div>
+</div>
+
+<script>
+const DESIGNS = [
+  { id:'A', name:'ספר ושיחה', vibe:'חמים, ספרותי · מומלץ',
+    bg:'#FAF7F2', card:'#FFFFFF', card2:'#FFFFFF', ink:'#211C16', muted:'#7A6F62',
+    primary:'#1E1B4B', primaryText:'#FFFFFF', accent:'#C8623D', sage:'#4E7C6B', sageBg:'#E7F0EC',
+    border:'#EAE2D6', radius:'16px', btnRadius:'14px', hfont:"'Frank Ruhl Libre',serif", heroWeight:500 },
+  { id:'B', name:'מרחב שקט', vibe:'מינימלי, נקי, אוורירי',
+    bg:'#F6F6F3', card:'#FFFFFF', card2:'#FBFBF9', ink:'#1C1C1A', muted:'#71716B',
+    primary:'#334155', primaryText:'#FFFFFF', accent:'#2F7E68', sage:'#2F7E68', sageBg:'#E6F0EC',
+    border:'#E7E7E1', radius:'12px', btnRadius:'10px', hfont:"'Assistant',sans-serif", heroWeight:600 },
+  { id:'C', name:'חדר בלילה', vibe:'אינטימי, עמוק, מצב כהה',
+    bg:'#1A1714', card:'#232019', card2:'#2A261F', ink:'#ECE6DD', muted:'#A99E8D',
+    primary:'#D98A5E', primaryText:'#1A1714', accent:'#E0B15A', sage:'#9CC2AE', sageBg:'#26302A',
+    border:'#352F27', radius:'18px', btnRadius:'16px', hfont:"'Frank Ruhl Libre',serif", heroWeight:500 },
+  { id:'D', name:'רך ואנושי', vibe:'חברותי, מעוגל, חמים',
+    bg:'#FBF4EC', card:'#FFFFFF', card2:'#FFF9F3', ink:'#2A2320', muted:'#897A6E',
+    primary:'#C8623D', primaryText:'#FFFFFF', accent:'#6E5A7A', sage:'#6E5A7A', sageBg:'#EFE9F0',
+    border:'#EFE3D6', radius:'22px', btnRadius:'999px', hfont:"'Fraunces',serif", heroWeight:600 },
+];
+
+function panel(d, inner, pad='24px'){ return `<div style="background:${d.bg};border:1px solid ${d.border};border-radius:22px;padding:${pad};overflow:hidden">${inner}</div>`; }
+function btn(d, text, accent){ const bg=accent?d.accent:d.primary; const tc=accent?'#fff':d.primaryText; return `<span style="display:inline-block;background:${bg};color:${tc};border-radius:${d.btnRadius};padding:11px 22px;font-weight:500;font-size:15px">${text}</span>`; }
+function ghost(d, text){ return `<span style="display:inline-block;background:transparent;color:${d.ink};border:1px solid ${d.border};border-radius:${d.btnRadius};padding:10px 20px;font-weight:500;font-size:14px">${text}</span>`; }
+function stars(d){ return `<span style="color:${d.accent};font-size:16px;letter-spacing:1px">★★★★★</span>`; }
+
+function nav(d){ return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+  <div style="display:flex;align-items:center;gap:9px;font-weight:600;color:${d.ink}"><span style="width:30px;height:30px;border-radius:9px;background:${d.primary};color:${d.primaryText};display:flex;align-items:center;justify-content:center;font-weight:700">K</span> KopelAi</div>
+  <div style="color:${d.muted};font-size:14px">שיחה · ניתוח · מנוי</div>
+  ${btn(d,'התחל עכשיו')}</div>`; }
+
+function hero(d){ return `<div style="text-align:center;padding:10px 0 18px">
+  <h2 style="font-family:${d.hfont};color:${d.ink};font-size:46px;font-weight:${d.heroWeight};line-height:1.12;letter-spacing:-0.5px">אני־אתה</h2>
+  <div style="color:${d.muted};font-size:16px;margin-top:10px">מרחב לחשוב בו — לא טופס, לא מבחן.</div>
+  <div style="margin-top:18px">${btn(d,'התחל שיחה')}</div></div>`; }
+
+function priceCard(d, name, price, sub, feats, isPro){ return `<div style="background:${d.card};border:${isPro?'2px':'1px'} solid ${isPro?d.primary:d.border};border-radius:${d.radius};padding:20px">
+  ${isPro?`<span style="display:inline-block;background:${d.sageBg};color:${d.accent};font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;margin-bottom:8px">הכי פופולרי</span>`:''}
+  <div style="font-weight:600;color:${d.ink}">${name}</div>
+  <div style="font-family:${d.hfont};font-size:30px;font-weight:${d.heroWeight};color:${d.ink};margin:2px 0">${price}<span style="font-size:13px;color:${d.muted};font-weight:400"> ${sub}</span></div>
+  <div style="margin:10px 0 14px;display:flex;flex-direction:column;gap:6px">${feats.map(f=>`<div style="font-size:13px;color:${d.muted}">✓ ${f}</div>`).join('')}</div>
+  ${isPro?btn(d,'שדרג לפרו'):ghost(d,'התחל בחינם')}</div>`; }
+
+function pricing(d){ return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+  ${priceCard(d,'פרו','₪99','/ חודש',['זיכרון מלא בין מפגשים','תובנות אישיות','שיחות ללא הגבלה'],true)}
+  ${priceCard(d,'חינם','₪0','',['שיחה מלאה עם קופלAI','ללא זיכרון לאורך זמן','ללא עמוד תובנות'],false)}
+</div>`; }
+
+function chat(d){ return `<div style="background:${d.card};border:1px solid ${d.border};border-radius:${d.radius};padding:16px">
+  <div style="display:flex;justify-content:flex-start;margin-bottom:9px"><div style="max-width:76%;background:${d.card2};color:${d.ink};border:1px solid ${d.border};border-radius:16px 16px 16px 5px;padding:10px 14px;font-size:14px;line-height:1.6">ספר לי מה עולה בדעתך.</div></div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:14px"><div style="max-width:76%;background:${d.primary};color:${d.primaryText};border-radius:16px 16px 5px 16px;padding:10px 14px;font-size:14px;line-height:1.6">היה לי יום קשה עם מטופל.</div></div>
+  <div style="display:flex;gap:8px;align-items:center;background:${d.card2};border:1px solid ${d.border};border-radius:${d.btnRadius==='999px'?'999px':d.radius};padding:6px 8px 6px 14px">
+    <span style="flex:1;color:${d.muted};font-size:14px">ספר על משהו שעל ליבך…</span>
+    <span style="width:34px;height:34px;border-radius:50%;background:${d.primary};color:${d.primaryText};display:flex;align-items:center;justify-content:center;font-size:15px">↑</span>
+  </div></div>`; }
+
+function insight(d){ return `<div style="background:${d.card};border:1px solid ${d.border};border-radius:${d.radius};padding:20px 22px">
+  <div style="font-size:12px;color:${d.accent};font-weight:600;margin-bottom:8px">תובנה · ערכים</div>
+  <div style="font-family:${d.hfont};font-size:19px;line-height:1.6;color:${d.ink}">"נראה לי שקשה לך להיפרד ממטופלים — שהם נשארים איתך גם אחרי שהקשר נגמר."</div>
+  <div style="margin-top:12px;font-size:13px;color:${d.muted}">מתוך שלוש שיחות אחרונות</div></div>`; }
+
+function components(d){ return `<div style="background:${d.card};border:1px solid ${d.border};border-radius:${d.radius};padding:18px">
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    ${btn(d,'כפתור ראשי')} ${ghost(d,'משני')}
+    <span style="display:inline-block;background:${d.card2};border:1px solid ${d.border};border-radius:${d.btnRadius==='999px'?'999px':'10px'};padding:9px 16px;color:${d.muted};font-size:14px">שדה קלט</span>
+    <span style="display:inline-block;background:${d.sageBg};color:${d.sage};border-radius:999px;padding:5px 13px;font-size:12px;font-weight:500">ניסיון פעיל</span>
+    ${stars(d)}
+  </div></div>`; }
+
+function testimonial(d){ return `<div style="background:${d.card};border:1px solid ${d.border};border-radius:${d.radius};padding:18px 20px">
+  ${stars(d)}
+  <p style="font-size:15px;color:${d.ink};line-height:1.7;margin:8px 0 0">"בפעם הראשונה הרגשתי שיש לי מקום לעבד את מה שעולה אחרי טיפול. קופל ממש זוכר אותי."</p>
+  <div style="margin-top:8px;font-size:14px;font-weight:600;color:${d.muted}">— ד״ר מ., פסיכולוגית קלינית</div></div>`; }
+
+document.getElementById('out').innerHTML = DESIGNS.map(d => `
+  <div class="seclabel"><span class="ltr">${d.id}</span><span class="name">${d.name}</span><span class="vibe">${d.vibe} · גופן כותרת: ${d.hfont.split(',')[0].replace(/'/g,'')}</span></div>
+  ${panel(d, `
+    ${nav(d)}
+    ${hero(d)}
+    <div class="examples" style="margin-top:6px">
+      ${pricing(d)}
+      <div class="grid2">${chat(d)}${insight(d)}</div>
+      ${components(d)}
+      ${testimonial(d)}
+    </div>
+  `)}
+`).join('');
+</script>
+</body>
+</html>
