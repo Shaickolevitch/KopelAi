@@ -43,6 +43,13 @@ export default function SignupPage() {
     try { localStorage.setItem('kopelai.pending_consent', marketingConsent ? '1' : '0'); } catch {}
   }
 
+  // Honor a deep-link destination (e.g. /app/review) if one was passed along.
+  function nextDest(): string {
+    if (typeof window === 'undefined') return '/app/welcome';
+    const n = new URLSearchParams(window.location.search).get('next');
+    return n && n.startsWith('/') ? n : '/app/welcome';
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -61,7 +68,7 @@ export default function SignupPage() {
     stashConsent();
     try {
       await signUpWithEmail(trimmedEmail, password);
-      router.push('/app/welcome');
+      router.push(nextDest());
     } catch (err: unknown) {
       const key = authErrorToMessageKey(err);
       const message = (t as Record<string, unknown>)[key];
@@ -76,7 +83,7 @@ export default function SignupPage() {
     setSubmitting(true);
     stashConsent();
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(nextDest());
     } catch {
       setError(t.auth_error_generic);
       setSubmitting(false);

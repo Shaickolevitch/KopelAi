@@ -20,8 +20,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     getCurrentUser().then((u) => {
-      if (!u) router.replace('/auth/signin');
-      else {
+      if (!u) {
+        // Remember where they were headed so sign-in can return them there.
+        const dest = pathname ? `?next=${encodeURIComponent(pathname)}` : '';
+        router.replace(`/auth/signin${dest}`);
+      } else {
         setUser(u); setChecking(false); identifyUser(u.id);
         // Save the marketing-consent choice captured at signup (email or Google).
         // Kept in localStorage until a successful write, so it survives the OAuth redirect.

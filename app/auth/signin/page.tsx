@@ -36,6 +36,14 @@ export default function SigninPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Where to go after login (set by the app layout when it bounces a deep link
+  // like /app/review here). Only internal paths are honored.
+  function nextDest(): string {
+    if (typeof window === 'undefined') return '/app/conversation';
+    const n = new URLSearchParams(window.location.search).get('next');
+    return n && n.startsWith('/') ? n : '/app/conversation';
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -53,7 +61,7 @@ export default function SigninPage() {
     setSubmitting(true);
     try {
       await signInWithEmail(trimmedEmail, password);
-      router.push('/app/conversation');
+      router.push(nextDest());
     } catch (err: unknown) {
       const key = authErrorToMessageKey(err);
       const message = (t as Record<string, unknown>)[key];
@@ -67,7 +75,7 @@ export default function SigninPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(nextDest());
     } catch {
       setError(t.auth_error_generic);
       setSubmitting(false);
@@ -175,7 +183,9 @@ export default function SigninPage() {
 
         <div className="mt-6 text-center">
           <Link
-            href="/auth/signup"
+            href={typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('next')
+              ? `/auth/signup?next=${encodeURIComponent(new URLSearchParams(window.location.search).get('next') as string)}`
+              : '/auth/signup'}
             className="text-sm text-orange-700 dark:text-orange-400 hover:underline"
           >
             {t.auth_switch_to_signup}

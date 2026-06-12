@@ -52,8 +52,9 @@ export async function sendPasswordResetEmail(email: string) {
   if (error) throw error;
 }
 
-export async function signInWithGoogle() {
-  const redirectTo = `${window.location.origin}/auth/callback`;
+export async function signInWithGoogle(next?: string) {
+  const base = `${window.location.origin}/auth/callback`;
+  const redirectTo = next && next.startsWith('/') ? `${base}?next=${encodeURIComponent(next)}` : base;
   const { error } = await supabase().auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo },
