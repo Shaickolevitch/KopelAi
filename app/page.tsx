@@ -236,11 +236,6 @@ export default function HomePage() {
               ? 'כאילו שילמת על מפגש אחד בחודש - ומקבלים את קופלAI תמיד, מסביב לשעון.'
               : 'About the price of one therapy hour a month - and you get KopelAi always, around the clock.'}
           </p>
-          <div className="flex justify-center mb-6">
-            <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300">
-              {he ? '🎉 מחיר פיילוט - לחברים הראשונים בלבד' : '🎉 Pilot price - for our first members only'}
-            </span>
-          </div>
           <div className="grid sm:grid-cols-2 gap-5">
             {/* Free */}
             <div className="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
