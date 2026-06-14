@@ -38,10 +38,20 @@ const STEPS = [
   { he: { t: 'ממשיכים', b: 'בפעם הבאה קופלAI כבר מכיר אותך - והתמונה מתחדדת.' }, en: { t: 'Continue', b: 'Next time KopelAi already knows you - and the picture sharpens.' } },
 ];
 
-const AUDIENCE = [
-  { he: 'מטפל/ת שרוצה להיות מודע/ת יותר לעצמו/ה - לחוזקות, לנקודות העיוורון ולדפוסים שחוזרים.', en: 'A therapist who wants to be more self-aware - of their strengths, blind spots, and recurring patterns.' },
-  { he: 'מי שמרגיש/ה שהעבודה הטיפולית נוגעת בו/ה, ורוצה מרחב פרטי לעבד את זה.', en: 'Someone who feels the work touches them, and wants a private space to process it.' },
-  { he: 'מי שמחפש/ת צמיחה מקצועית מתמשכת - מרחב אישי, מעבר לכלים לניהול מטופלים.', en: 'Someone after ongoing professional growth - a personal space, beyond client-management tools.' },
+// Expanding rings of who KopelAi is for — from the certified core outward.
+const RINGS = [
+  { color: '#1E1B4B', dot: '#1E1B4B',
+    he: { t: 'פסיכולוגים ומטפלים מוסמכים', d: 'הלב של קופלAI - אנשי מקצוע מוסמכים בתחום הנפש.' },
+    en: { t: 'Certified therapists & psychologists', d: 'The core - licensed mental-health professionals.' } },
+  { color: '#C8623D', dot: '#C8623D',
+    he: { t: 'כל המגוון הטיפולי', d: 'מטפלים בהבעה ויצירה - אמנות, מוזיקה, תיאטרון - ומאמנים ומלווי תהליכים.' },
+    en: { t: 'The whole therapy spectrum', d: 'Expressive-arts therapists - art, music, drama - coaches and facilitators.' } },
+  { color: '#E7C9A3', dot: '#D89A5E',
+    he: { t: 'מטופלים בתהליך', d: 'מי שנמצא בטיפול ורוצה מרחב לעיבוד בין מפגש למפגש.' },
+    en: { t: 'People in therapy', d: 'Anyone in a process who wants space to reflect between sessions.' } },
+  { color: '#F3EADF', dot: '#C9B89E',
+    he: { t: 'כל אדם', d: 'כל מי שמחפש זווית מקצועית על דילמה, קונפליקט או שאלה שמעסיקה אותו.' },
+    en: { t: 'Anyone', d: 'Anyone seeking a professional perspective on a dilemma, conflict, or question.' } },
 ];
 
 const PEOPLE = [
@@ -176,19 +186,42 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Who you are */}
+      {/* Who it's for — expanding rings */}
       <section className="px-5 py-16 bg-white dark:bg-zinc-900 border-y border-stone-200 dark:border-zinc-800">
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl font-bold tracking-tight mb-6">{he ? 'מי אתה?' : 'Is this for you?'}</h2>
-          <div className="space-y-4">
-            {AUDIENCE.map((a, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-400">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold tracking-tight">{he ? 'למי זה מתאים?' : 'Who is it for?'}</h2>
+            <p className="text-stone-500 dark:text-zinc-400 mt-2 text-[15px]">
+              {he ? 'מתחילים מאנשי המקצוע - ומתרחבים החוצה.' : 'It starts with professionals — and widens outward.'}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {/* Bullseye */}
+            <svg viewBox="0 0 360 360" className="w-full max-w-[300px] mx-auto" role="img" aria-label={he ? 'מעגלי הקהל של קופלAI' : "KopelAi's audience rings"}>
+              <circle cx="180" cy="180" r="170" fill="#F3EADF" />
+              <circle cx="180" cy="180" r="128" fill="#E7C9A3" />
+              <circle cx="180" cy="180" r="86" fill="#C8623D" />
+              <circle cx="180" cy="180" r="44" fill="#1E1B4B" />
+              <text x="180" y="35" textAnchor="middle" fill="#3a2a1a" fontSize="15" fontWeight="600">{he ? 'כל אדם' : 'Anyone'}</text>
+              <text x="180" y="77" textAnchor="middle" fill="#3a2a1a" fontSize="15" fontWeight="600">{he ? 'מטופלים' : 'In therapy'}</text>
+              <text x="180" y="118" textAnchor="middle" fill="#ffffff" fontSize="14" fontWeight="600">{he ? 'המגוון הטיפולי' : 'Therapy field'}</text>
+              <text x="180" y="175" textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="600">{he ? 'מטפלים' : 'Certified'}</text>
+              <text x="180" y="191" textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="600">{he ? 'מוסמכים' : 'therapists'}</text>
+            </svg>
+
+            {/* Legend */}
+            <div className="space-y-4">
+              {RINGS.map((r, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <span className="w-3.5 h-3.5 rounded-full shrink-0 mt-1 border border-black/10" style={{ background: r.dot }} />
+                  <div>
+                    <div className="font-semibold text-stone-900 dark:text-zinc-100 text-[15px]">{he ? r.he.t : r.en.t}</div>
+                    <div className="text-sm text-stone-500 dark:text-zinc-400 leading-relaxed">{he ? r.he.d : r.en.d}</div>
+                  </div>
                 </div>
-                <p className="text-stone-600 dark:text-zinc-300 leading-relaxed text-[15px]">{he ? a.he : a.en}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
