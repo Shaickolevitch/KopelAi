@@ -21,9 +21,32 @@ const frankRuhl = Frank_Ruhl_Libre({
   display: "swap",
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://kopelai.com";
+const OG_DESCRIPTION =
+  "שיחה רפלקטיבית למטפלים — להבין את הדפוסים, החוזקות ונקודות העיוורון שלך לאורך זמן.";
+
 export const metadata: Metadata = {
-  title: "KopelAi",
-  description: "A reflective conversation for therapists - understand your own strengths and patterns over time.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "KopelAi — מרחב רפלקטיבי למטפלים",
+    template: "%s · KopelAi",
+  },
+  description: OG_DESCRIPTION,
+  applicationName: "KopelAi",
+  // og:image is provided by app/opengraph-image.tsx (the file convention).
+  openGraph: {
+    type: "website",
+    siteName: "KopelAi",
+    locale: "he_IL",
+    url: SITE_URL,
+    title: "KopelAi — מרחב רפלקטיבי למטפלים",
+    description: OG_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "KopelAi — מרחב רפלקטיבי למטפלים",
+    description: OG_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
