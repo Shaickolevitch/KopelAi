@@ -967,20 +967,25 @@ app.post('/transcribe', upload.single('audio'), async (req: Request, res: Respon
     }
 
     const language = (req.body.language as string) || 'he';
+    const fname = req.file.originalname || 'audio.m4a';
+    const ftype = req.file.mimetype || 'audio/m4a';
 
-    const audioFile = await OpenAI.toFile(
-      Readable.from(req.file.buffer),
-      req.file.originalname || 'audio.m4a',
-      { type: req.file.mimetype || 'audio/m4a' }
-    );
+    // Try the newer model; fall back to whisper-1 (most lenient + widely available)
+    // if it errors (model access, or an iOS mp4 it doesn't like). Re-create the
+    // file each attempt because the stream is consumed on use.
+    let text = '';
+    try {
+      const f1 = await OpenAI.toFile(Readable.from(req.file.buffer), fname, { type: ftype });
+      const t1 = await openai.audio.transcriptions.create({ file: f1, model: 'gpt-4o-transcribe', language: language === 'he' ? 'he' : 'en' });
+      text = t1.text;
+    } catch (e1: any) {
+      console.error('gpt-4o-transcribe failed, falling back to whisper-1:', e1?.message);
+      const f2 = await OpenAI.toFile(Readable.from(req.file.buffer), fname, { type: ftype });
+      const t2 = await openai.audio.transcriptions.create({ file: f2, model: 'whisper-1', language: language === 'he' ? 'he' : 'en' });
+      text = t2.text;
+    }
 
-    const transcription = await openai.audio.transcriptions.create({
-      file: audioFile,
-      model: 'gpt-4o-transcribe',
-      language: language === 'he' ? 'he' : 'en',
-    });
-
-    res.json({ text: transcription.text });
+    res.json({ text });
   } catch (err: any) {
     console.error('Transcribe error:', err);
     res.status(500).json({ error: err.message ?? 'Transcription failed' });

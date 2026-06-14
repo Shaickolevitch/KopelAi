@@ -251,7 +251,8 @@ export default function ConversationPage() {
           if (text) setInputText((prev) => (prev ? prev + ' ' : '') + text);
         } catch (err) {
           console.error('Transcribe failed:', err);
-          setError(language === 'he' ? 'התמלול נכשל. נסה שוב.' : 'Transcription failed. Try again.');
+          const detail = err instanceof Error ? ` (${err.message})` : '';
+          setError((language === 'he' ? 'התמלול נכשל. נסה שוב.' : 'Transcription failed. Try again.') + detail);
         } finally {
           setTranscribing(false);
         }
