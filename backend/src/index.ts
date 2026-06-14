@@ -106,6 +106,15 @@ function trialDaysLeftFrom(trialEndsAt: string | null | undefined): number {
   return Math.max(0, Math.ceil(msLeft / 86_400_000));
 }
 
+// Referral program: a referee gets a 30-day trial; a referrer earns this many
+// comped-Pro days (full, uncapped Pro) each time a referee converts to paying.
+const REFERRAL_TRIAL_DAYS = 30;
+const REFERRAL_REWARD_DAYS = 30;
+function compedProActive(referralProUntil: string | null | undefined): boolean {
+  if (!referralProUntil) return false;
+  return Date.now() < new Date(referralProUntil).getTime();
+}
+
 // ── Simple per-user fixed-window rate limiter (in-memory) ──
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 function rateLimited(key: string, limit: number, windowMs: number): boolean {
@@ -782,12 +791,12 @@ app.post('/chat', async (req: Request, res: Response) => {
     let remaining: number | null = null;
     const { data: tierRow } = await supabaseAdmin
       .from('user_profile')
-      .select('subscription_tier, trial_ends_at')
+      .select('subscription_tier, trial_ends_at, referral_pro_until')
       .eq('user_id', userId)
       .maybeSingle();
-    // Paid Pro is uncapped. Trial users get Pro features (memory/insights) but
-    // are metered at the higher trial cap. Free users get the lower free cap.
-    const paidPro = tierRow?.subscription_tier === 'pro';
+    // Full Pro (paid OR referral-comped) is uncapped. Trial users get Pro
+    // features but are metered at the higher cap. Free users get the lower cap.
+    const paidPro = tierRow?.subscription_tier === 'pro' || compedProActive(tierRow?.referral_pro_until);
     const onTrial = !paidPro && trialActiveFrom(tierRow?.trial_ends_at);
     const proFeatures = paidPro || onTrial; // memory + insights
     const dailyLimit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;
@@ -856,10 +865,10 @@ app.get('/usage', async (req: Request, res: Response) => {
 
     const { data: tierRow } = await supabaseAdmin
       .from('user_profile')
-      .select('subscription_tier, trial_ends_at')
+      .select('subscription_tier, trial_ends_at, referral_pro_until')
       .eq('user_id', user.id)
       .maybeSingle();
-    const paidPro = tierRow?.subscription_tier === 'pro';
+    const paidPro = tierRow?.subscription_tier === 'pro' || compedProActive(tierRow?.referral_pro_until);
     const onTrial = !paidPro && trialActiveFrom(tierRow?.trial_ends_at);
     // Trial can be started only if never started before (and not anonymous/pro).
     const trialAvailable = !paidPro && !onTrial && !tierRow?.trial_ends_at && !user.is_anonymous;
@@ -948,6 +957,80 @@ app.post('/start-trial', async (req: Request, res: Response) => {
     res.json({ trialEndsAt: endsAt, trialDaysLeft: PRO_TRIAL_DAYS });
   } catch (err: any) {
     console.error('start-trial error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// ----------------------------------------------------------
+// Referral program — "give a month, get a month".
+// ----------------------------------------------------------
+const REFERRAL_SITE = process.env.PUBLIC_SITE_URL || 'https://kopelai.com';
+
+// My referral link + stats (lazily creates a code).
+app.get('/referral', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { data: prof } = await supabaseAdmin
+      .from('user_profile').select('referral_code, referral_pro_until').eq('user_id', user.id).maybeSingle();
+    let code = prof?.referral_code ?? null;
+    if (!code) {
+      for (let i = 0; i < 5; i++) {
+        const candidate = 'K' + crypto.randomBytes(3).toString('hex').toUpperCase();
+        const { data: taken } = await supabaseAdmin.from('user_profile').select('user_id').eq('referral_code', candidate).maybeSingle();
+        if (taken) continue;
+        const { error } = await supabaseAdmin.from('user_profile').upsert({ user_id: user.id, referral_code: candidate }, { onConflict: 'user_id' });
+        if (!error) { code = candidate; break; }
+      }
+    }
+
+    const [joinedR, rewardedR] = await Promise.all([
+      supabaseAdmin.from('referrals').select('*', { count: 'exact', head: true }).eq('referrer_id', user.id),
+      supabaseAdmin.from('referrals').select('*', { count: 'exact', head: true }).eq('referrer_id', user.id).eq('status', 'rewarded'),
+    ]);
+
+    res.json({
+      code,
+      url: code ? `${REFERRAL_SITE}/?ref=${code}` : null,
+      joined: joinedR.count ?? 0,
+      rewarded: rewardedR.count ?? 0,
+      proUntil: prof?.referral_pro_until ?? null,
+      active: compedProActive(prof?.referral_pro_until),
+    });
+  } catch (err: any) {
+    console.error('referral error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// Claim a referral code (called once, right after the referee signs up).
+app.post('/referral/claim', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (user.is_anonymous) return res.json({ ok: false });
+
+    const code = typeof req.body?.code === 'string' ? req.body.code.trim().toUpperCase() : '';
+    if (!code) return res.json({ ok: false });
+
+    const { data: referrer } = await supabaseAdmin.from('user_profile').select('user_id').eq('referral_code', code).maybeSingle();
+    if (!referrer || referrer.user_id === user.id) return res.json({ ok: false });
+
+    const { data: existing } = await supabaseAdmin.from('referrals').select('id').eq('referee_id', user.id).maybeSingle();
+    if (existing) return res.json({ ok: true, already: true });
+
+    await supabaseAdmin.from('referrals').insert({ referrer_id: referrer.user_id, referee_id: user.id, code, status: 'pending' });
+
+    // Gift the referee a longer 30-day trial (only if they have none and aren't Pro).
+    const { data: prof } = await supabaseAdmin.from('user_profile').select('subscription_tier, trial_ends_at').eq('user_id', user.id).maybeSingle();
+    if (prof?.subscription_tier !== 'pro' && !prof?.trial_ends_at) {
+      const endsAt = new Date(Date.now() + REFERRAL_TRIAL_DAYS * 86_400_000).toISOString();
+      await supabaseAdmin.from('user_profile').upsert({ user_id: user.id, trial_ends_at: endsAt }, { onConflict: 'user_id' });
+    }
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error('referral claim error:', err);
     res.status(500).json({ error: err.message ?? 'Internal server error' });
   }
 });
@@ -1098,11 +1181,13 @@ async function consolidateConversation(conversationId: string): Promise<Consolid
     // that would be remembered next session.
     const { data: tierRow } = await supabaseAdmin
       .from('user_profile')
-      .select('subscription_tier, trial_ends_at')
+      .select('subscription_tier, trial_ends_at, referral_pro_until')
       .eq('user_id', userId)
       .maybeSingle();
-    // Trial users get memory + insights too (effective Pro).
-    const isPro = tierRow?.subscription_tier === 'pro' || trialActiveFrom(tierRow?.trial_ends_at);
+    // Trial + referral-comped users get memory + insights too (effective Pro).
+    const isPro = tierRow?.subscription_tier === 'pro'
+      || compedProActive(tierRow?.referral_pro_until)
+      || trialActiveFrom(tierRow?.trial_ends_at);
 
     if (!isPro) {
       await supabaseAdmin
@@ -1791,8 +1876,8 @@ async function handleWhatsAppMessage(phone: string, text: string) {
 
   // 3. Shared tier + daily wall (same counter as web).
   const { data: tierRow } = await supabaseAdmin
-    .from('user_profile').select('subscription_tier, trial_ends_at').eq('user_id', userId).maybeSingle();
-  const paidPro = tierRow?.subscription_tier === 'pro';
+    .from('user_profile').select('subscription_tier, trial_ends_at, referral_pro_until').eq('user_id', userId).maybeSingle();
+  const paidPro = tierRow?.subscription_tier === 'pro' || compedProActive(tierRow?.referral_pro_until);
   const onTrial = !paidPro && trialActiveFrom(tierRow?.trial_ends_at);
   const proFeatures = paidPro || onTrial;
   const dailyLimit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;

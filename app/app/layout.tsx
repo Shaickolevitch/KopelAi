@@ -7,7 +7,7 @@ import { useT, useLang } from '@/lib/i18n';
 import { AuthUser, getCurrentUser, signOut } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { identifyUser, resetAnalytics } from '@/lib/analytics';
-import { submitMarketingConsent } from '@/lib/api';
+import { submitMarketingConsent, claimReferral } from '@/lib/api';
 import FeedbackButton from './FeedbackButton';
 import AdminBell from './AdminBell';
 
@@ -34,6 +34,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           if (pending !== null) {
             submitMarketingConsent(pending === '1')
               .then(() => { try { localStorage.removeItem('kopelai.pending_consent'); } catch {} })
+              .catch(() => {});
+          }
+        } catch {}
+        // Credit the inviter if this user arrived via a referral link. The
+        // backend ignores self-referrals and users who already converted.
+        try {
+          const ref = localStorage.getItem('kopelai.ref');
+          if (ref) {
+            claimReferral(ref)
+              .then(() => { try { localStorage.removeItem('kopelai.ref'); } catch {} })
               .catch(() => {});
           }
         } catch {}
@@ -71,6 +81,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { href: '/app/store', label: t.tab_lectures },
     { href: '/app/about', label: t.tab_about_us },
     { href: '/app/plan', label: t.tab_plan },
+    { href: '/app/invite', label: t.tab_invite },
     ...(isAdmin ? [{ href: '/app/admin', label: t.tab_admin }] : []),
   ];
 

@@ -61,7 +61,7 @@ async function handleSubscriptionActive(subscription: Record<string, unknown>) {
     subscription_current_period_end: periodEnd ?? null,
   });
 
-  // Notify the admin only on a real free→pro conversion (not renewals/updates).
+  // Notify the admin + reward a referrer only on a real free→pro conversion.
   if (prevTier !== 'pro') {
     try {
       const admin = adminSupabase();
@@ -70,6 +70,26 @@ async function handleSubscriptionActive(subscription: Record<string, unknown>) {
       await admin.from('admin_events').insert({ type: 'pro_purchase', title: email });
     } catch (e) {
       console.error('Webhook: failed to log pro_purchase event', e);
+    }
+
+    // "Give a month, get a month": if this buyer was referred, grant the
+    // referrer 30 days of comped Pro (stacking) and mark the referral rewarded.
+    try {
+      const admin = adminSupabase();
+      const { data: ref } = await admin
+        .from('referrals').select('id, referrer_id, status').eq('referee_id', userId).maybeSingle();
+      if (ref && ref.status === 'pending') {
+        await admin.from('referrals').update({ status: 'rewarded', rewarded_at: new Date().toISOString() }).eq('id', ref.id);
+        const { data: rp } = await admin
+          .from('user_profile').select('referral_pro_until').eq('user_id', ref.referrer_id).maybeSingle();
+        const cur = rp?.referral_pro_until ? new Date(rp.referral_pro_until).getTime() : 0;
+        const base = cur > Date.now() ? cur : Date.now();
+        const until = new Date(base + 30 * 24 * 60 * 60 * 1000).toISOString();
+        await admin.from('user_profile').upsert({ user_id: ref.referrer_id, referral_pro_until: until });
+        await admin.from('admin_events').insert({ type: 'referral_reward', title: 'חבר שהוזמן הפך לפרו 🎁' });
+      }
+    } catch (e) {
+      console.error('Webhook: referral reward failed', e);
     }
   }
 }

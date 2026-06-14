@@ -10,7 +10,7 @@ export async function getSubscriptionTier(userId: string): Promise<SubscriptionT
   if (_cachedTier && _cachedUserId === userId) return _cachedTier;
   const { data } = await supabase()
     .from('user_profile')
-    .select('subscription_tier, trial_ends_at')
+    .select('subscription_tier, trial_ends_at, referral_pro_until')
     .eq('user_id', userId)
     .maybeSingle();
   let tier: SubscriptionTier = data?.subscription_tier === 'pro' ? 'pro' : 'free';
@@ -18,6 +18,11 @@ export async function getSubscriptionTier(userId: string): Promise<SubscriptionT
   // While the opt-in trial is active, treat the user as Pro so paid features
   // work. The backend is the real gate; this just drives UI behavior.
   if (tier === 'free' && data?.trial_ends_at && Date.now() < new Date(data.trial_ends_at).getTime()) {
+    tier = 'pro';
+  }
+
+  // Comped Pro from the referral reward ("give a month, get a month").
+  if (tier === 'free' && data?.referral_pro_until && Date.now() < new Date(data.referral_pro_until).getTime()) {
     tier = 'pro';
   }
 

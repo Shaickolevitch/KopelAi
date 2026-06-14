@@ -80,6 +80,12 @@ export default function HomePage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    // Capture a referral code from the invite link (?ref=CODE) so we can credit
+    // the inviter once this visitor signs up. Stored until claimed post-auth.
+    try {
+      const ref = new URLSearchParams(window.location.search).get('ref');
+      if (ref) localStorage.setItem('kopelai.ref', ref.trim());
+    } catch {}
     getCurrentUser().then((u) => {
       if (u) router.replace('/app/conversation');
       else setChecking(false);

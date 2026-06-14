@@ -42,6 +42,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Brand accents as utilities (bg-clay, text-clay, bg-sage, ...). We avoid
+     naming one "indigo" so Tailwind's built-in indigo scale stays intact. */
+  --color-clay: var(--clay);
+  --color-sage: var(--sage);
   --font-sans: var(--font-body);
 }
 

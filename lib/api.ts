@@ -547,3 +547,20 @@ export async function getHistoryMessages(conversationId: string): Promise<{ mess
   if (!r.ok) throw new Error(`History messages error (${r.status})`);
   return r.json();
 }
+
+// ── Referral program ─────────────────────────────────────────────────────────
+export type ReferralInfo = { code: string | null; url: string | null; joined: number; rewarded: number; proUntil: string | null; active: boolean };
+
+export async function getReferral(): Promise<ReferralInfo> {
+  const r = await fetch(`${API_URL}/referral`, { headers: { ...(await authHeaders()) } });
+  if (!r.ok) throw new Error(`Referral error (${r.status})`);
+  return r.json();
+}
+
+export async function claimReferral(code: string): Promise<void> {
+  await fetch(`${API_URL}/referral/claim`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ code }),
+  });
+}
