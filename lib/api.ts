@@ -394,9 +394,20 @@ export async function adminDeleteUser(userId: string) {
 }
 
 // Record audio in chat -> backend transcribes it to text.
+// Map a recorded blob's MIME to a file extension OpenAI's transcriber accepts
+// (mp3, mp4, m4a, wav, webm, ogg...). iOS records mp4; Android/desktop webm.
+function audioExt(type: string): string {
+  const t = (type || '').toLowerCase();
+  if (t.includes('mp4') || t.includes('m4a') || t.includes('aac') || t.includes('x-m4a')) return 'mp4';
+  if (t.includes('ogg')) return 'ogg';
+  if (t.includes('wav')) return 'wav';
+  if (t.includes('mpeg') || t.includes('mp3')) return 'mp3';
+  return 'webm';
+}
+
 export async function transcribeAudio(blob: Blob, language: 'he' | 'en' = 'he'): Promise<string> {
   const form = new FormData();
-  form.append('audio', blob, 'audio.webm');
+  form.append('audio', blob, `audio.${audioExt(blob.type)}`);
   form.append('language', language);
   const response = await fetch(`${API_URL}/transcribe`, {
     method: 'POST',

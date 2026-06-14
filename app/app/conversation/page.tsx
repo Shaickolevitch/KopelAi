@@ -230,13 +230,20 @@ export default function ConversationPage() {
     setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
+      // Pick a format the device actually supports. iOS Safari records audio/mp4,
+      // not webm — recording then labeling it webm makes transcription fail.
+      const preferred = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg'];
+      const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported)
+        ? (preferred.find((t) => MediaRecorder.isTypeSupported(t)) || '')
+        : '';
+      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       audioChunksRef.current = [];
       mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
       mr.onstop = async () => {
         stream.getTracks().forEach((tr) => tr.stop());
         setRecording(false);
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        // Use the recorder's real format so the file extension/MIME match the bytes.
+        const blob = new Blob(audioChunksRef.current, { type: mr.mimeType || mimeType || 'audio/webm' });
         if (blob.size === 0) return;
         setTranscribing(true);
         try {
