@@ -639,8 +639,15 @@ function chunkText(text: string, size = 1000, overlap = 150): string[] {
 /** Embed an array of texts with OpenAI (batched). */
 async function embedTexts(texts: string[]): Promise<number[][]> {
   const out: number[][] = [];
+  // The embedding model caps input at 8192 tokens. A long pasted message (e.g. a
+  // full session transcript used as the RAG query) blows past that and returns a
+  // 400, so clamp each input to a safe character budget — kept conservative
+  // because Hebrew is token-dense. Plenty of signal for semantic retrieval.
+  const MAX_EMBED_CHARS = 6000;
   for (let i = 0; i < texts.length; i += 100) {
-    const batch = texts.slice(i, i + 100);
+    const batch = texts
+      .slice(i, i + 100)
+      .map((t) => (t.length > MAX_EMBED_CHARS ? t.slice(0, MAX_EMBED_CHARS) : t));
     const res = await openai.embeddings.create({ model: EMBEDDING_MODEL, input: batch });
     for (const d of res.data) out.push(d.embedding as number[]);
   }
