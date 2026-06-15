@@ -662,7 +662,7 @@ async function getKnowledgeContext(query: string): Promise<string> {
       .map((d, i) => `[${i + 1}] ${d.content}`)
       .join('\n\n');
     if (!excerpts) return '';
-    return `\n\n# Reference material (from the practice's knowledge base)\nThe following excerpts may be relevant to this conversation. Draw on them when useful; integrate the ideas naturally, don't quote verbatim or cite numbers unless asked.\n\n${excerpts}`;
+    return `\n\n# Reference material (from the practice's knowledge base)\nThe following excerpts may be relevant to this conversation. Usually integrate the ideas naturally, in your own voice. You may occasionally quote a short line verbatim and faithfully — but ONLY text that actually appears in the excerpts below, attributed plainly to Kopel's lecture or to Frankl. Never quote or attribute anything that isn't present here, and never show the [n] numbers.\n\n${excerpts}`;
   } catch (err) {
     console.error('getKnowledgeContext failed:', err);
     return '';
