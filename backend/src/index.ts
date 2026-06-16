@@ -1206,15 +1206,27 @@ async function consolidateConversation(conversationId: string): Promise<Consolid
       return { status: 'ok', tier: 'free', insights_count: 0 };
     }
 
-    // 2. Generate session summary
-    const summaryPrompt = `Below is a conversation between KopelAi (a self-reflection AI) and a user.
+    // 2. Generate session summary.
+    // Detect the conversation's dominant language from the transcript and pin the
+    // summary to it up front — a trailing "use the same language" hint gets
+    // ignored on short chats, so Hebrew conversations were being summarized in
+    // English on the history page.
+    // Judge language from the message contents only — not the transcript, whose
+    // "[id:…] User:/KopelAi:" scaffolding is Latin and would skew short chats.
+    const contentOnly = messages.map((m) => m.content).join(' ');
+    const hebChars = (contentOnly.match(/[֐-׿]/g) ?? []).length;
+    const latChars = (contentOnly.match(/[A-Za-z]/g) ?? []).length;
+    const summaryLang = hebChars >= latChars ? 'Hebrew' : 'English';
+    const summaryPrompt = `Write the summary in ${summaryLang}. This is required: match the language of the conversation below, not the language of these instructions.
+
+Below is a conversation between KopelAi (a self-reflection AI) and a user.
 
 Write a concise summary (3-5 sentences) covering:
 - Main topics discussed
 - Anything notable about how the user thinks, feels, or approaches things
 - Open threads — things mentioned but not explored deeply that would be worth returning to
 
-Write in third person about the user. Be specific, not generic. Use the same language the user used.
+Write in third person about the user. Be specific, not generic.
 
 Conversation:
 ${transcript}`;
