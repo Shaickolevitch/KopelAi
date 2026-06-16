@@ -404,16 +404,18 @@ app.get('/admin/notifications', async (req: Request, res: Response) => {
     const user = await getAuthedUser(req);
     if (!user || user.id !== ADMIN_USER_ID) return res.status(403).json({ error: 'Not authorized' });
 
-    const [fb, rv, pp] = await Promise.all([
+    // Run all four lookups in parallel — the Sentry call is a slow external HTTP
+    // request, so awaiting it after the DB counts (as before) serialized ~1.5s of
+    // latency. Folding it into the same Promise.all collapses that to the slowest
+    // single call. getSentrySummary() handles its own errors; .catch is a guard.
+    const [fb, rv, pp, s] = await Promise.all([
       supabaseAdmin.from('feedback').select('*', { count: 'exact', head: true }).eq('status', 'new'),
       supabaseAdmin.from('reviews').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       supabaseAdmin.from('admin_events').select('*', { count: 'exact', head: true }).eq('type', 'pro_purchase').eq('seen', false),
+      getSentrySummary().catch(() => null),
     ]);
     let sentry_open = 0;
-    try {
-      const s = await getSentrySummary();
-      if ((s as any).configured && typeof (s as any).openIssues === 'number') sentry_open = (s as any).openIssues;
-    } catch { /* ignore sentry hiccups */ }
+    if (s && (s as any).configured && typeof (s as any).openIssues === 'number') sentry_open = (s as any).openIssues;
 
     res.json({
       feedback_new: fb.count ?? 0,
