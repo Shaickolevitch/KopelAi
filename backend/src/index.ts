@@ -1473,6 +1473,112 @@ app.post('/end-conversation', async (req: Request, res: Response) => {
   }
 });
 
+// ----------------------------------------------------------
+// Per-conversation deep analysis (the "by conversation" tab in ניתוח).
+// Generated on first view from the conversation's messages and cached on the
+// conversation row. Pro/trial/comped only. Grounded references — no fabrication.
+// ----------------------------------------------------------
+const KOPEL_LECTURES_URL =
+  'https://kopelel.co.il/%D7%91%D7%99%D7%9F-%D7%A9%D7%A2%D7%94-%D7%9C%D7%A9%D7%A2%D7%94-%D7%94%D7%A8%D7%A6%D7%90%D7%95%D7%AA-%D7%95%D7%95%D7%99%D7%93%D7%90%D7%95/';
+
+app.get('/conversation/:id/analysis', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const conversationId = req.params.id;
+
+    const { data: convo } = await supabaseAdmin
+      .from('conversations')
+      .select('user_id, analysis')
+      .eq('id', conversationId)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (!convo || convo.user_id !== user.id) return res.status(403).json({ error: 'Not your conversation' });
+
+    // Per-conversation analysis is a paid feature, same gate as the rest of ניתוח.
+    const { data: tierRow } = await supabaseAdmin
+      .from('user_profile')
+      .select('subscription_tier, trial_ends_at, referral_pro_until')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const isPro =
+      tierRow?.subscription_tier === 'pro' ||
+      compedProActive(tierRow?.referral_pro_until) ||
+      trialActiveFrom(tierRow?.trial_ends_at);
+    if (!isPro) return res.status(403).json({ error: 'pro_required' });
+
+    // Cached → return immediately.
+    if (convo.analysis) return res.json({ analysis: convo.analysis, cached: true });
+
+    // Generation is the expensive path — rate-limit it.
+    if (rateLimited(`convanalysis:${user.id}`, 15, 60_000)) {
+      return res.status(429).json({ error: 'Too many requests, slow down a moment.' });
+    }
+
+    const { data: messages } = await supabaseAdmin
+      .from('messages')
+      .select('id, role, content')
+      .eq('conversation_id', conversationId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true });
+    if (!messages || messages.length === 0) {
+      return res.status(400).json({ error: 'This conversation has no saved messages to analyze.' });
+    }
+
+    const transcript = messages
+      .map((m) => `${m.role === 'user' ? 'Therapist' : 'KopelAi'}: ${m.content}`)
+      .join('\n\n')
+      .slice(0, 16000);
+    const contentOnly = messages.map((m) => m.content).join(' ');
+    const heb = (contentOnly.match(/[֐-׿]/g) ?? []).length;
+    const lat = (contentOnly.match(/[A-Za-z]/g) ?? []).length;
+    const lang = heb >= lat ? 'Hebrew' : 'English';
+
+    const prompt = `You are analyzing ONE reflective conversation between a therapist (the user) and KopelAi, a psychoanalytic self-reflection guide. Produce a structured analysis FOR THE THERAPIST to learn from — about themselves as a clinician, not about any client.
+
+Write every text value in ${lang}. Output ONLY valid JSON, no markdown fences, no prose outside the JSON, with EXACTLY this shape:
+{
+  "summary": "2-4 sentences: what this conversation was about and where it went",
+  "insights": [ { "title": "short label", "content": "1-3 sentences: a specific clinical observation about the therapist visible in THIS conversation — a pattern, strength, blind spot, countertransference, or defense" } ],
+  "questions": [ "a reflective question worth sitting with, grounded in this conversation" ],
+  "key_moments": [ { "moment": "a brief paraphrase or short quote of a turning point", "why": "why it mattered" } ],
+  "references": [ { "kind": "lecture" | "book" | "concept", "title": "the lecture topic / book / concept name", "note": "1 sentence on why it connects to this conversation", "url": "optional, see rules" } ]
+}
+
+Counts: 2-5 insights, 2-4 questions, 1-4 key_moments, 1-4 references. Fewer is fine. If the conversation is too brief or trivial to analyze, return empty arrays and a one-line summary saying so.
+
+References MUST be real and grounded — never fabricate:
+- "lecture": one of psychoanalyst Kopel Eliezer's lecture topics when it genuinely fits (e.g. העברה, מרחב פוטנציאלי, נרקיסיזם, מיכל, אינטרסובייקטיביות, העמדה הדכאונית, אמפתיה, חשיפה עצמית). For a lecture you MAY set "url" to exactly "${KOPEL_LECTURES_URL}".
+- "book": "אדם מחפש משמעות" (Viktor Frankl) when meaning/emptiness/suffering is relevant, or another genuinely well-known clinical text. Do NOT invent titles, authors, or editions.
+- "concept": a well-established named psychological concept (transference, projective identification, the holding environment, the depressive position, existential vacuum, parallel process, enactment, etc.).
+- NEVER invent a journal article, page number, author, edition, or URL. If unsure whether something real exists, use a "concept" instead. Omit "url" entirely unless it is exactly the Kopel lectures link above.
+
+Be specific to THIS conversation, not generic.
+
+Conversation:
+${transcript}`;
+
+    const resp = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const block = resp.content.find((b) => b.type === 'text');
+    const raw = block && block.type === 'text' ? block.text : '';
+    const analysis = extractJSON(raw);
+
+    await supabaseAdmin
+      .from('conversations')
+      .update({ analysis, analysis_generated_at: new Date().toISOString() })
+      .eq('id', conversationId);
+
+    res.json({ analysis, cached: false });
+  } catch (err: any) {
+    console.error('Conversation analysis error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
 // =====================================================
 // Account deletion + restore
 // =====================================================

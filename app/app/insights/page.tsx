@@ -7,6 +7,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { INSIGHT_CATEGORIES, getCategoryLabel } from '@kopelai/shared';
 import { getSubscriptionTier } from '@/lib/subscription';
+import ByConversation from './ByConversation';
 
 type Insight = {
   id: string;
@@ -40,6 +41,20 @@ export default function InsightsPage() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPro, setIsPro] = useState(true);
+  const [tab, setTabState] = useState<'general' | 'conversations'>('general');
+
+  const setTab = (next: 'general' | 'conversations') => {
+    setTabState(next);
+    try { localStorage.setItem('kopelai.analysisTab', next); } catch {}
+  };
+
+  // Restore the last-used tab (e.g. when returning from a conversation's analysis).
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('kopelai.analysisTab');
+      if (saved === 'conversations' || saved === 'general') setTabState(saved);
+    } catch {}
+  }, []);
 
   // Declare loadAll/init with useCallback before the useEffects that reference them
   const loadAll = useCallback(async (uid: string) => {
@@ -141,89 +156,87 @@ export default function InsightsPage() {
     );
   }
 
-  if (!hasAnyInsights) {
-    return (
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="max-w-md text-center">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center mx-auto mb-5">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400 dark:text-indigo-500">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-              <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/>
-            </svg>
-          </div>
-          <h2 className="text-2xl font-semibold text-stone-900 dark:text-zinc-100 mb-3">{t.insights_empty_title}</h2>
-          <p className="text-stone-500 dark:text-zinc-500 leading-relaxed mb-4 text-sm">{t.insights_empty_body}</p>
+  const he = language === 'he';
+  const tabBtn = (key: 'general' | 'conversations', label: string) => (
+    <button
+      onClick={() => setTab(key)}
+      className={`px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors ${
+        tab === key
+          ? 'border-indigo-900 dark:border-indigo-400 text-stone-900 dark:text-zinc-100'
+          : 'border-transparent text-stone-400 dark:text-zinc-500 hover:text-stone-700 dark:hover:text-zinc-300'
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-6">
+      <h1 className="text-3xl font-bold text-stone-900 dark:text-zinc-100 mb-4">{t.insights_title}</h1>
+
+      {/* Tabs: general (aggregate) vs. per-conversation */}
+      <div className="flex gap-1 mb-6 border-b border-stone-200 dark:border-zinc-800">
+        {tabBtn('general', he ? 'כללי' : 'General')}
+        {tabBtn('conversations', he ? 'לפי שיחה' : 'By conversation')}
+      </div>
+
+      {tab === 'conversations' ? (
+        <ByConversation />
+      ) : !hasAnyInsights ? (
+        <div className="py-12 text-center">
+          <h2 className="text-xl font-semibold text-stone-900 dark:text-zinc-100 mb-2">{t.insights_empty_title}</h2>
+          <p className="text-stone-500 dark:text-zinc-500 leading-relaxed mb-4 text-sm max-w-md mx-auto">{t.insights_empty_body}</p>
           <p className="text-sm text-stone-400 dark:text-zinc-600 italic mb-6">{t.insights_empty_footer}</p>
           <Link
             href="/app/conversation"
             className="inline-block px-6 py-3 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors"
           >
-            {language === 'he' ? 'התחל שיחה עם קופלAI ←' : 'Start a conversation →'}
+            {he ? 'התחל שיחה עם קופלAI ←' : 'Start a conversation →'}
           </Link>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-6">
-      <h1 className="text-3xl font-bold text-stone-900 dark:text-zinc-100 mb-6">{t.insights_title}</h1>
-
-      {/* Stats strip */}
-      {stats && (
-        <div className="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl mb-6 shadow-sm overflow-hidden">
-          <div className="flex divide-x divide-stone-100 dark:divide-zinc-800">
-            <StatCell value={stats.conversation_count} label={t.insights_stat_conversations} />
-            <StatCell value={stats.message_count} label={t.insights_stat_messages} />
-            <StatCell value={formatRelativeTime(stats.last_activity_at, t)} label={t.insights_stat_last_activity} />
-          </div>
-        </div>
-      )}
-
-      {/* Opener paragraph */}
-      {opener && opener.trim().length > 0 && (
-        <p className="text-stone-700 dark:text-zinc-300 leading-relaxed mb-6 px-1 text-[15px]">{opener}</p>
-      )}
-
-      {/* Insight cards */}
-      {/* Pro upgrade banner for free users */}
-      {!isPro && (
-        <div className="mb-6 rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/30 px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-300 mb-0.5">{t.insights_pro_banner_title}</p>
-            <p className="text-xs text-indigo-600 dark:text-indigo-400 leading-relaxed">{t.insights_pro_banner_body}</p>
-          </div>
-          <Link
-            href="/app/plan"
-            className="shrink-0 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 text-white text-xs font-semibold transition-colors text-center"
-          >
-            {t.insights_pro_banner_cta}
-          </Link>
-        </div>
-      )}
-
-      <div className="space-y-2.5">
-        {INSIGHT_CATEGORIES.map((cat, idx) => {
-          const ins = insightByCategory.get(cat.key);
-          const accentColor = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
-          return (
-            <div key={cat.key}
-              className="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm flex">
-              <div className={`w-1 shrink-0 ${accentColor} opacity-60`} />
-              <div className="px-4 py-4 flex-1 min-w-0">
-                <h3 className="font-semibold text-stone-500 dark:text-zinc-500 mb-1.5 text-xs uppercase tracking-widest">
-                  {getCategoryLabel(cat.key, language)}
-                </h3>
-                {ins ? (
-                  <p className="text-stone-800 dark:text-zinc-200 leading-relaxed text-[15px]">{ins.content}</p>
-                ) : (
-                  <p className="text-sm text-stone-400 dark:text-zinc-600 italic">{t.insights_card_empty}</p>
-                )}
+      ) : (
+        <>
+          {/* Stats strip */}
+          {stats && (
+            <div className="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl mb-6 shadow-sm overflow-hidden">
+              <div className="flex divide-x divide-stone-100 dark:divide-zinc-800">
+                <StatCell value={stats.conversation_count} label={t.insights_stat_conversations} />
+                <StatCell value={stats.message_count} label={t.insights_stat_messages} />
+                <StatCell value={formatRelativeTime(stats.last_activity_at, t)} label={t.insights_stat_last_activity} />
               </div>
             </div>
-          );
-        })}
-      </div>
+          )}
+
+          {/* Opener paragraph */}
+          {opener && opener.trim().length > 0 && (
+            <p className="text-stone-700 dark:text-zinc-300 leading-relaxed mb-6 px-1 text-[15px]">{opener}</p>
+          )}
+
+          {/* Insight cards */}
+          <div className="space-y-2.5">
+            {INSIGHT_CATEGORIES.map((cat, idx) => {
+              const ins = insightByCategory.get(cat.key);
+              const accentColor = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
+              return (
+                <div key={cat.key}
+                  className="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm flex">
+                  <div className={`w-1 shrink-0 ${accentColor} opacity-60`} />
+                  <div className="px-4 py-4 flex-1 min-w-0">
+                    <h3 className="font-semibold text-stone-500 dark:text-zinc-500 mb-1.5 text-xs uppercase tracking-widest">
+                      {getCategoryLabel(cat.key, language)}
+                    </h3>
+                    {ins ? (
+                      <p className="text-stone-800 dark:text-zinc-200 leading-relaxed text-[15px]">{ins.content}</p>
+                    ) : (
+                      <p className="text-sm text-stone-400 dark:text-zinc-600 italic">{t.insights_card_empty}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <div className="h-12" />
     </div>

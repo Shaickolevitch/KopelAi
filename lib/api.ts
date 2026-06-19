@@ -564,3 +564,38 @@ export async function claimReferral(code: string): Promise<void> {
     body: JSON.stringify({ code }),
   });
 }
+
+// ── Per-conversation deep analysis (the "by conversation" tab in ניתוח) ──────
+export type ConversationAnalysis = {
+  summary?: string;
+  insights?: { title?: string; content?: string }[];
+  questions?: string[];
+  key_moments?: { moment?: string; why?: string }[];
+  references?: { kind?: 'lecture' | 'book' | 'concept'; title?: string; note?: string; url?: string }[];
+};
+
+// Thrown when a non-Pro user requests a conversation analysis.
+export class ProRequiredError extends Error {
+  constructor() { super('pro_required'); this.name = 'ProRequiredError'; }
+}
+
+// Fetches (and, on first view, generates) the deep analysis for one conversation.
+// Generation can take several seconds; the result is cached server-side after.
+export async function getConversationAnalysis(conversationId: string): Promise<ConversationAnalysis> {
+  const r = await fetch(`${API_URL}/conversation/${conversationId}/analysis`, {
+    headers: { ...(await authHeaders()) },
+  });
+  if (r.status === 403) {
+    let body: { error?: string } = {};
+    try { body = await r.json(); } catch {}
+    if (body.error === 'pro_required') throw new ProRequiredError();
+    throw new Error('Not authorized for this conversation');
+  }
+  if (!r.ok) {
+    let t = await r.text();
+    try { t = JSON.parse(t).error ?? t; } catch {}
+    throw new Error(t || `Analysis error (${r.status})`);
+  }
+  const data = await r.json();
+  return (data.analysis ?? {}) as ConversationAnalysis;
+}

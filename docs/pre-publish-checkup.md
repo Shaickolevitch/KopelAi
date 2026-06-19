@@ -2,7 +2,12 @@
 
 **Date:** 2026-06-14
 **Recommendation:** Ship after a few quick fixes — no blockers found
-**Blockers:** 0   **High:** 2   **Medium:** 4   **Low:** 5
+**Blockers:** 0   **High:** 2 (both now fixed ✅)   **Medium:** 4   **Low:** 5
+
+> **Update 2026-06-14:** Both High items resolved — Next bumped to 16.2.9 (RSC
+> advisory cleared), backend `npm audit fix` → 0 vulnerabilities, and Open
+> Graph / Twitter / `og:image` link-preview metadata added. Committed (not yet
+> pushed). Remaining Medium/Low items below are unaddressed.
 
 ## Summary
 
