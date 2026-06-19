@@ -335,11 +335,25 @@ async function getPosthogSummary() {
   }
 }
 
+// The Sentry summary hits Sentry's external API (~600ms). It's read by the admin
+// notification bell, which polls every 90s, so a live call per poll made the
+// endpoint slow (Sentry flagged it as a "blocking operation"). Cache the result
+// so repeated polls are served from memory: 5 min on success, 1 min on error
+// (so a transient Sentry hiccup retries soon rather than sticking).
+let _sentryCache: { at: number; ttl: number; data: unknown } | null = null;
+const SENTRY_CACHE_OK_MS = 5 * 60 * 1000;
+const SENTRY_CACHE_ERR_MS = 60 * 1000;
+
 async function getSentrySummary() {
+  if (_sentryCache && Date.now() - _sentryCache.at < _sentryCache.ttl) return _sentryCache.data;
   const token = process.env.SENTRY_AUTH_TOKEN; // secret — must be set in Railway
   const org = process.env.SENTRY_ORG || 'shaiyan';
   const project = process.env.SENTRY_PROJECT || 'kopelai';
-  if (!token || !org || !project) return { configured: false };
+  if (!token || !org || !project) {
+    const data = { configured: false };
+    _sentryCache = { at: Date.now(), ttl: SENTRY_CACHE_OK_MS, data };
+    return data;
+  }
   try {
     const r = await fetch(
       `https://sentry.io/api/0/projects/${org}/${project}/issues/?query=is:unresolved&statsPeriod=14d&limit=8`,
@@ -347,7 +361,7 @@ async function getSentrySummary() {
     );
     if (!r.ok) throw new Error(`Sentry ${r.status}`);
     const issues = (await r.json()) as any[];
-    return {
+    const data = {
       configured: true,
       openIssues: issues.length,
       issues: issues.map((i) => ({
@@ -357,8 +371,12 @@ async function getSentrySummary() {
         permalink: i.permalink ?? null,
       })),
     };
+    _sentryCache = { at: Date.now(), ttl: SENTRY_CACHE_OK_MS, data };
+    return data;
   } catch (e) {
-    return { configured: true, error: e instanceof Error ? e.message : 'Sentry fetch failed' };
+    const data = { configured: true, error: e instanceof Error ? e.message : 'Sentry fetch failed' };
+    _sentryCache = { at: Date.now(), ttl: SENTRY_CACHE_ERR_MS, data };
+    return data;
   }
 }
 
