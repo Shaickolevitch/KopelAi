@@ -100,6 +100,22 @@ export default function ConversationAnalysisPage() {
             </Section>
           )}
 
+          {/* Appreciation — specific good things the therapist did */}
+          {analysis.appreciation && analysis.appreciation.length > 0 && (
+            <Section title={he ? 'הוקרה' : 'Appreciation'}>
+              <div className="rounded-2xl border border-clay/20 bg-clay/[0.06] px-4 py-3.5">
+                <ul className="space-y-2.5">
+                  {analysis.appreciation.map((a, i) => (
+                    <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed text-stone-800 dark:text-zinc-200">
+                      <span className="text-clay shrink-0" aria-hidden>✓</span>
+                      <span>{a}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Section>
+          )}
+
           {/* Insights */}
           {analysis.insights && analysis.insights.length > 0 && (
             <Section title={he ? 'תובנות' : 'Insights'}>
@@ -165,7 +181,7 @@ export default function ConversationAnalysisPage() {
           )}
 
           {/* Nothing to show (very short conversation) */}
-          {!analysis.summary && !(analysis.insights?.length) && !(analysis.questions?.length) && !(analysis.key_moments?.length) && (
+          {!analysis.summary && !(analysis.appreciation?.length) && !(analysis.insights?.length) && !(analysis.questions?.length) && !(analysis.key_moments?.length) && (
             <p className="text-sm text-stone-400 dark:text-zinc-600 text-center py-8">
               {he ? 'השיחה קצרה מכדי להפיק ממנה ניתוח.' : 'This conversation was too short to analyze.'}
             </p>

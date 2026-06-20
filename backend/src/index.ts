@@ -1539,13 +1539,14 @@ app.get('/conversation/:id/analysis', async (req: Request, res: Response) => {
 Write every text value in ${lang}. Output ONLY valid JSON, no markdown fences, no prose outside the JSON, with EXACTLY this shape:
 {
   "summary": "2-4 sentences: what this conversation was about and where it went",
+  "appreciation": [ "a specific good thing the therapist did in THIS conversation — name the concrete move (a brave intervention, real attunement, a restraint that served the client, staying with something hard) and, briefly, why it was good. Specific praise only, never generic." ],
   "insights": [ { "title": "short label", "content": "1-3 sentences: a specific clinical observation about the therapist visible in THIS conversation — a pattern, strength, blind spot, countertransference, or defense" } ],
   "questions": [ "a reflective question worth sitting with, grounded in this conversation" ],
   "key_moments": [ { "moment": "a brief paraphrase or short quote of a turning point", "why": "why it mattered" } ],
   "references": [ { "kind": "lecture" | "book" | "concept", "title": "the lecture topic / book / concept name", "note": "1 sentence on why it connects to this conversation", "url": "optional, see rules" } ]
 }
 
-Counts: 2-5 insights, 2-4 questions, 1-4 key_moments, 1-4 references. Fewer is fine. If the conversation is too brief or trivial to analyze, return empty arrays and a one-line summary saying so.
+Counts: 3-5 appreciation, 2-5 insights, 2-4 questions, 1-4 key_moments, 1-4 references. Fewer is fine. If the conversation is too brief or trivial to analyze, return empty arrays and a one-line summary saying so. Appreciation must be earned and specific — if there genuinely isn't much to praise in a very short exchange, give fewer items rather than empty flattery.
 
 References MUST be real and grounded — never fabricate:
 - "lecture": one of psychoanalyst Kopel Eliezer's lecture topics when it genuinely fits (e.g. העברה, מרחב פוטנציאלי, נרקיסיזם, מיכל, אינטרסובייקטיביות, העמדה הדכאונית, אמפתיה, חשיפה עצמית). For a lecture you MAY set "url" to exactly "${KOPEL_LECTURES_URL}".

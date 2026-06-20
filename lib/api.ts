@@ -568,6 +568,7 @@ export async function claimReferral(code: string): Promise<void> {
 // ── Per-conversation deep analysis (the "by conversation" tab in ניתוח) ──────
 export type ConversationAnalysis = {
   summary?: string;
+  appreciation?: string[];
   insights?: { title?: string; content?: string }[];
   questions?: string[];
   key_moments?: { moment?: string; why?: string }[];
