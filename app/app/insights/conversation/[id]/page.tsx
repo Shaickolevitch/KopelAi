@@ -66,14 +66,10 @@ export default function ConversationAnalysisPage() {
       {startedAt && <p className="text-sm text-stone-400 dark:text-zinc-500 mb-6">{fmtDate(startedAt)}</p>}
 
       {status === 'loading' && (
-        <div className="py-16 text-center">
-          <div className="flex justify-center gap-1.5 mb-4">
-            {[0, 150, 300].map((d) => (
-              <span key={d} className="w-2 h-2 rounded-full bg-stone-300 dark:bg-zinc-700 animate-bounce" style={{ animationDelay: `${d}ms` }} />
-            ))}
-          </div>
-          <p className="text-sm text-stone-400 dark:text-zinc-500">
-            {he ? 'מנתח את השיחה… זה עשוי לקחת רגע.' : 'Analyzing this conversation… this can take a moment.'}
+        <div className="py-16 flex flex-col items-center">
+          <AnalyzingCircle />
+          <p className="mt-5 text-sm text-stone-400 dark:text-zinc-500">
+            {he ? 'קופל מנתח את השיחה…' : 'Kopel is analyzing this conversation…'}
           </p>
         </div>
       )}
@@ -199,6 +195,39 @@ export default function ConversationAnalysisPage() {
       )}
 
       <div className="h-12" />
+    </div>
+  );
+}
+
+// A circular progress ring that fills smoothly while the analysis generates.
+// We don't know the exact duration, so it eases toward ~95% and keeps inching
+// forward — the result replaces it the moment generation finishes.
+function AnalyzingCircle() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setProgress((p) => (p >= 95 ? 95 : p + (95 - p) * 0.05));
+    }, 350);
+    return () => clearInterval(id);
+  }, []);
+
+  const r = 42;
+  const C = 2 * Math.PI * r;
+  const offset = C * (1 - progress / 100);
+  return (
+    <div className="relative w-28 h-28">
+      <svg width="112" height="112" viewBox="0 0 112 112" className="-rotate-90">
+        <circle cx="56" cy="56" r={r} fill="none" strokeWidth="6" className="stroke-stone-200 dark:stroke-zinc-800" />
+        <circle
+          cx="56" cy="56" r={r} fill="none" strokeWidth="6" strokeLinecap="round"
+          className="stroke-indigo-900 dark:stroke-indigo-400"
+          strokeDasharray={C} strokeDashoffset={offset}
+          style={{ transition: 'stroke-dashoffset 0.35s linear' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-lg font-semibold text-stone-700 dark:text-zinc-300 tabular-nums">{Math.round(progress)}%</span>
+      </div>
     </div>
   );
 }
