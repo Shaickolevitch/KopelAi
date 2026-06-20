@@ -20,6 +20,7 @@ export default function ConversationAnalysisPage() {
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>('loading');
   const [errMsg, setErrMsg] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,7 +45,7 @@ export default function ConversationAnalysisPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [id, he]);
+  }, [id, he, attempt]);
 
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(he ? 'he-IL' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -88,7 +89,15 @@ export default function ConversationAnalysisPage() {
       )}
 
       {status === 'error' && (
-        <div className="py-10 text-center text-sm text-stone-500 dark:text-zinc-400">{errMsg}</div>
+        <div className="py-10 text-center">
+          <p className="text-sm text-stone-500 dark:text-zinc-400 mb-4">{errMsg}</p>
+          <button
+            onClick={() => { setStatus('loading'); setAttempt((a) => a + 1); }}
+            className="px-5 py-2.5 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-900 dark:hover:bg-indigo-500 transition-colors"
+          >
+            {he ? 'נסה שוב' : 'Try again'}
+          </button>
+        </div>
       )}
 
       {status === 'ready' && analysis && (

@@ -1561,12 +1561,17 @@ ${transcript}`;
 
     const resp = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 4000, // headroom so the JSON isn't truncated mid-object
+      messages: [
+        { role: 'user', content: prompt },
+        // Prefill an opening brace so the model emits pure JSON (no prose preamble,
+        // no markdown fence). We re-add the "{" before parsing.
+        { role: 'assistant', content: '{' },
+      ],
     });
     const block = resp.content.find((b) => b.type === 'text');
     const raw = block && block.type === 'text' ? block.text : '';
-    const analysis = extractJSON(raw);
+    const analysis = extractJSON('{' + raw);
 
     await supabaseAdmin
       .from('conversations')
