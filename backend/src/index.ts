@@ -1534,13 +1534,13 @@ app.get('/conversation/:id/analysis', async (req: Request, res: Response) => {
     const lat = (contentOnly.match(/[A-Za-z]/g) ?? []).length;
     const lang = heb >= lat ? 'Hebrew' : 'English';
 
-    const prompt = `You are analyzing ONE reflective conversation between a therapist (the user) and KopelAi, a psychoanalytic self-reflection guide. Produce a structured analysis FOR THE THERAPIST to learn from — about themselves as a clinician, not about any client.
+    const prompt = `You are analyzing ONE reflective conversation between a therapist (the user) and KopelAi, a psychoanalytic self-reflection guide. Produce a structured analysis written DIRECTLY TO the therapist, in the SECOND PERSON — address them as "you" throughout ("you came with…", "you noticed…", "what stopped you…"), never in the third person ("the therapist…"). In Hebrew, speak directly to them (פנייה ישירה). It is about them as a clinician, not about any client.
 
 Write every text value in ${lang}. Output ONLY valid JSON, no markdown fences, no prose outside the JSON, with EXACTLY this shape:
 {
-  "summary": "2-4 sentences: what this conversation was about and where it went",
-  "appreciation": [ "a specific good thing the therapist did in THIS conversation — name the concrete move (a brave intervention, real attunement, a restraint that served the client, staying with something hard) and, briefly, why it was good. Specific praise only, never generic." ],
-  "insights": [ { "title": "short label", "content": "1-3 sentences: a specific clinical observation about the therapist visible in THIS conversation — a pattern, strength, blind spot, countertransference, or defense" } ],
+  "summary": "2-4 sentences addressed to you: what you talked about and where it went",
+  "appreciation": [ "a specific good thing YOU did in THIS conversation — name the concrete move (a brave intervention, real attunement, a restraint that served the client, staying with something hard) and, briefly, why it was good. Address it to 'you'. Specific praise only, never generic." ],
+  "insights": [ { "title": "short label", "content": "1-3 sentences, addressed to you: a specific clinical observation about you visible in THIS conversation — a pattern, strength, blind spot, countertransference, or defense you showed" } ],
   "questions": [ "a reflective question worth sitting with, grounded in this conversation" ],
   "key_moments": [ { "moment": "a brief paraphrase or short quote of a turning point", "why": "why it mattered" } ],
   "references": [ { "kind": "lecture" | "book" | "concept", "title": "the lecture topic / book / concept name", "note": "1 sentence on why it connects to this conversation", "url": "optional, see rules" } ]
@@ -1554,7 +1554,7 @@ References MUST be real and grounded — never fabricate:
 - "concept": a well-established named psychological concept (transference, projective identification, the holding environment, the depressive position, existential vacuum, parallel process, enactment, etc.).
 - NEVER invent a journal article, page number, author, edition, or URL. If unsure whether something real exists, use a "concept" instead. Omit "url" entirely unless it is exactly the Kopel lectures link above.
 
-Be specific to THIS conversation, not generic.
+Be specific to THIS conversation, not generic. Throughout every field, speak directly to the therapist as "you" — never refer to them in the third person ("the therapist", "they"). In Hebrew use direct address (פנייה ישירה).
 
 Conversation:
 ${transcript}`;
