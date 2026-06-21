@@ -38,6 +38,7 @@ export default function ByConversation() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [onlyAnalyzed, setOnlyAnalyzed] = useState(false);
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'longest' | 'shortest'>('newest');
 
   useEffect(() => {
     (async () => {
@@ -59,14 +60,26 @@ export default function ByConversation() {
     const ql = q.trim().toLowerCase();
     const fromT = from ? new Date(from + 'T00:00:00').getTime() : -Infinity;
     const toT = to ? new Date(to + 'T23:59:59').getTime() : Infinity;
-    return convos.filter((c) => {
+    const rows = convos.filter((c) => {
       const t = new Date(c.started_at).getTime();
       if (t < fromT || t > toT) return false;
       if (onlyAnalyzed && !c.analysis_generated_at) return false;
       if (ql && !(c.summary || '').toLowerCase().includes(ql)) return false;
       return true;
     });
-  }, [convos, q, from, to, onlyAnalyzed]);
+    const byDate = (c: Convo) => new Date(c.started_at).getTime();
+    const byLen = (c: Convo) => c.message_count || 0;
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      switch (sort) {
+        case 'oldest': return byDate(a) - byDate(b);
+        case 'longest': return byLen(b) - byLen(a);
+        case 'shortest': return byLen(a) - byLen(b);
+        default: return byDate(b) - byDate(a); // newest
+      }
+    });
+    return sorted;
+  }, [convos, q, from, to, onlyAnalyzed, sort]);
 
   function fmtDate(iso: string) {
     return new Date(iso).toLocaleDateString(he ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -117,20 +130,33 @@ export default function ByConversation() {
         )}
       </div>
 
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
         <div className="text-xs text-stone-400 dark:text-zinc-600">
           {he ? `${filtered.length} שיחות` : `${filtered.length} conversations`}
         </div>
-        <button
-          onClick={() => setOnlyAnalyzed((v) => !v)}
-          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
-            onlyAnalyzed
-              ? 'bg-clay/10 text-clay border-clay/30'
-              : 'text-stone-400 dark:text-zinc-500 border-stone-200 dark:border-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-800'
-          }`}
-        >
-          {he ? 'נותחו בלבד' : 'Analyzed only'}
-        </button>
+        <div className="flex items-center gap-2">
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as typeof sort)}
+            aria-label={he ? 'מיון' : 'Sort'}
+            className="px-2.5 py-1 rounded-full text-xs font-medium border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-stone-500 dark:text-zinc-400 outline-none hover:bg-stone-50 dark:hover:bg-zinc-800 cursor-pointer"
+          >
+            <option value="newest">{he ? 'מהחדש לישן' : 'Newest first'}</option>
+            <option value="oldest">{he ? 'מהישן לחדש' : 'Oldest first'}</option>
+            <option value="longest">{he ? 'הארוכות ביותר' : 'Longest first'}</option>
+            <option value="shortest">{he ? 'הקצרות ביותר' : 'Shortest first'}</option>
+          </select>
+          <button
+            onClick={() => setOnlyAnalyzed((v) => !v)}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
+              onlyAnalyzed
+                ? 'bg-clay/10 text-clay border-clay/30'
+                : 'text-stone-400 dark:text-zinc-500 border-stone-200 dark:border-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-800'
+            }`}
+          >
+            {he ? 'נותחו בלבד' : 'Analyzed only'}
+          </button>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
