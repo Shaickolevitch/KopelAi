@@ -202,6 +202,9 @@ export default function ConversationPage() {
   const [sending, setSending] = useState(false);
   const [endingSession, setEndingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // When the current sitting began — set on the first message of this mount, so
+  // Kopel can be aware of how long the session has run and wind it down ~50 min in.
+  const sessionStartRef = useRef<number | null>(null);
   const [showUpgradeNudge, setShowUpgradeNudge] = useState(false);
   const [showPlanPicker, setShowPlanPicker] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -422,7 +425,10 @@ export default function ConversationPage() {
         ...messages.map(({ role, content }) => ({ role, content })),
         { role: 'user', content: fullContent },
       ];
-      const response = await sendChat(history, language);
+      // Track the sitting's length so Kopel can steer toward a close ~50 min in.
+      if (sessionStartRef.current === null) sessionStartRef.current = Date.now();
+      const sessionMinutes = Math.floor((Date.now() - sessionStartRef.current) / 60000);
+      const response = await sendChat(history, language, sessionMinutes);
 
       // Insert the assistant bubble empty, then type out the response.
       const assistantId = crypto.randomUUID();

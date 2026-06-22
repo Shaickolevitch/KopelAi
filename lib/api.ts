@@ -39,12 +39,13 @@ export class DailyLimitError extends Error {
 
 export async function sendChat(
   messages: ChatMessage[],
-  language: 'he' | 'en' = 'he'
+  language: 'he' | 'en' = 'he',
+  sessionMinutes = 0
 ): Promise<ChatResponse> {
   const response = await fetch(`${API_URL}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-    body: JSON.stringify({ messages, language }),
+    body: JSON.stringify({ messages, language, session_minutes: sessionMinutes }),
   });
 
   if (!response.ok) {

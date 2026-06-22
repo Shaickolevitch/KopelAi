@@ -714,7 +714,8 @@ async function buildSystemPrompt(
   lastUserMessage?: string,
   windDown = false,
   isProEffective = false,
-  channel: 'web' | 'whatsapp' = 'web'
+  channel: 'web' | 'whatsapp' = 'web',
+  sessionMinutes = 0
 ): Promise<SystemBlock[]> {
   const basePrompt = await getBasePrompt();
   const knowledge = await getKnowledgeContext(lastUserMessage ?? '');
@@ -736,13 +737,24 @@ async function buildSystemPrompt(
     ? '\n\n# WhatsApp\n\nYou are replying over WhatsApp. Keep it short and conversational — usually 1–4 sentences, like a warm text message. No headings, no long lists. Offer one gentle reflection or question at a time.'
     : '';
 
+  // Time-awareness: a real therapist watches the clock and closes the hour around
+  // the 50-minute mark. We pass the elapsed minutes of the current sitting and
+  // nudge Kopel to steer toward a close — softly near 40, more firmly past ~55.
+  const sessionTimeDirective = (() => {
+    if (channel !== 'web' || !sessionMinutes || sessionMinutes < 40) return '';
+    if (sessionMinutes >= 55) {
+      return `\n\n# Time — bring the session to a close\n\nThis sitting has run about ${sessionMinutes} minutes — past the length of a normal therapy session. Close the hour now, the way a therapist does: name it warmly, help them gather the one thing most worth taking from today, and suggest picking it up another time. You may invite them to end the session here. Don't open a new line of inquiry.`;
+    }
+    return `\n\n# Time — approaching the end\n\nThis sitting has run about ${sessionMinutes} minutes — near the natural length of a session. Like a therapist mindful of the clock, begin steering gently toward a close: help them land what matters most from today and let them know you're nearing the end of the session. No abrupt stop — just start rounding off.`;
+  })();
+
   // The static base prompt is cached; everything dynamic goes in a second block.
   const baseBlock: SystemBlock = { type: 'text', text: basePrompt, cache_control: { type: 'ephemeral' } };
   const dynamic = (rest: string): SystemBlock[] =>
     rest.trim().length > 0 ? [baseBlock, { type: 'text', text: rest }] : [baseBlock];
 
   if (!userId) {
-    return dynamic(knowledge + langDirective + windDownDirective + channelDirective);
+    return dynamic(knowledge + langDirective + windDownDirective + channelDirective + sessionTimeDirective);
   }
 
   const { data: profile } = await supabaseAdmin
@@ -764,7 +776,7 @@ async function buildSystemPrompt(
     memorySection = `\n\n# What you remember about this person\n\nThis is a fresh session and you have no memory of past conversations with this person. Don't pretend to remember things you don't, and don't claim to recognize them.`;
   }
 
-  return dynamic(knowledge + memorySection + langDirective + windDownDirective + channelDirective);
+  return dynamic(knowledge + memorySection + langDirective + windDownDirective + channelDirective + sessionTimeDirective);
 }
 
 // Try to extract JSON from a Claude response, handling cases where it includes prose
@@ -803,7 +815,7 @@ app.post('/chat', async (req: Request, res: Response) => {
       return res.status(429).json({ error: 'Too many messages, slow down a moment.' });
     }
 
-    const { messages, language } = req.body;
+    const { messages, language, session_minutes } = req.body;
     const userId = user.id;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -851,7 +863,8 @@ app.post('/chat', async (req: Request, res: Response) => {
     }
 
     const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user')?.content;
-    const systemPrompt = await buildSystemPrompt(userId, language ?? 'he', lastUserMessage, windDown, proFeatures);
+    const sessionMinutes = typeof session_minutes === 'number' && session_minutes > 0 ? Math.floor(session_minutes) : 0;
+    const systemPrompt = await buildSystemPrompt(userId, language ?? 'he', lastUserMessage, windDown, proFeatures, 'web', sessionMinutes);
     const cappedMessages = messages.slice(-30);
 
     // Prompt-cache the conversation prefix: marking the last message caches
