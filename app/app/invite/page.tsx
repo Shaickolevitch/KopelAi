@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { getReferral, ReferralInfo } from '@/lib/api';
+import { DropSpot } from '../rewards';
 
 export default function InvitePage() {
   const { language } = useLang();
@@ -52,6 +53,7 @@ export default function InvitePage() {
 
   return (
     <div className="max-w-2xl mx-auto w-full px-4 sm:px-6 py-10">
+      <DropSpot sources={['referral']} />
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-clay/10 text-clay mb-4">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 11h-6M19 8v6" /></svg>

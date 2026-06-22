@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useLang } from '@/lib/i18n';
 import { getCurrentUser } from '@/lib/auth';
 import { submitReview } from '@/lib/api';
+import { DropSpot } from '../rewards';
 
 function Stars({ value, hover, onPick, onHover }: { value: number; hover: number; onPick: (n: number) => void; onHover: (n: number) => void }) {
   return (
@@ -73,6 +74,7 @@ export default function ReviewPage() {
   return (
     <div className="flex-1 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
+        <DropSpot sources={['review']} />
         <h1 className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mb-1">{he ? 'לכתוב המלצה' : 'Leave a review'}</h1>
         <p className="text-stone-500 dark:text-zinc-400 text-sm mb-6">
           {he ? 'החוויה שלך עוזרת למטפלים אחרים להחליט. תודה שאתם משתפים.' : 'Your experience helps other therapists decide. Thanks for sharing.'}

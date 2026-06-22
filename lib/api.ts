@@ -637,3 +637,32 @@ export async function fillTree(): Promise<Extract<TreeState, { planted: true }> 
   if (!r.ok) throw new Error(`Tree fill error (${r.status})`);
   return r.json();
 }
+
+// ── Collectible water-drop rewards ──────────────────────────────────────────
+export type WaterReward = {
+  id: string;
+  amount: number;
+  source: string;
+  ref: string | null;
+  route: string;
+  label_he: string;
+  label_en: string;
+  created_at: string;
+};
+
+export async function getWaterRewards(): Promise<WaterReward[]> {
+  const r = await fetch(`${API_URL}/water-rewards`, { headers: { ...(await authHeaders()) } });
+  if (!r.ok) throw new Error(`Rewards error (${r.status})`);
+  const d = await r.json();
+  return (d.rewards ?? []) as WaterReward[];
+}
+
+export async function collectWaterReward(id: string): Promise<{ collected: number; remaining: number }> {
+  const r = await fetch(`${API_URL}/water-rewards/collect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ id }),
+  });
+  if (!r.ok) throw new Error(`Collect error (${r.status})`);
+  return r.json();
+}

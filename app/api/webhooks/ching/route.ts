@@ -87,10 +87,14 @@ async function handleSubscriptionActive(subscription: Record<string, unknown>) {
         const until = new Date(base + 30 * 24 * 60 * 60 * 1000).toISOString();
         await admin.from('user_profile').upsert({ user_id: ref.referrer_id, referral_pro_until: until });
         await admin.from('admin_events').insert({ type: 'referral_reward', title: 'חבר שהוזמן הפך לפרו 🎁' });
-        // Tree: a referral converting waters the inviter's tree (+10), if planted.
-        const { data: tr } = await admin.from('tree_state').select('water_drops').eq('user_id', ref.referrer_id).maybeSingle();
+        // Tree: a referral converting earns the inviter a collectible drop (+10),
+        // tapped on their Invite page (if they have a tree planted).
+        const { data: tr } = await admin.from('tree_state').select('user_id').eq('user_id', ref.referrer_id).maybeSingle();
         if (tr) {
-          await admin.from('tree_state').update({ water_drops: (tr.water_drops ?? 0) + 10, updated_at: new Date().toISOString() }).eq('user_id', ref.referrer_id);
+          await admin.from('water_rewards').insert({
+            user_id: ref.referrer_id, amount: 10, source: 'referral', route: '/app/invite',
+            label_he: 'חבר שהצטרף 🎁', label_en: 'A friend joined 🎁',
+          });
         }
       }
     } catch (e) {

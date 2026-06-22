@@ -12,6 +12,7 @@ import {
 } from '@/lib/subscription';
 import { getUsage, startTrial } from '@/lib/api';
 import ConnectWhatsApp from './ConnectWhatsApp';
+import { DropSpot } from '../rewards';
 
 export default function PlanPage() {
   const { language } = useLang();
@@ -122,6 +123,7 @@ export default function PlanPage() {
 
   return (
     <div className="max-w-2xl mx-auto w-full px-4 sm:px-6 py-10">
+      <DropSpot sources={['whatsapp']} />
       <h1 className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mb-1">
         {isHebrew ? 'המנוי שלי' : 'My plan'}
       </h1>

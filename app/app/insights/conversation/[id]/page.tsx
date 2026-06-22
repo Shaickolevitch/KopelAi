@@ -7,6 +7,7 @@ import { useLang } from '@/lib/i18n';
 import { getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { getConversationAnalysis, ProRequiredError, type ConversationAnalysis } from '@/lib/api';
+import { DropSpot } from '../../../rewards';
 
 type Status = 'loading' | 'ready' | 'pro' | 'error';
 
@@ -64,6 +65,8 @@ export default function ConversationAnalysisPage() {
         {he ? 'ניתוח השיחה' : 'Conversation analysis'}
       </h1>
       {startedAt && <p className="text-sm text-stone-400 dark:text-zinc-500 mb-6">{fmtDate(startedAt)}</p>}
+
+      <DropSpot sources={['session', 'analysis', 'praise']} refId={id} />
 
       {status === 'loading' && (
         <div className="py-16 flex flex-col items-center">

@@ -1510,8 +1510,13 @@ app.post('/end-conversation', async (req: Request, res: Response) => {
     if (!convo || convo.user_id !== user.id) return res.status(403).json({ error: 'Not your conversation' });
 
     const result = await consolidateConversation(conversationId);
-    // Tree: ending a reflective session waters it (+3). No-ops for non-Pro.
-    void awardWater(user.id, 3);
+    // Tree: ending a reflective session earns a collectible drop (+3) on that
+    // conversation's analysis page. No-ops for non-Pro.
+    void awardWater(user.id, 3, {
+      source: 'session', ref: conversationId,
+      route: `/app/insights/conversation/${conversationId}`,
+      labelHe: 'סיום מפגש', labelEn: 'Session ended',
+    });
     res.json({
       status: result.status,
       summary: result.summary,
@@ -1537,7 +1542,7 @@ app.get('/conversation/:id/analysis', async (req: Request, res: Response) => {
   try {
     const user = await getAuthedUser(req);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
-    const conversationId = req.params.id;
+    const conversationId = String(req.params.id ?? '');
 
     const { data: convo } = await supabaseAdmin
       .from('conversations')
@@ -1652,10 +1657,12 @@ ${transcript}`;
       .update({ analysis, analysis_generated_at: new Date().toISOString() })
       .eq('id', conversationId);
 
-    // Tree: generating an analysis is a "go deeper" action (+2), and every piece
-    // of Kopel's praise (each הוקרה item) waters the tree (+1 each).
+    // Tree: generating an analysis earns a collectible (+2), and Kopel's praise
+    // earns its own collectible (+1 per הוקרה item) — both on this analysis page.
     const apprCount = Array.isArray(analysis?.appreciation) ? analysis.appreciation.length : 0;
-    void awardWater(user.id, 2 + apprCount);
+    const aRoute = `/app/insights/conversation/${conversationId}`;
+    void awardWater(user.id, 2, { source: 'analysis', ref: conversationId, route: aRoute, labelHe: 'ניתוח שיחה', labelEn: 'Conversation analysis' });
+    void awardWater(user.id, apprCount, { source: 'praise', ref: conversationId, route: aRoute, labelHe: 'הוקרה מקופל', labelEn: 'Praise from Kopel' });
 
     res.json({ analysis, cached: false });
   } catch (err: any) {
@@ -1773,22 +1780,30 @@ function treeView(row: TreeRow, frozen: boolean) {
   };
 }
 
-// Award water drops. Settles first, only for Pro/trial users. For one-time
-// rewards pass onceKey (no-ops if already claimed). Never throws.
-async function awardWater(userId: string, amount: number, onceKey?: string): Promise<void> {
+// Award water drops as a COLLECTIBLE pending reward — it is NOT added to the
+// reserve until the user taps the drop at its source. Pro/trial only. For
+// one-time rewards pass onceKey (no-ops if already claimed). Never throws.
+type AwardOpts = { source: string; route: string; labelHe: string; labelEn: string; ref?: string; onceKey?: string };
+async function awardWater(userId: string, amount: number, opts: AwardOpts): Promise<void> {
   try {
+    if (amount <= 0) return;
     if (!isEffectivePro(await treeTier(userId))) return;
     let row = await getTreeRow(userId);
     if (!row) { row = await plantTree(userId); if (!row) return; }
-    if (onceKey && row.claimed && row.claimed[onceKey]) return;
-    settleTree(row, Date.now(), false);
-    row.water_drops += amount; // earned drops go into the reserve, not the bucket
-    if (onceKey) row.claimed = { ...(row.claimed || {}), [onceKey]: true };
-    await persistTree(row);
+    if (opts.onceKey && row.claimed && row.claimed[opts.onceKey]) return;
+    await supabaseAdmin.from('water_rewards').insert({
+      user_id: userId, amount, source: opts.source, ref: opts.ref ?? null,
+      route: opts.route, label_he: opts.labelHe, label_en: opts.labelEn,
+    });
+    if (opts.onceKey) {
+      row.claimed = { ...(row.claimed || {}), [opts.onceKey]: true };
+      await persistTree(row);
+    }
   } catch (e) { console.error('awardWater failed', e); }
 }
 
 // Daily streak — once per (UTC) day; bonus grows 2→6 with consecutive days.
+// Creates a collectible reward (tapped at the chat page).
 async function awardDailyStreak(userId: string): Promise<void> {
   try {
     if (!isEffectivePro(await treeTier(userId))) return;
@@ -1799,10 +1814,12 @@ async function awardDailyStreak(userId: string): Promise<void> {
     const yesterday = new Date(Date.now() - TREE_DAY_MS).toISOString().slice(0, 10);
     row.streak_days = row.last_active_day === yesterday ? row.streak_days + 1 : 1;
     const bonus = Math.min(2 + (row.streak_days - 1), 6);
-    settleTree(row, Date.now(), false);
-    row.water_drops += bonus; // streak drops bank into the reserve
     row.last_active_day = today;
     await persistTree(row);
+    await supabaseAdmin.from('water_rewards').insert({
+      user_id: userId, amount: bonus, source: 'streak', ref: null, route: '/app/conversation',
+      label_he: `כניסה יומית · רצף ${row.streak_days} 🔥`, label_en: `Daily check-in · ${row.streak_days}-day streak`,
+    });
   } catch (e) { console.error('awardDailyStreak failed', e); }
 }
 
@@ -1853,6 +1870,60 @@ app.post('/tree/fill', async (req: Request, res: Response) => {
     res.json({ ...treeView(row, !effPro), poured });
   } catch (err: any) {
     console.error('Tree fill error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// Uncollected water-drop rewards — each is a collectible the user taps at its
+// source. Returned oldest-first so the header trail walks them in order.
+app.get('/water-rewards', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const { data } = await supabaseAdmin
+      .from('water_rewards')
+      .select('id, amount, source, ref, route, label_he, label_en, created_at')
+      .eq('user_id', user.id)
+      .is('collected_at', null)
+      .order('created_at', { ascending: true });
+    res.json({ rewards: data ?? [] });
+  } catch (err: any) {
+    console.error('Water rewards error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// Collect one reward → pour its drops into the reserve. Atomic on collected_at
+// so a double-tap can't double-credit.
+app.post('/water-rewards/collect', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const id = req.body?.id;
+    if (!id) return res.status(400).json({ error: 'id required' });
+
+    const { data: claimed } = await supabaseAdmin
+      .from('water_rewards')
+      .update({ collected_at: new Date().toISOString() })
+      .eq('id', id).eq('user_id', user.id).is('collected_at', null)
+      .select('amount').maybeSingle();
+
+    if (claimed && typeof claimed.amount === 'number') {
+      let row = await getTreeRow(user.id);
+      if (!row) row = await plantTree(user.id);
+      if (row) {
+        const effPro = isEffectivePro(await treeTier(user.id));
+        settleTree(row, Date.now(), !effPro);
+        row.water_drops += claimed.amount;
+        await persistTree(row);
+      }
+    }
+    const { count } = await supabaseAdmin
+      .from('water_rewards').select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id).is('collected_at', null);
+    res.json({ collected: claimed?.amount ?? 0, remaining: count ?? 0 });
+  } catch (err: any) {
+    console.error('Collect reward error:', err);
     res.status(500).json({ error: err.message ?? 'Internal server error' });
   }
 });
@@ -2179,8 +2250,8 @@ app.post('/reviews', async (req: Request, res: Response) => {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
     if (error) throw error;
-    // Tree: leaving a review is a one-time milestone (+10).
-    void awardWater(user.id, 10, 'review');
+    // Tree: leaving a review is a one-time collectible milestone (+10).
+    void awardWater(user.id, 10, { source: 'review', route: '/app/review', labelHe: 'השארת המלצה', labelEn: 'Left a review', onceKey: 'review' });
     res.json({ status: 'ok', moderation: 'pending' });
   } catch (err: any) {
     console.error('review submit error:', err);
@@ -2286,8 +2357,8 @@ async function handleWhatsAppMessage(phone: string, text: string) {
     if (codeRow && Date.now() - new Date(codeRow.created_at).getTime() < 30 * 60_000) {
       await supabaseAdmin.from('whatsapp_links').upsert({ phone, user_id: codeRow.user_id }, { onConflict: 'phone' });
       await supabaseAdmin.from('whatsapp_link_codes').delete().eq('user_id', codeRow.user_id);
-      // Tree: connecting WhatsApp is a one-time milestone (+5).
-      void awardWater(codeRow.user_id, 5, 'whatsapp');
+      // Tree: connecting WhatsApp is a one-time collectible milestone (+5).
+      void awardWater(codeRow.user_id, 5, { source: 'whatsapp', route: '/app/plan', labelHe: 'חיבור וואטסאפ', labelEn: 'Connected WhatsApp', onceKey: 'whatsapp' });
       await sendWhatsApp(phone, lang === 'he'
         ? 'היי, אני קופלAI. עכשיו אפשר לשוחח איתי גם כאן בוואטסאפ, ולא רק דרך האתר - כתוב/י לי מתי שבא לך, ואני כאן.'
         : "Hi, I'm KopelAi. You can now talk with me right here on WhatsApp, not only through the website — message me whenever you like, I'm here.");

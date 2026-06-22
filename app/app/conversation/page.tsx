@@ -6,6 +6,7 @@ import { useT, useLang } from '@/lib/i18n';
 import { sendChat, endConversation, understandFile, transcribeAudio, getUsage, startTrial, DailyLimitError, ChatMessage } from '@/lib/api';
 import Onboarding from './Onboarding';
 import ChatTabs from '../ChatTabs';
+import { DropSpot } from '../rewards';
 import { getCurrentUser, AuthUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import {
@@ -583,6 +584,8 @@ export default function ConversationPage() {
 
       <div className="flex-1 flex flex-col max-w-3xl w-full mx-auto px-4 sm:px-6 py-4">
         <ChatTabs active="chat" />
+
+        <DropSpot sources={['streak']} />
 
         {/* Trial countdown (shown while the 14-day Pro trial is active) */}
         {trialDaysLeft > 0 && (

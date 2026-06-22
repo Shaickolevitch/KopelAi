@@ -11,6 +11,7 @@ import { submitMarketingConsent, claimReferral } from '@/lib/api';
 import FeedbackButton from './FeedbackButton';
 import AdminBell from './AdminBell';
 import TreeIndicator from './TreeIndicator';
+import { RewardsProvider, DropTrail } from './rewards';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const t = useT();
@@ -87,6 +88,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   ];
 
   return (
+   <RewardsProvider>
     <div className="min-h-screen bg-stone-50 dark:bg-zinc-950 flex flex-col">
       <header className="border-b border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
@@ -119,6 +121,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               })}
             </nav>
             <TreeIndicator />
+            <DropTrail />
             <button
               onClick={() => setLanguage(language === 'he' ? 'en' : 'he')}
               className="px-3 py-2 text-sm rounded-lg text-stone-500 dark:text-zinc-500 hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-800 dark:hover:text-zinc-200 transition-colors"
@@ -169,5 +172,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </footer>
     </div>
+   </RewardsProvider>
   );
 }
