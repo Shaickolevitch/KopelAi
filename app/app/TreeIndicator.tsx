@@ -16,9 +16,10 @@ export default function TreeIndicator() {
 
   if (!tree || !tree.planted) return null;
 
-  // Nudge when the bucket needs attention: empty/low, or there are earned drops
-  // waiting to be poured in (canFill).
-  const nudge = !tree.frozen && (tree.wilting || tree.bucket <= 4 || tree.canFill);
+  // Nudge only when the tree genuinely needs water — wilting or the bucket
+  // running low. (Not merely "you have drops to top off", which is almost always
+  // true and made the dot show constantly.)
+  const nudge = !tree.frozen && (tree.wilting || tree.bucket <= 4);
   return (
     <Link
       href="/app/tree"
