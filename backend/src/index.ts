@@ -741,11 +741,11 @@ async function buildSystemPrompt(
   // the 50-minute mark. We pass the elapsed minutes of the current sitting and
   // nudge Kopel to steer toward a close — softly near 40, more firmly past ~55.
   const sessionTimeDirective = (() => {
-    if (channel !== 'web' || !sessionMinutes || sessionMinutes < 40) return '';
-    if (sessionMinutes >= 55) {
-      return `\n\n# Time — bring the session to a close\n\nThis sitting has run about ${sessionMinutes} minutes — past the length of a normal therapy session. Close the hour now, the way a therapist does: name it warmly, help them gather the one thing most worth taking from today, and suggest picking it up another time. You may invite them to end the session here. Don't open a new line of inquiry.`;
+    if (channel !== 'web' || !sessionMinutes || sessionMinutes < 20) return '';
+    if (sessionMinutes >= 30) {
+      return `\n\n# Time — bring the session to a close\n\nThis sitting has run about ${sessionMinutes} minutes — at the length of a full session. Close it now, the way a therapist does: name it warmly, help them gather the one thing most worth taking from today, and suggest picking it up another time. You may invite them to end the session here. Don't open a new line of inquiry.`;
     }
-    return `\n\n# Time — approaching the end\n\nThis sitting has run about ${sessionMinutes} minutes — near the natural length of a session. Like a therapist mindful of the clock, begin steering gently toward a close: help them land what matters most from today and let them know you're nearing the end of the session. No abrupt stop — just start rounding off.`;
+    return `\n\n# Time — approaching the end\n\nThis sitting has run about ${sessionMinutes} minutes — getting close to the natural length of a session. Like a therapist mindful of the clock, begin steering gently toward a close: help them land what matters most from today and let them know you're nearing the end of the session. No abrupt stop — just start rounding off.`;
   })();
 
   // The static base prompt is cached; everything dynamic goes in a second block.
