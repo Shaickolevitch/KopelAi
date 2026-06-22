@@ -16,7 +16,9 @@ export default function TreeIndicator() {
 
   if (!tree || !tree.planted) return null;
 
-  const thirsty = tree.wilting || tree.waterDrops <= 2;
+  // Nudge when the bucket needs attention: empty/low, or there are earned drops
+  // waiting to be poured in (canFill).
+  const nudge = !tree.frozen && (tree.wilting || tree.bucket <= 4 || tree.canFill);
   return (
     <Link
       href="/app/tree"
@@ -24,8 +26,8 @@ export default function TreeIndicator() {
       className="relative flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm text-stone-500 dark:text-zinc-400 hover:bg-stone-100 dark:hover:bg-zinc-800 transition-colors"
     >
       <span className="text-base leading-none">{tree.stageIndex >= 4 ? '🌳' : tree.stageIndex >= 1 ? '🌱' : '🌰'}</span>
-      <span className="text-xs tabular-nums text-sky-600 dark:text-sky-400">💧{tree.waterDrops}</span>
-      {thirsty && !tree.frozen && <span className="absolute -top-0.5 -end-0.5 w-2 h-2 rounded-full bg-amber-500" />}
+      <span className="text-xs tabular-nums text-sky-600 dark:text-sky-400">💧{tree.bucket}</span>
+      {nudge && <span className="absolute -top-0.5 -end-0.5 w-2 h-2 rounded-full bg-amber-500" />}
     </Link>
   );
 }

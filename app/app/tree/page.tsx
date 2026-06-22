@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/i18n';
-import { getTree, TreeState } from '@/lib/api';
+import { getTree, fillTree, TreeState } from '@/lib/api';
 
 const STAGE_NAMES: Record<string, { he: string; en: string }> = {
   seed: { he: 'זרע', en: 'Seed' },
@@ -21,10 +21,27 @@ export default function TreePage() {
   const he = language === 'he';
   const [tree, setTree] = useState<TreeState | null>(null);
   const [loading, setLoading] = useState(true);
+  const [filling, setFilling] = useState(false);
+  const [pouredMsg, setPouredMsg] = useState<string | null>(null);
 
   useEffect(() => {
     getTree().then(setTree).catch(() => setTree(null)).finally(() => setLoading(false));
   }, []);
+
+  async function handleFill() {
+    if (filling) return;
+    setFilling(true);
+    try {
+      const next = await fillTree();
+      setTree(next);
+      if (next.poured > 0) {
+        setPouredMsg(he ? `הוספת ${next.poured} טיפות לדלי 💧` : `Poured ${next.poured} drops 💧`);
+        setTimeout(() => setPouredMsg(null), 2500);
+      }
+    } catch { /* ignore */ } finally {
+      setFilling(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -57,7 +74,8 @@ export default function TreePage() {
   }
 
   const stageName = STAGE_NAMES[tree.stageKey]?.[he ? 'he' : 'en'] ?? tree.stageKey;
-  const daysLeft = tree.waterDrops;
+  const hoursLeft = tree.bucket; // 1 drop ≈ 1 hour
+  const bucketPct = Math.round((tree.bucket / tree.bucketCapacity) * 100);
   const toNext = tree.nextStageAt != null ? Math.max(0, tree.nextStageAt - tree.growthPoints) : 0;
   const stagePct = tree.nextStageAt != null
     ? Math.min(100, Math.round(((tree.growthPoints - tree.currentStageAt) / (tree.nextStageAt - tree.currentStageAt)) * 100))
@@ -78,15 +96,45 @@ export default function TreePage() {
       {tree.frozen ? (
         <Banner tone="muted">{he ? '❄️ העץ קפוא — חידוש מנוי פרו ימשיך להשקות אותו. ההתקדמות נשמרת.' : '❄️ Your tree is paused — renewing Pro resumes watering. Your progress is saved.'}</Banner>
       ) : tree.wilting ? (
-        <Banner tone="warn">{he ? '🥀 העץ צמא ומתחיל לנבול — שיחה עם קופל תשקה אותו מיד.' : '🥀 Your tree is thirsty and starting to wilt — a conversation with Kopel will water it.'}</Banner>
-      ) : daysLeft <= 2 ? (
-        <Banner tone="warn">{he ? '💧 נשארו מעט טיפות מים — חזור לשוחח כדי להמשיך להשקות.' : '💧 Low on water — come back and talk to keep it watered.'}</Banner>
+        <Banner tone="warn">{he ? '🥀 העץ צמא ומתחיל לנבול — מלא את הדלי כדי להשקות אותו.' : '🥀 Your tree is wilting — fill the bucket to water it.'}</Banner>
+      ) : tree.bucket === 0 ? (
+        <Banner tone="warn">{he ? '💧 הדלי ריק — מלא אותו כדי שהעץ ימשיך לגדול.' : '💧 The bucket is empty — fill it so the tree keeps growing.'}</Banner>
+      ) : tree.bucket <= 4 ? (
+        <Banner tone="warn">{he ? '💧 הדלי כמעט ריק — שווה למלא.' : '💧 The bucket is almost empty — worth a refill.'}</Banner>
       ) : null}
+
+      {/* The bucket — fill it from your earned drops */}
+      <div className="mt-4 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+        <div className="flex items-center justify-between mb-2 text-sm">
+          <span className="font-medium text-stone-700 dark:text-zinc-300">{he ? 'הדלי' : 'The bucket'}</span>
+          <span className="text-stone-500 dark:text-zinc-400 tabular-nums">{tree.bucket}/{tree.bucketCapacity} 💧 · {hoursLeft} {he ? 'ש׳' : 'h'}</span>
+        </div>
+        <div className="h-3 rounded-full bg-stone-100 dark:bg-zinc-800 overflow-hidden mb-3">
+          <div className="h-full bg-sky-400 transition-all" style={{ width: `${bucketPct}%` }} />
+        </div>
+        <button
+          onClick={handleFill}
+          disabled={!tree.canFill || filling}
+          className="w-full py-2.5 rounded-xl bg-sky-600 text-white text-sm font-medium hover:bg-sky-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          {filling
+            ? (he ? 'ממלא…' : 'Filling…')
+            : tree.canFill
+              ? (he ? `מלא את הדלי (${tree.reserve} 💧 בצד)` : `Fill the bucket (${tree.reserve} 💧 banked)`)
+              : tree.bucket >= tree.bucketCapacity
+                ? (he ? 'הדלי מלא 🪣' : 'Bucket is full 🪣')
+                : (he ? 'אין טיפות לצקת — שוחח עם קופל כדי לצבור' : 'No drops to pour — talk to Kopel to earn some')}
+        </button>
+        {pouredMsg && <p className="text-center text-xs text-sky-600 dark:text-sky-400 mt-2">{pouredMsg}</p>}
+        <p className="text-xs text-stone-400 dark:text-zinc-500 mt-2 leading-relaxed">
+          {he ? 'הדלי מתרוקן בקצב טיפה לשעה. מלא אותו לפחות פעם ביום מהטיפות שצברת.' : 'The bucket drains 1 drop/hour. Fill it at least once a day from the drops you’ve earned.'}
+        </p>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mt-4">
-        <Stat value={`💧 ${tree.waterDrops}`} label={he ? 'טיפות מים' : 'water drops'} />
-        <Stat value={`${daysLeft} ${he ? 'ימים' : 'days'}`} label={he ? 'מים שנותרו' : 'water left'} />
+        <Stat value={`💧 ${tree.reserve}`} label={he ? 'טיפות שצברת' : 'banked drops'} />
+        <Stat value={`${hoursLeft} ${he ? 'שעות' : 'h'}`} label={he ? 'מים בדלי' : 'in bucket'} />
         <Stat value={`🔥 ${tree.streakDays}`} label={he ? 'ימים ברצף' : 'day streak'} />
       </div>
 

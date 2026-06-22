@@ -1670,19 +1670,22 @@ ${transcript}`;
 // wilts (never dies) when dry, and freezes when Pro/trial lapses. All state is
 // in tree_state and settled lazily on read/award — no cron needed.
 // ==========================================================================
-const TREE_DAY_MS = 24 * 60 * 60 * 1000;
-const TREE_CONSUME_PER_DAY = 1;
-const TREE_WILT_GRACE_DAYS = 3;
-const TREE_STARTER_DROPS = 7;
-// Cumulative growth points to reach each stage (seed → fruiting orange tree).
+const TREE_HOUR_MS = 60 * 60 * 1000;
+const TREE_DAY_MS = 24 * TREE_HOUR_MS;
+const BUCKET_CAPACITY = 24;        // a full bucket = 24h of water
+const TREE_DRAIN_PER_HOUR = 1;     // the tree drinks 1 drop/hour from the bucket
+const TREE_WILT_GRACE_HOURS = 72;  // wilts after the bucket has been empty ~3 days
+const TREE_STARTER_BUCKET = 24;    // planted with a full bucket (a day of water)
+const TREE_STARTER_RESERVE = 24;   // plus a day of earned drops banked to refill
+// Cumulative growth points (= drops the tree has drunk) to reach each stage.
 const TREE_STAGES = [
   { key: 'seed', at: 0 },
-  { key: 'sprout', at: 3 },
-  { key: 'seedling', at: 8 },
-  { key: 'sapling', at: 16 },
-  { key: 'young', at: 30 },
-  { key: 'blossom', at: 50 },
-  { key: 'fruiting', at: 75 },
+  { key: 'sprout', at: 24 },
+  { key: 'seedling', at: 72 },
+  { key: 'sapling', at: 168 },
+  { key: 'young', at: 360 },
+  { key: 'blossom', at: 600 },
+  { key: 'fruiting', at: 1000 },
 ];
 
 type TierRow = { subscription_tier?: string | null; trial_ends_at?: string | null; referral_pro_until?: string | null } | null;
@@ -1694,7 +1697,7 @@ function isEffectivePro(tierRow: TierRow): boolean {
 }
 
 type TreeRow = {
-  user_id: string; planted_at: string; water_drops: number; growth_points: number;
+  user_id: string; planted_at: string; water_drops: number; bucket: number; growth_points: number;
   last_tick_at: string; dry_since: string | null; streak_days: number;
   last_active_day: string | null; claimed: Record<string, boolean>;
 };
@@ -1712,8 +1715,8 @@ async function getTreeRow(userId: string): Promise<TreeRow | null> {
 async function plantTree(userId: string): Promise<TreeRow | null> {
   const nowIso = new Date().toISOString();
   const row: TreeRow = {
-    user_id: userId, planted_at: nowIso, water_drops: TREE_STARTER_DROPS, growth_points: 0,
-    last_tick_at: nowIso, dry_since: null, streak_days: 0, last_active_day: null, claimed: { onboarding: true },
+    user_id: userId, planted_at: nowIso, water_drops: TREE_STARTER_RESERVE, bucket: TREE_STARTER_BUCKET,
+    growth_points: 0, last_tick_at: nowIso, dry_since: null, streak_days: 0, last_active_day: null, claimed: { onboarding: true },
   };
   const { data } = await supabaseAdmin.from('tree_state').upsert(row, { onConflict: 'user_id' }).select('*').maybeSingle();
   return (data as TreeRow) ?? null;
@@ -1724,15 +1727,15 @@ async function plantTree(userId: string): Promise<TreeRow | null> {
 function settleTree(row: TreeRow, now: number, frozen: boolean) {
   if (frozen) { row.last_tick_at = new Date(now).toISOString(); return; }
   const last = new Date(row.last_tick_at).getTime();
-  let days = Math.floor((now - last) / TREE_DAY_MS);
-  if (days <= 0) return;
+  let hours = Math.floor((now - last) / TREE_HOUR_MS);
+  if (hours <= 0) return; // advance only on whole hours; remainder carries over
   let cursor = last;
-  while (days-- > 0) {
-    cursor += TREE_DAY_MS;
-    if (row.water_drops > 0) {
-      row.water_drops -= TREE_CONSUME_PER_DAY;
-      row.growth_points += 1;
-      if (row.water_drops <= 0) { row.water_drops = 0; row.dry_since = new Date(cursor).toISOString(); }
+  while (hours-- > 0) {
+    cursor += TREE_HOUR_MS;
+    if (row.bucket > 0) {
+      row.bucket -= TREE_DRAIN_PER_HOUR;       // tree drinks from the bucket
+      row.growth_points += 1;                  // and grows for it
+      if (row.bucket <= 0) { row.bucket = 0; row.dry_since = new Date(cursor).toISOString(); }
       else { row.dry_since = null; }
     } else if (!row.dry_since) {
       row.dry_since = new Date(cursor).toISOString();
@@ -1743,7 +1746,7 @@ function settleTree(row: TreeRow, now: number, frozen: boolean) {
 
 async function persistTree(row: TreeRow) {
   await supabaseAdmin.from('tree_state').update({
-    water_drops: row.water_drops, growth_points: row.growth_points, last_tick_at: row.last_tick_at,
+    water_drops: row.water_drops, bucket: row.bucket, growth_points: row.growth_points, last_tick_at: row.last_tick_at,
     dry_since: row.dry_since, streak_days: row.streak_days, last_active_day: row.last_active_day,
     claimed: row.claimed, updated_at: new Date().toISOString(),
   }).eq('user_id', row.user_id);
@@ -1755,10 +1758,14 @@ function treeView(row: TreeRow, frozen: boolean) {
   TREE_STAGES.forEach((s, i) => { if (row.growth_points >= s.at) stageIndex = i; });
   const next = TREE_STAGES[stageIndex + 1] ?? null;
   const dryMs = row.dry_since ? now - new Date(row.dry_since).getTime() : 0;
-  const wilting = row.water_drops <= 0 && dryMs >= TREE_WILT_GRACE_DAYS * TREE_DAY_MS;
+  const wilting = row.bucket <= 0 && dryMs >= TREE_WILT_GRACE_HOURS * TREE_HOUR_MS;
   return {
     planted: true, frozen,
-    waterDrops: row.water_drops,
+    reserve: row.water_drops,        // earned drops banked, waiting to be poured in
+    bucket: row.bucket,              // drops in the bucket right now (drains 1/hr)
+    bucketCapacity: BUCKET_CAPACITY,
+    hoursLeft: row.bucket,           // 1 drop ≈ 1 hour of water
+    canFill: row.water_drops > 0 && row.bucket < BUCKET_CAPACITY && !frozen,
     growthPoints: row.growth_points,
     stageIndex, stageKey: TREE_STAGES[stageIndex].key, stageCount: TREE_STAGES.length,
     currentStageAt: TREE_STAGES[stageIndex].at, nextStageAt: next?.at ?? null,
@@ -1775,8 +1782,7 @@ async function awardWater(userId: string, amount: number, onceKey?: string): Pro
     if (!row) { row = await plantTree(userId); if (!row) return; }
     if (onceKey && row.claimed && row.claimed[onceKey]) return;
     settleTree(row, Date.now(), false);
-    row.water_drops += amount;
-    if (row.water_drops > 0) row.dry_since = null;
+    row.water_drops += amount; // earned drops go into the reserve, not the bucket
     if (onceKey) row.claimed = { ...(row.claimed || {}), [onceKey]: true };
     await persistTree(row);
   } catch (e) { console.error('awardWater failed', e); }
@@ -1794,8 +1800,7 @@ async function awardDailyStreak(userId: string): Promise<void> {
     row.streak_days = row.last_active_day === yesterday ? row.streak_days + 1 : 1;
     const bonus = Math.min(2 + (row.streak_days - 1), 6);
     settleTree(row, Date.now(), false);
-    row.water_drops += bonus;
-    if (row.water_drops > 0) row.dry_since = null;
+    row.water_drops += bonus; // streak drops bank into the reserve
     row.last_active_day = today;
     await persistTree(row);
   } catch (e) { console.error('awardDailyStreak failed', e); }
@@ -1817,6 +1822,37 @@ app.get('/tree', async (req: Request, res: Response) => {
     res.json(treeView(row, !effPro));
   } catch (err: any) {
     console.error('Tree error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// Manually pour earned (reserve) drops into the bucket, up to its 24 capacity.
+// This is the daily ritual — the tree only drinks from the bucket.
+app.post('/tree/fill', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const effPro = isEffectivePro(await treeTier(user.id));
+    let row = await getTreeRow(user.id);
+    if (!row) {
+      if (!effPro) return res.status(403).json({ error: 'pro_required' });
+      row = await plantTree(user.id);
+      if (!row) return res.status(500).json({ error: 'Could not plant tree' });
+    }
+    settleTree(row, Date.now(), !effPro);
+    let poured = 0;
+    if (effPro) {
+      poured = Math.min(row.water_drops, BUCKET_CAPACITY - row.bucket);
+      if (poured > 0) {
+        row.bucket += poured;
+        row.water_drops -= poured;
+        row.dry_since = null;
+      }
+    }
+    await persistTree(row);
+    res.json({ ...treeView(row, !effPro), poured });
+  } catch (err: any) {
+    console.error('Tree fill error:', err);
     res.status(500).json({ error: err.message ?? 'Internal server error' });
   }
 });

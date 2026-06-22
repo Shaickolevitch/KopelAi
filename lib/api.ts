@@ -608,7 +608,11 @@ export type TreeState =
   | {
       planted: true;
       frozen: boolean;
-      waterDrops: number;
+      reserve: number;        // earned drops banked, waiting to be poured in
+      bucket: number;         // drops in the bucket now (drains 1/hour)
+      bucketCapacity: number; // 24
+      hoursLeft: number;      // hours of water left = bucket
+      canFill: boolean;       // reserve > 0 and bucket not full and not frozen
       growthPoints: number;
       stageIndex: number;
       stageKey: 'seed' | 'sprout' | 'seedling' | 'sapling' | 'young' | 'blossom' | 'fruiting';
@@ -623,5 +627,13 @@ export type TreeState =
 export async function getTree(): Promise<TreeState> {
   const r = await fetch(`${API_URL}/tree`, { headers: { ...(await authHeaders()) } });
   if (!r.ok) throw new Error(`Tree error (${r.status})`);
+  return r.json();
+}
+
+// Pour earned reserve drops into the bucket (the daily ritual). Returns the new
+// state plus how many drops were poured.
+export async function fillTree(): Promise<Extract<TreeState, { planted: true }> & { poured: number }> {
+  const r = await fetch(`${API_URL}/tree/fill`, { method: 'POST', headers: { ...(await authHeaders()) } });
+  if (!r.ok) throw new Error(`Tree fill error (${r.status})`);
   return r.json();
 }
