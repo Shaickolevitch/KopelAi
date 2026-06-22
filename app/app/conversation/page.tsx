@@ -354,6 +354,14 @@ export default function ConversationPage() {
     if (ta) { ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`; }
   }, [inputText]);
 
+  // Put the cursor in the composer on entry and again each time Kopel finishes
+  // replying, so you can just start typing. Skips the wall/onboarding states.
+  useEffect(() => {
+    if (user && !sending && !limitReached && !showOnboarding) {
+      textareaRef.current?.focus();
+    }
+  }, [user, sending, limitReached, showOnboarding]);
+
   async function ensureConversation(uid: string): Promise<string> {
     if (conversationId) return conversationId;
     const { data, error: insertErr } = await supabase()
