@@ -804,6 +804,39 @@ function extractJSON(text: string): any {
   }
 }
 
+// Tolerant JSON parse for model output that may be slightly truncated. Tries a
+// strict parse first; on failure, rebuilds a valid object by closing any open
+// string and brackets and dropping a dangling trailing comma / key. Best-effort
+// salvage so a near-complete analysis still renders instead of erroring.
+function parseLooseJSON(input: string): any {
+  try {
+    return extractJSON(input);
+  } catch {
+    /* fall through to repair */
+  }
+  let s = input;
+  const start = s.indexOf('{');
+  if (start > 0) s = s.slice(start);
+  let inStr = false;
+  let esc = false;
+  const stack: string[] = [];
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (esc) { esc = false; continue; }
+    if (ch === '\\') { if (inStr) esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === '{' || ch === '[') stack.push(ch);
+    else if (ch === '}' || ch === ']') stack.pop();
+  }
+  let out = s;
+  if (inStr) out += '"';               // close an open string value
+  out = out.replace(/,\s*$/, '');       // drop a dangling trailing comma
+  out = out.replace(/,?\s*"[^"]*"\s*:\s*$/, ''); // drop a dangling "key": with no value
+  for (let i = stack.length - 1; i >= 0; i--) out += stack[i] === '{' ? '}' : ']';
+  return JSON.parse(out);
+}
+
 // ----------------------------------------------------------
 // Chat endpoint
 // ----------------------------------------------------------
@@ -1572,19 +1605,41 @@ Be specific to THIS conversation, not generic. Throughout every field, speak dir
 Conversation:
 ${transcript}`;
 
-    const resp = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 4000, // headroom so the JSON isn't truncated mid-object
-      messages: [
-        { role: 'user', content: prompt },
-        // Prefill an opening brace so the model emits pure JSON (no prose preamble,
-        // no markdown fence). We re-add the "{" before parsing.
-        { role: 'assistant', content: '{' },
-      ],
-    });
-    const block = resp.content.find((b) => b.type === 'text');
-    const raw = block && block.type === 'text' ? block.text : '';
-    const analysis = extractJSON('{' + raw);
+    // Generate the JSON. Prefill "{" so the model emits pure JSON (no prose
+    // preamble, no markdown fence) — we re-add the "{" before parsing. The cap is
+    // set very high so the analysis never gets cut off; we still detect a
+    // max_tokens stop and retry once even higher, just in case.
+    const genAnalysis = async (maxTokens: number) => {
+      const resp = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: maxTokens,
+        messages: [
+          { role: 'user', content: prompt },
+          { role: 'assistant', content: '{' },
+        ],
+      });
+      const block = resp.content.find((b) => b.type === 'text');
+      const raw = block && block.type === 'text' ? block.text : '';
+      return { raw, truncated: resp.stop_reason === 'max_tokens' };
+    };
+
+    let { raw, truncated } = await genAnalysis(16000);
+    if (truncated) {
+      console.warn('Conversation analysis hit max_tokens at 16000; retrying higher');
+      ({ raw, truncated } = await genAnalysis(32000));
+    }
+
+    let analysis: any;
+    try {
+      analysis = parseLooseJSON('{' + raw);
+    } catch (e) {
+      console.error('Conversation analysis: could not parse JSON', { truncated, err: e });
+      return res.status(502).json({
+        error: truncated
+          ? 'The analysis was too long to finish. Please try again.'
+          : 'Could not read the analysis this time. Please try again.',
+      });
+    }
 
     await supabaseAdmin
       .from('conversations')
