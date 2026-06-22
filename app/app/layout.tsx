@@ -10,6 +10,7 @@ import { identifyUser, resetAnalytics } from '@/lib/analytics';
 import { submitMarketingConsent, claimReferral } from '@/lib/api';
 import FeedbackButton from './FeedbackButton';
 import AdminBell from './AdminBell';
+import TreeIndicator from './TreeIndicator';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const t = useT();
@@ -82,6 +83,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { href: '/app/about', label: t.tab_about_us },
     { href: '/app/plan', label: t.tab_plan },
     { href: '/app/invite', label: t.tab_invite },
+    { href: '/app/tree', label: t.tab_tree },
     ...(isAdmin ? [{ href: '/app/admin', label: t.tab_admin }] : []),
   ];
 
@@ -117,6 +119,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 );
               })}
             </nav>
+            <TreeIndicator />
             {isAdmin && (
               <div className="mx-1.5 shrink-0">
                 <AdminBell />

@@ -18,6 +18,7 @@ export const STRINGS = {
     tab_about_us: 'מי אנחנו',
     tab_plan: 'מנוי',
     tab_invite: 'הזמנת חברים',
+    tab_tree: 'העץ שלי',
     tab_admin: 'אדמין',
 
     conversation_empty_hint: "אני 'קופלAI', מהות וירטואלית.\nמטרתי לעזור למטפלים ולאנשים המתעניינים בפסיכואנליזה להרחיב את יכולת החשיבה שלהם.\nספר לי מה עולה בדעתך.",
@@ -250,6 +251,7 @@ export const STRINGS = {
     tab_about_us: 'Who we are',
     tab_plan: 'Plan',
     tab_invite: 'Invite',
+    tab_tree: 'My tree',
     tab_admin: 'Admin',
 
     conversation_empty_hint: "I'm 'KopelAi', a virtual entity.\nMy purpose is to help therapists and people interested in psychoanalysis expand their capacity to think.\nTell me what comes to mind.",

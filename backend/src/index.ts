@@ -920,6 +920,10 @@ app.post('/chat', async (req: Request, res: Response) => {
     const textBlock = response.content.find((b) => b.type === 'text');
     const text = textBlock && textBlock.type === 'text' ? textBlock.text : '';
 
+    // Tree: showing up today waters the tree (daily streak). Fire-and-forget so
+    // it never adds latency to the reply; the helper no-ops for non-Pro users.
+    void awardDailyStreak(userId);
+
     res.json({ text, usage: response.usage, remaining });
   } catch (err: any) {
     console.error('Chat error:', err);
@@ -1506,6 +1510,8 @@ app.post('/end-conversation', async (req: Request, res: Response) => {
     if (!convo || convo.user_id !== user.id) return res.status(403).json({ error: 'Not your conversation' });
 
     const result = await consolidateConversation(conversationId);
+    // Tree: ending a reflective session waters it (+3). No-ops for non-Pro.
+    void awardWater(user.id, 3);
     res.json({
       status: result.status,
       summary: result.summary,
@@ -1646,9 +1652,171 @@ ${transcript}`;
       .update({ analysis, analysis_generated_at: new Date().toISOString() })
       .eq('id', conversationId);
 
+    // Tree: generating an analysis is a "go deeper" action (+2), and every piece
+    // of Kopel's praise (each הוקרה item) waters the tree (+1 each).
+    const apprCount = Array.isArray(analysis?.appreciation) ? analysis.appreciation.length : 0;
+    void awardWater(user.id, 2 + apprCount);
+
     res.json({ analysis, cached: false });
   } catch (err: any) {
     console.error('Conversation analysis error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// ==========================================================================
+// Relationship orange-tree — a gentle gamified bond with Kopel for Pro/trial.
+// Water drops are the currency; the tree drinks ~1/day, grows when watered,
+// wilts (never dies) when dry, and freezes when Pro/trial lapses. All state is
+// in tree_state and settled lazily on read/award — no cron needed.
+// ==========================================================================
+const TREE_DAY_MS = 24 * 60 * 60 * 1000;
+const TREE_CONSUME_PER_DAY = 1;
+const TREE_WILT_GRACE_DAYS = 3;
+const TREE_STARTER_DROPS = 7;
+// Cumulative growth points to reach each stage (seed → fruiting orange tree).
+const TREE_STAGES = [
+  { key: 'seed', at: 0 },
+  { key: 'sprout', at: 3 },
+  { key: 'seedling', at: 8 },
+  { key: 'sapling', at: 16 },
+  { key: 'young', at: 30 },
+  { key: 'blossom', at: 50 },
+  { key: 'fruiting', at: 75 },
+];
+
+type TierRow = { subscription_tier?: string | null; trial_ends_at?: string | null; referral_pro_until?: string | null } | null;
+function isEffectivePro(tierRow: TierRow): boolean {
+  if (!tierRow) return false;
+  return tierRow.subscription_tier === 'pro'
+    || compedProActive(tierRow.referral_pro_until)
+    || trialActiveFrom(tierRow.trial_ends_at);
+}
+
+type TreeRow = {
+  user_id: string; planted_at: string; water_drops: number; growth_points: number;
+  last_tick_at: string; dry_since: string | null; streak_days: number;
+  last_active_day: string | null; claimed: Record<string, boolean>;
+};
+
+async function treeTier(userId: string): Promise<TierRow> {
+  const { data } = await supabaseAdmin
+    .from('user_profile').select('subscription_tier, trial_ends_at, referral_pro_until')
+    .eq('user_id', userId).maybeSingle();
+  return data as TierRow;
+}
+async function getTreeRow(userId: string): Promise<TreeRow | null> {
+  const { data } = await supabaseAdmin.from('tree_state').select('*').eq('user_id', userId).maybeSingle();
+  return (data as TreeRow) ?? null;
+}
+async function plantTree(userId: string): Promise<TreeRow | null> {
+  const nowIso = new Date().toISOString();
+  const row: TreeRow = {
+    user_id: userId, planted_at: nowIso, water_drops: TREE_STARTER_DROPS, growth_points: 0,
+    last_tick_at: nowIso, dry_since: null, streak_days: 0, last_active_day: null, claimed: { onboarding: true },
+  };
+  const { data } = await supabaseAdmin.from('tree_state').upsert(row, { onConflict: 'user_id' }).select('*').maybeSingle();
+  return (data as TreeRow) ?? null;
+}
+
+// Advance the tree from last_tick_at to now in whole-day steps (mutates row).
+// `frozen` (Pro/trial lapsed) pauses consumption, growth and wilting.
+function settleTree(row: TreeRow, now: number, frozen: boolean) {
+  if (frozen) { row.last_tick_at = new Date(now).toISOString(); return; }
+  const last = new Date(row.last_tick_at).getTime();
+  let days = Math.floor((now - last) / TREE_DAY_MS);
+  if (days <= 0) return;
+  let cursor = last;
+  while (days-- > 0) {
+    cursor += TREE_DAY_MS;
+    if (row.water_drops > 0) {
+      row.water_drops -= TREE_CONSUME_PER_DAY;
+      row.growth_points += 1;
+      if (row.water_drops <= 0) { row.water_drops = 0; row.dry_since = new Date(cursor).toISOString(); }
+      else { row.dry_since = null; }
+    } else if (!row.dry_since) {
+      row.dry_since = new Date(cursor).toISOString();
+    }
+  }
+  row.last_tick_at = new Date(cursor).toISOString();
+}
+
+async function persistTree(row: TreeRow) {
+  await supabaseAdmin.from('tree_state').update({
+    water_drops: row.water_drops, growth_points: row.growth_points, last_tick_at: row.last_tick_at,
+    dry_since: row.dry_since, streak_days: row.streak_days, last_active_day: row.last_active_day,
+    claimed: row.claimed, updated_at: new Date().toISOString(),
+  }).eq('user_id', row.user_id);
+}
+
+function treeView(row: TreeRow, frozen: boolean) {
+  const now = Date.now();
+  let stageIndex = 0;
+  TREE_STAGES.forEach((s, i) => { if (row.growth_points >= s.at) stageIndex = i; });
+  const next = TREE_STAGES[stageIndex + 1] ?? null;
+  const dryMs = row.dry_since ? now - new Date(row.dry_since).getTime() : 0;
+  const wilting = row.water_drops <= 0 && dryMs >= TREE_WILT_GRACE_DAYS * TREE_DAY_MS;
+  return {
+    planted: true, frozen,
+    waterDrops: row.water_drops,
+    growthPoints: row.growth_points,
+    stageIndex, stageKey: TREE_STAGES[stageIndex].key, stageCount: TREE_STAGES.length,
+    currentStageAt: TREE_STAGES[stageIndex].at, nextStageAt: next?.at ?? null,
+    wilting, streakDays: row.streak_days, plantedAt: row.planted_at,
+  };
+}
+
+// Award water drops. Settles first, only for Pro/trial users. For one-time
+// rewards pass onceKey (no-ops if already claimed). Never throws.
+async function awardWater(userId: string, amount: number, onceKey?: string): Promise<void> {
+  try {
+    if (!isEffectivePro(await treeTier(userId))) return;
+    let row = await getTreeRow(userId);
+    if (!row) { row = await plantTree(userId); if (!row) return; }
+    if (onceKey && row.claimed && row.claimed[onceKey]) return;
+    settleTree(row, Date.now(), false);
+    row.water_drops += amount;
+    if (row.water_drops > 0) row.dry_since = null;
+    if (onceKey) row.claimed = { ...(row.claimed || {}), [onceKey]: true };
+    await persistTree(row);
+  } catch (e) { console.error('awardWater failed', e); }
+}
+
+// Daily streak — once per (UTC) day; bonus grows 2→6 with consecutive days.
+async function awardDailyStreak(userId: string): Promise<void> {
+  try {
+    if (!isEffectivePro(await treeTier(userId))) return;
+    let row = await getTreeRow(userId);
+    if (!row) { row = await plantTree(userId); if (!row) return; }
+    const today = new Date().toISOString().slice(0, 10);
+    if (row.last_active_day === today) return;
+    const yesterday = new Date(Date.now() - TREE_DAY_MS).toISOString().slice(0, 10);
+    row.streak_days = row.last_active_day === yesterday ? row.streak_days + 1 : 1;
+    const bonus = Math.min(2 + (row.streak_days - 1), 6);
+    settleTree(row, Date.now(), false);
+    row.water_drops += bonus;
+    if (row.water_drops > 0) row.dry_since = null;
+    row.last_active_day = today;
+    await persistTree(row);
+  } catch (e) { console.error('awardDailyStreak failed', e); }
+}
+
+app.get('/tree', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const effPro = isEffectivePro(await treeTier(user.id));
+    let row = await getTreeRow(user.id);
+    if (!row) {
+      if (!effPro) return res.json({ planted: false });
+      row = await plantTree(user.id);
+      if (!row) return res.status(500).json({ error: 'Could not plant tree' });
+    }
+    settleTree(row, Date.now(), !effPro);
+    await persistTree(row);
+    res.json(treeView(row, !effPro));
+  } catch (err: any) {
+    console.error('Tree error:', err);
     res.status(500).json({ error: err.message ?? 'Internal server error' });
   }
 });
@@ -1975,6 +2143,8 @@ app.post('/reviews', async (req: Request, res: Response) => {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
     if (error) throw error;
+    // Tree: leaving a review is a one-time milestone (+10).
+    void awardWater(user.id, 10, 'review');
     res.json({ status: 'ok', moderation: 'pending' });
   } catch (err: any) {
     console.error('review submit error:', err);
@@ -2080,6 +2250,8 @@ async function handleWhatsAppMessage(phone: string, text: string) {
     if (codeRow && Date.now() - new Date(codeRow.created_at).getTime() < 30 * 60_000) {
       await supabaseAdmin.from('whatsapp_links').upsert({ phone, user_id: codeRow.user_id }, { onConflict: 'phone' });
       await supabaseAdmin.from('whatsapp_link_codes').delete().eq('user_id', codeRow.user_id);
+      // Tree: connecting WhatsApp is a one-time milestone (+5).
+      void awardWater(codeRow.user_id, 5, 'whatsapp');
       await sendWhatsApp(phone, lang === 'he'
         ? 'היי, אני קופלAI. עכשיו אפשר לשוחח איתי גם כאן בוואטסאפ, ולא רק דרך האתר - כתוב/י לי מתי שבא לך, ואני כאן.'
         : "Hi, I'm KopelAi. You can now talk with me right here on WhatsApp, not only through the website — message me whenever you like, I'm here.");

@@ -601,3 +601,27 @@ export async function getConversationAnalysis(conversationId: string): Promise<C
   const data = await r.json();
   return (data.analysis ?? {}) as ConversationAnalysis;
 }
+
+// ── Relationship orange-tree ────────────────────────────────────────────────
+export type TreeState =
+  | { planted: false }
+  | {
+      planted: true;
+      frozen: boolean;
+      waterDrops: number;
+      growthPoints: number;
+      stageIndex: number;
+      stageKey: 'seed' | 'sprout' | 'seedling' | 'sapling' | 'young' | 'blossom' | 'fruiting';
+      stageCount: number;
+      currentStageAt: number;
+      nextStageAt: number | null;
+      wilting: boolean;
+      streakDays: number;
+      plantedAt: string;
+    };
+
+export async function getTree(): Promise<TreeState> {
+  const r = await fetch(`${API_URL}/tree`, { headers: { ...(await authHeaders()) } });
+  if (!r.ok) throw new Error(`Tree error (${r.status})`);
+  return r.json();
+}

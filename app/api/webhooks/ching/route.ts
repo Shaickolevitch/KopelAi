@@ -87,6 +87,11 @@ async function handleSubscriptionActive(subscription: Record<string, unknown>) {
         const until = new Date(base + 30 * 24 * 60 * 60 * 1000).toISOString();
         await admin.from('user_profile').upsert({ user_id: ref.referrer_id, referral_pro_until: until });
         await admin.from('admin_events').insert({ type: 'referral_reward', title: 'חבר שהוזמן הפך לפרו 🎁' });
+        // Tree: a referral converting waters the inviter's tree (+10), if planted.
+        const { data: tr } = await admin.from('tree_state').select('water_drops').eq('user_id', ref.referrer_id).maybeSingle();
+        if (tr) {
+          await admin.from('tree_state').update({ water_drops: (tr.water_drops ?? 0) + 10, updated_at: new Date().toISOString() }).eq('user_id', ref.referrer_id);
+        }
       }
     } catch (e) {
       console.error('Webhook: referral reward failed', e);
