@@ -205,53 +205,27 @@ function Banner({ tone, children }: { tone: 'warn' | 'muted'; children: React.Re
   return <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm text-center ${cls}`}>{children}</div>;
 }
 
-// Parametric orange tree — grows with stageIndex (0 seed … 6 fruiting); wilting
-// desaturates and droops it. Self-contained SVG, brand colors.
+// Signature orange-tree illustrations (brand design-system assets in /public/tree).
+// Stages 1–7; wilted variants exist for stages 4–7. Earlier stages fall back to a
+// gentle CSS wilt filter since they have no dedicated thirsty art.
+const TREE_FILES = ['tree-1-seed', 'tree-2-sprout', 'tree-3-seedling', 'tree-4-sapling', 'tree-5-young', 'tree-6-blossom', 'tree-7-fruiting'];
+const HAS_WILTED = new Set([3, 4, 5, 6]); // 0-based stage indices with a -wilted asset
+
 export function TreeArt({ stageIndex, wilting }: { stageIndex: number; wilting: boolean }) {
-  const trunkH = [0, 16, 30, 52, 82, 102, 116][stageIndex] ?? 0;
-  const canopyR = [0, 12, 18, 28, 42, 52, 60][stageIndex] ?? 0;
-  const cx = 100;
-  const groundY = 212;
-  const topY = groundY - trunkH;
-  const green = '#4e7c6b';
-  const greenLight = '#6fa088';
-  const trunk = '#8a5a3b';
-
-  const oranges = stageIndex >= 6 ? [[-26, -8], [22, -18], [4, 16], [-12, -28], [30, 6]] : [];
-  const blossoms = stageIndex >= 5 ? [[-18, 10], [16, -4], [0, -22], [-30, -10], [26, 14]] : [];
-
+  const i = Math.max(0, Math.min(TREE_FILES.length - 1, stageIndex));
+  const useWiltedAsset = wilting && HAS_WILTED.has(i);
+  const src = `/tree/${TREE_FILES[i]}${useWiltedAsset ? '-wilted' : ''}.png`;
+  // If the tree is thirsty but the stage has no wilted artwork, soften it in CSS.
+  const cssWilt = wilting && !useWiltedAsset;
   return (
-    <svg viewBox="0 0 200 240" width="100%" height="220" role="img"
-      style={{ filter: wilting ? 'saturate(0.45) sepia(0.25)' : 'none', transition: 'filter 0.4s' }}>
-      {/* ground */}
-      <ellipse cx={cx} cy="216" rx="74" ry="11" fill="#e7d9c4" className="dark:opacity-20" />
-      <ellipse cx={cx} cy="214" rx="50" ry="7" fill="#d8c4a6" className="dark:opacity-20" />
-
-      {stageIndex === 0 ? (
-        // Seed half-buried in soil
-        <g transform={`rotate(${wilting ? 4 : 0} ${cx} 206)`}>
-          <ellipse cx={cx} cy="205" rx="13" ry="9" fill="#9a6b42" />
-          <ellipse cx={cx - 3} cy="203" rx="4" ry="3" fill="#c79a6f" />
-        </g>
-      ) : (
-        <g transform={`rotate(${wilting ? 5 : 0} ${cx} ${groundY})`} style={{ transition: 'transform 0.4s' }}>
-          {/* trunk */}
-          <rect x={cx - Math.max(3, trunkH / 20)} y={topY} width={Math.max(6, trunkH / 10)} height={trunkH} rx="4" fill={trunk} />
-          {/* canopy: a cluster of puffs */}
-          <circle cx={cx} cy={topY} r={canopyR} fill={green} />
-          <circle cx={cx - canopyR * 0.6} cy={topY + canopyR * 0.25} r={canopyR * 0.62} fill={greenLight} />
-          <circle cx={cx + canopyR * 0.6} cy={topY + canopyR * 0.2} r={canopyR * 0.6} fill={greenLight} />
-          <circle cx={cx} cy={topY - canopyR * 0.45} r={canopyR * 0.6} fill={green} />
-          {/* blossoms */}
-          {blossoms.map(([dx, dy], i) => (
-            <circle key={`b${i}`} cx={cx + dx} cy={topY + dy} r="3.2" fill="#f6d3df" />
-          ))}
-          {/* oranges */}
-          {oranges.map(([dx, dy], i) => (
-            <circle key={`o${i}`} cx={cx + dx} cy={topY + dy} r="5.5" fill="#e8821e" stroke="#c96a12" strokeWidth="0.5" />
-          ))}
-        </g>
-      )}
-    </svg>
+    <img
+      src={src}
+      alt=""
+      width={220}
+      height={220}
+      className="mx-auto block w-[220px] h-[220px] object-contain select-none"
+      style={{ filter: cssWilt ? 'saturate(0.5) sepia(0.2)' : 'none', transition: 'filter 0.4s, opacity 0.4s' }}
+      draggable={false}
+    />
   );
 }
