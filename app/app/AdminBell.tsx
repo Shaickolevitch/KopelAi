@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useLang } from '@/lib/i18n';
 import { getAdminNotifications, markAdminEventsSeen, type AdminNotifications } from '@/lib/api';
 
-export default function AdminBell() {
+export default function AdminBell({ dropUp = false }: { dropUp?: boolean }) {
   const { language } = useLang();
   const he = language === 'he';
   const [n, setN] = useState<AdminNotifications | null>(null);
@@ -63,7 +63,7 @@ export default function AdminBell() {
       </button>
 
       {open && (
-        <div className="absolute end-0 mt-2 w-64 rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg z-50 overflow-hidden">
+        <div className={`absolute end-0 w-64 rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg z-50 overflow-hidden ${dropUp ? 'bottom-full mb-2' : 'top-full mt-2'}`}>
           <div className="px-4 py-2.5 text-xs font-medium text-stone-500 dark:text-zinc-500 border-b border-stone-100 dark:border-zinc-800">
             {he ? 'דורש תשומת לב' : 'Needs attention'}
           </div>

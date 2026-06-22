@@ -84,7 +84,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { href: '/app/plan', label: t.tab_plan },
     { href: '/app/invite', label: t.tab_invite },
     { href: '/app/tree', label: t.tab_tree },
-    ...(isAdmin ? [{ href: '/app/admin', label: t.tab_admin }] : []),
   ];
 
   return (
@@ -120,11 +119,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               })}
             </nav>
             <TreeIndicator />
-            {isAdmin && (
-              <div className="mx-1.5 shrink-0">
-                <AdminBell />
-              </div>
-            )}
             <button
               onClick={() => setLanguage(language === 'he' ? 'en' : 'he')}
               className="px-3 py-2 text-sm rounded-lg text-stone-500 dark:text-zinc-500 hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-800 dark:hover:text-zinc-200 transition-colors"
@@ -164,6 +158,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               </>
             );
           })()}
+          {/* Admin controls live here (out of the top toolbar) so the header
+              matches exactly what a regular user sees. */}
+          {isAdmin && (
+            <span className="flex items-center gap-2 ms-1 ps-3 border-s border-stone-200 dark:border-zinc-800">
+              <Link href="/app/admin" className="hover:text-stone-600 dark:hover:text-zinc-400 transition-colors">{language === 'he' ? 'אדמין' : 'Admin'}</Link>
+              <AdminBell dropUp />
+            </span>
+          )}
         </div>
       </footer>
     </div>
