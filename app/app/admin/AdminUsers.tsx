@@ -29,7 +29,7 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('');
   const [tier, setTier] = useState<'all' | 'free' | 'pro'>('all');
   const [page, setPage] = useState(0);
-  const [sortBy, setSortBy] = useState<'name' | 'created_at' | 'last_active' | 'tier'>('created_at');
+  const [sortBy, setSortBy] = useState<'name' | 'created_at' | 'last_active' | 'tier' | 'conversations'>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -134,6 +134,7 @@ export default function AdminUsers() {
           <option value="name">{isHebrew ? 'מיון: שם' : 'Sort: Name'}</option>
           <option value="created_at">{isHebrew ? 'מיון: תאריך הצטרפות' : 'Sort: Date joined'}</option>
           <option value="last_active">{isHebrew ? 'מיון: פעילות אחרונה' : 'Sort: Last active'}</option>
+          <option value="conversations">{isHebrew ? 'מיון: שיחות שמורות' : 'Sort: Conversations'}</option>
           <option value="tier">{isHebrew ? 'מיון: תוכנית' : 'Sort: Plan'}</option>
         </select>
         <button
@@ -158,15 +159,16 @@ export default function AdminUsers() {
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'תוכנית' : 'Plan'}</th>
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'נוצר' : 'Joined'}</th>
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'פעילות אחרונה' : 'Last active'}</th>
+              <th className="text-start font-medium py-2 px-2">{isHebrew ? 'שיחות שמורות' : 'Conversations'}</th>
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'דיוור' : 'Marketing'}</th>
               <th className="text-start font-medium py-2 px-2"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="py-6 text-center text-stone-400 dark:text-zinc-600">…</td></tr>
+              <tr><td colSpan={7} className="py-6 text-center text-stone-400 dark:text-zinc-600">…</td></tr>
             ) : users.length === 0 ? (
-              <tr><td colSpan={6} className="py-6 text-center text-stone-400 dark:text-zinc-600">{isHebrew ? 'לא נמצאו משתמשים' : 'No users found'}</td></tr>
+              <tr><td colSpan={7} className="py-6 text-center text-stone-400 dark:text-zinc-600">{isHebrew ? 'לא נמצאו משתמשים' : 'No users found'}</td></tr>
             ) : (
               users.map((u) => (
                 <tr key={u.id} className="border-t border-stone-100 dark:border-zinc-800">
@@ -203,6 +205,9 @@ export default function AdminUsers() {
                         </span>
                       );
                     })()}
+                  </td>
+                  <td className="py-2.5 px-2 text-xs text-stone-600 dark:text-zinc-400 tabular-nums">
+                    {u.conversations_count}
                   </td>
                   <td className="py-2.5 px-2 text-xs">
                     {u.marketing_consent

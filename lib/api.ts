@@ -213,6 +213,7 @@ export type AdminUser = {
   deleted_at: string | null;
   last_active: string | null;
   marketing_consent: boolean;
+  conversations_count: number;
 };
 
 export async function adminListUsers(params: {

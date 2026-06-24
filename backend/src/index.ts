@@ -262,7 +262,7 @@ app.get('/admin/users', async (req: Request, res: Response) => {
     const tier = (req.query.tier as string) || 'all';
     const page = Math.max(0, parseInt((req.query.page as string) || '0', 10) || 0);
     const pageSize = 25;
-    const ALLOWED_SORT = ['name', 'created_at', 'last_active', 'tier'];
+    const ALLOWED_SORT = ['name', 'created_at', 'last_active', 'tier', 'conversations'];
     const sortBy = ALLOWED_SORT.includes(req.query.sortBy as string)
       ? (req.query.sortBy as string)
       : 'created_at';
@@ -287,6 +287,7 @@ app.get('/admin/users', async (req: Request, res: Response) => {
         deleted_at: r.deleted_at,
         last_active: r.last_active,
         marketing_consent: r.marketing_consent ?? false,
+        conversations_count: Number(r.conversations_count ?? 0),
       })),
       total,
       page,
