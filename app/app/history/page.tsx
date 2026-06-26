@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { getCurrentUser } from '@/lib/auth';
 import { getSubscriptionTier } from '@/lib/subscription';
-import { deleteHistory } from '@/lib/api';
+import { deleteHistory, deleteConversation } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import ChatTabs from '../ChatTabs';
 
@@ -38,6 +38,24 @@ export default function HistoryPage() {
   const [to, setTo] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [deleting, setDeleting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function deleteOne(id: string) {
+    const msg = he
+      ? 'למחוק לצמיתות את השיחה הזו? אי אפשר לבטל פעולה זו.'
+      : 'Permanently delete this conversation? This cannot be undone.';
+    if (!window.confirm(msg)) return;
+    setDeletingId(id);
+    try {
+      await deleteConversation(id);
+      setConvos((prev) => prev.filter((c) => c.id !== id));
+      setMsgsByConvo((prev) => { const n = { ...prev }; delete n[id]; return n; });
+    } catch {
+      alert(he ? 'מחיקה נכשלה. נסה שוב.' : 'Delete failed. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function deleteAllHistory() {
     const msg = he
@@ -203,6 +221,16 @@ export default function HistoryPage() {
                         ))}
                       </div>
                     )}
+
+                    <div className="flex justify-end px-4 py-2 border-t border-stone-100 dark:border-zinc-800">
+                      <button
+                        onClick={() => deleteOne(c.id)}
+                        disabled={deletingId === c.id}
+                        className="text-xs text-rose-600 dark:text-rose-400 hover:underline disabled:opacity-50"
+                      >
+                        {deletingId === c.id ? (he ? 'מוחק…' : 'Deleting…') : (he ? 'מחק שיחה' : 'Delete conversation')}
+                      </button>
+                    </div>
                   </div>
                 );
               })}

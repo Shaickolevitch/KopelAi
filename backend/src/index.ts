@@ -1953,6 +1953,28 @@ app.post('/delete-history', async (req: Request, res: Response) => {
   }
 });
 
+// Permanently erase one conversation (and its messages/insights/themes).
+app.post('/delete-conversation', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const conversationId = req.body?.conversationId;
+    if (!conversationId) return res.status(400).json({ error: 'conversationId is required' });
+
+    // Verify ownership before deleting anything.
+    const { data: convo } = await supabaseAdmin
+      .from('conversations').select('user_id').eq('id', conversationId).maybeSingle();
+    if (!convo || convo.user_id !== user.id) return res.status(403).json({ error: 'Not your conversation' });
+
+    await supabaseAdmin.from('messages').delete().eq('conversation_id', conversationId);
+    await supabaseAdmin.from('conversations').delete().eq('id', conversationId);
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error('Delete conversation error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
 app.post('/delete-account', async (req: Request, res: Response) => {
   try {
     const authed = await getAuthedUser(req);

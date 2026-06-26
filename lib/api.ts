@@ -673,3 +673,13 @@ export async function deleteHistory(): Promise<void> {
   const r = await fetch(`${API_URL}/delete-history`, { method: 'POST', headers: { ...(await authHeaders()) } });
   if (!r.ok) throw new Error(`Delete history error (${r.status})`);
 }
+
+// Permanently delete a single conversation (its messages + the row).
+export async function deleteConversation(conversationId: string): Promise<void> {
+  const r = await fetch(`${API_URL}/delete-conversation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ conversationId }),
+  });
+  if (!r.ok) throw new Error(`Delete conversation error (${r.status})`);
+}

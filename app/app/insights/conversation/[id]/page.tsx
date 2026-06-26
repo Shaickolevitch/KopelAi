@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useLang } from '@/lib/i18n';
 import { getCurrentUser } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
-import { getConversationAnalysis, ProRequiredError, type ConversationAnalysis } from '@/lib/api';
+import { getConversationAnalysis, deleteConversation, ProRequiredError, type ConversationAnalysis } from '@/lib/api';
 import { DropSpot } from '../../../rewards';
 
 type Status = 'loading' | 'ready' | 'pro' | 'error';
@@ -15,7 +15,24 @@ export default function ConversationAnalysisPage() {
   const { language } = useLang();
   const he = language === 'he';
   const params = useParams();
+  const router = useRouter();
   const id = (Array.isArray(params.id) ? params.id[0] : params.id) as string;
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    const msg = he
+      ? 'למחוק לצמיתות את השיחה הזו ואת הניתוח שלה? אי אפשר לבטל פעולה זו.'
+      : 'Permanently delete this conversation and its analysis? This cannot be undone.';
+    if (!window.confirm(msg)) return;
+    setDeleting(true);
+    try {
+      await deleteConversation(id);
+      router.push('/app/insights');
+    } catch {
+      alert(he ? 'מחיקה נכשלה. נסה שוב.' : 'Delete failed. Please try again.');
+      setDeleting(false);
+    }
+  }
 
   const [analysis, setAnalysis] = useState<ConversationAnalysis | null>(null);
   const [startedAt, setStartedAt] = useState<string | null>(null);
@@ -57,9 +74,18 @@ export default function ConversationAnalysisPage() {
 
   return (
     <div className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 py-6">
-      <Link href="/app/insights" className="inline-block text-sm text-stone-400 dark:text-zinc-500 hover:text-stone-700 dark:hover:text-zinc-300 mb-4">
-        {he ? '→ חזרה לניתוח' : '← Back to analysis'}
-      </Link>
+      <div className="flex items-center justify-between mb-4">
+        <Link href="/app/insights" className="inline-block text-sm text-stone-400 dark:text-zinc-500 hover:text-stone-700 dark:hover:text-zinc-300">
+          {he ? '→ חזרה לניתוח' : '← Back to analysis'}
+        </Link>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="text-sm text-rose-600 dark:text-rose-400 hover:underline disabled:opacity-50"
+        >
+          {deleting ? (he ? 'מוחק…' : 'Deleting…') : (he ? 'מחק שיחה' : 'Delete conversation')}
+        </button>
+      </div>
 
       <h1 className="text-2xl font-semibold text-stone-900 dark:text-zinc-100 mb-1">
         {he ? 'ניתוח השיחה' : 'Conversation analysis'}
