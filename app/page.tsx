@@ -253,8 +253,7 @@ export default function HomePage() {
               const c = he ? person.he : person.en;
               return (
                 <div key={person.key} className="flex items-center gap-4 rounded-2xl border border-stone-200 dark:border-zinc-800 p-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={person.photo} alt={c.name} className="w-16 h-16 rounded-2xl object-cover shrink-0" />
+                  <Avatar src={person.photo} name={c.name} />
                   <div className="min-w-0">
                     <div className="font-semibold">{c.name}</div>
                     <div className="text-sm text-indigo-700 dark:text-indigo-400 mb-1">{c.role}</div>
@@ -370,6 +369,20 @@ export default function HomePage() {
           <span>· {he ? 'מופעל על ידי שי חי גיאן' : 'Made by Shai Hay Gian'}</span>
         </div>
       </footer>
+    </div>
+  );
+}
+
+// Avatar that falls back to an initials tile if the photo is missing / fails.
+function Avatar({ src, name }: { src?: string | null; name: string }) {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={name} onError={() => setFailed(true)} className="w-16 h-16 rounded-2xl object-cover shrink-0" />;
+  }
+  return (
+    <div className="w-16 h-16 rounded-2xl shrink-0 flex items-center justify-center bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-950 dark:to-indigo-900 text-indigo-800 dark:text-indigo-300 text-xl font-semibold" aria-label={name}>
+      {name.trim().charAt(0) || '?'}
     </div>
   );
 }

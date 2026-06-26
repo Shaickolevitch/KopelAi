@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useLang } from '@/lib/i18n';
 
 // The two people behind KopelAi - expanded version of the homepage section.
@@ -84,24 +85,7 @@ export default function AboutUsPage() {
           const copy = isHebrew ? person.he : person.en;
           return (
             <div key={person.key} className="flex flex-col sm:flex-row gap-5 sm:items-start">
-              {person.photo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={person.photo}
-                  alt={copy.name}
-                  className="w-28 h-28 rounded-2xl object-cover shrink-0 shadow-sm self-center sm:self-start"
-                />
-              ) : (
-                <div
-                  className="w-28 h-28 rounded-2xl shrink-0 flex items-center justify-center border-2 border-dashed border-stone-300 dark:border-zinc-700 bg-gradient-to-br from-stone-100 to-stone-200 dark:from-zinc-900 dark:to-zinc-800 text-stone-400 dark:text-zinc-600 self-center sm:self-start"
-                  aria-label={isHebrew ? 'מקום לתמונה' : 'Photo placeholder'}
-                >
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                </div>
-              )}
+              <PersonPhoto src={person.photo} name={copy.name} />
 
               <div className="min-w-0">
                 <div className="font-semibold text-lg text-stone-900 dark:text-zinc-100">{copy.name}</div>
@@ -136,6 +120,33 @@ export default function AboutUsPage() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// Person photo that degrades to a clean initials avatar if the image is missing
+// or fails to load (e.g. a photo file that isn't in /public yet).
+function PersonPhoto({ src, name }: { src?: string | null; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const showImg = src && !failed;
+  if (showImg) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src!}
+        alt={name}
+        onError={() => setFailed(true)}
+        className="w-28 h-28 rounded-2xl object-cover shrink-0 shadow-sm self-center sm:self-start"
+      />
+    );
+  }
+  const initial = name.trim().charAt(0) || '?';
+  return (
+    <div
+      className="w-28 h-28 rounded-2xl shrink-0 flex items-center justify-center bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-950 dark:to-indigo-900 text-indigo-800 dark:text-indigo-300 text-4xl font-semibold self-center sm:self-start shadow-sm"
+      aria-label={name}
+    >
+      {initial}
     </div>
   );
 }
