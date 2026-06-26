@@ -5,7 +5,7 @@ import { useLang } from '@/lib/i18n';
 
 // The two people behind KopelAi - expanded version of the homepage section.
 // To add real photos: drop the image files into /public (e.g. /public/kopel.jpg,
-// /public/shai.jpg) and set `photo` below. Edit the bios freely - they're placeholders.
+// /public/shai.png) and set `photo` below. Edit the bios freely - they're placeholders.
 const PEOPLE = [
   {
     key: 'kopel',
@@ -33,7 +33,7 @@ const PEOPLE = [
   },
   {
     key: 'shai',
-    photo: '/shai.jpg',
+    photo: '/shai.png',
     contact: '050-204-2507 · shaigian1@gmail.com',
     website: 'https://www.shaigian.com',
     he: {

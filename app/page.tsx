@@ -61,7 +61,7 @@ const PEOPLE = [
     en: { name: 'Kopel Eliezer', role: 'The inspiration', line: 'An independent psychoanalyst based in Tel Aviv. Creator of "Psychoanalysis - Hour by Hour" - 77 psychoanalytic lectures.' },
   },
   {
-    key: 'shai', photo: '/shai.jpg',
+    key: 'shai', photo: '/shai.png',
     he: { name: 'שי חי גיאן', role: 'המייסד והמפתח', line: 'היזם והמפתח שמאחורי קופלAI.' },
     en: { name: 'Shai Hay Gian', role: 'Founder & developer', line: 'The founder and developer behind KopelAi.' },
   },
