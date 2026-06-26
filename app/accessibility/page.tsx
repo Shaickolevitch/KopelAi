@@ -17,7 +17,7 @@ export default function AccessibilityStatement() {
         <h1 className="text-3xl font-bold mt-4 mb-2">{he ? 'הצהרת נגישות' : 'Accessibility statement'}</h1>
         <p className="text-sm text-stone-400 dark:text-zinc-500 mb-8">{he ? 'עודכן לאחרונה: יוני 2026' : 'Last updated: June 2026'}</p>
 
-        <div className="space-y-6 text-[15px] leading-relaxed text-stone-700 dark:text-zinc-300">
+        <div className="space-y-6 text-[0.94rem] leading-relaxed text-stone-700 dark:text-zinc-300">
           {he ? (
             <>
               <p>

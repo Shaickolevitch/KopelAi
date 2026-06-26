@@ -209,7 +209,7 @@ export default function InsightsPage() {
 
           {/* Opener paragraph */}
           {opener && opener.trim().length > 0 && (
-            <p className="text-stone-700 dark:text-zinc-300 leading-relaxed mb-6 px-1 text-[15px]">{opener}</p>
+            <p className="text-stone-700 dark:text-zinc-300 leading-relaxed mb-6 px-1 text-[0.94rem]">{opener}</p>
           )}
 
           {/* Insight cards */}
@@ -226,7 +226,7 @@ export default function InsightsPage() {
                       {getCategoryLabel(cat.key, language)}
                     </h3>
                     {ins ? (
-                      <p className="text-stone-800 dark:text-zinc-200 leading-relaxed text-[15px]">{ins.content}</p>
+                      <p className="text-stone-800 dark:text-zinc-200 leading-relaxed text-[0.94rem]">{ins.content}</p>
                     ) : (
                       <p className="text-sm text-stone-400 dark:text-zinc-600 italic">{t.insights_card_empty}</p>
                     )}

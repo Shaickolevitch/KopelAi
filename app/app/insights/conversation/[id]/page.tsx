@@ -130,7 +130,7 @@ export default function ConversationAnalysisPage() {
           {/* Summary */}
           {analysis.summary && (
             <Section title={he ? 'תקציר' : 'Summary'}>
-              <p className="text-[15px] leading-relaxed text-stone-700 dark:text-zinc-300">{analysis.summary}</p>
+              <p className="text-[0.94rem] leading-relaxed text-stone-700 dark:text-zinc-300">{analysis.summary}</p>
             </Section>
           )}
 
@@ -140,7 +140,7 @@ export default function ConversationAnalysisPage() {
               <div className="rounded-2xl border border-clay/20 bg-clay/[0.06] px-4 py-3.5">
                 <ul className="space-y-2.5">
                   {analysis.appreciation.map((a, i) => (
-                    <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed text-stone-800 dark:text-zinc-200">
+                    <li key={i} className="flex gap-2.5 text-[0.94rem] leading-relaxed text-stone-800 dark:text-zinc-200">
                       <span className="text-clay shrink-0" aria-hidden>✓</span>
                       <span>{a}</span>
                     </li>
@@ -157,7 +157,7 @@ export default function ConversationAnalysisPage() {
                 {analysis.insights.map((ins, i) => (
                   <div key={i} className="rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3">
                     {ins.title && <h3 className="text-xs font-semibold uppercase tracking-widest text-stone-500 dark:text-zinc-500 mb-1">{ins.title}</h3>}
-                    <p className="text-[15px] leading-relaxed text-stone-800 dark:text-zinc-200">{ins.content}</p>
+                    <p className="text-[0.94rem] leading-relaxed text-stone-800 dark:text-zinc-200">{ins.content}</p>
                   </div>
                 ))}
               </div>
@@ -170,7 +170,7 @@ export default function ConversationAnalysisPage() {
               <div className="space-y-3">
                 {analysis.key_moments.map((km, i) => (
                   <div key={i} className="border-s-2 border-clay/50 ps-3.5">
-                    <p className="text-[15px] leading-relaxed text-stone-800 dark:text-zinc-200">{km.moment}</p>
+                    <p className="text-[0.94rem] leading-relaxed text-stone-800 dark:text-zinc-200">{km.moment}</p>
                     {km.why && <p className="text-sm text-stone-500 dark:text-zinc-400 mt-0.5 leading-relaxed">{km.why}</p>}
                   </div>
                 ))}
@@ -183,7 +183,7 @@ export default function ConversationAnalysisPage() {
             <Section title={he ? 'שאלות לרפלקציה' : 'Questions to sit with'}>
               <ul className="space-y-2">
                 {analysis.questions.map((q, i) => (
-                  <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed text-stone-700 dark:text-zinc-300">
+                  <li key={i} className="flex gap-2.5 text-[0.94rem] leading-relaxed text-stone-700 dark:text-zinc-300">
                     <span className="text-clay shrink-0">—</span>
                     <span>{q}</span>
                   </li>
@@ -200,7 +200,7 @@ export default function ConversationAnalysisPage() {
                   <div key={i} className="rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3">
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="px-2 py-0.5 rounded-full bg-stone-100 dark:bg-zinc-800 text-[11px] font-medium text-stone-500 dark:text-zinc-400">{refKindLabel(r.kind)}</span>
-                      <span className="text-[15px] font-medium text-stone-900 dark:text-zinc-100">{r.title}</span>
+                      <span className="text-[0.94rem] font-medium text-stone-900 dark:text-zinc-100">{r.title}</span>
                     </div>
                     {r.note && <p className="text-sm text-stone-500 dark:text-zinc-400 leading-relaxed">{r.note}</p>}
                     {r.url && (

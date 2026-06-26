@@ -52,7 +52,7 @@ export default function WelcomePage() {
         <h1 className="text-2xl font-bold text-stone-900 dark:text-zinc-100 mb-2">
           {he ? 'ברוך הבא לקופלAI' : 'Welcome to KopelAi'}
         </h1>
-        <p className="text-stone-500 dark:text-zinc-400 text-[15px] leading-relaxed mb-5">
+        <p className="text-stone-500 dark:text-zinc-400 text-[0.94rem] leading-relaxed mb-5">
           {he
             ? 'רוצה לדבר עם קופל גם בוואטסאפ? בלחיצה אחת תוכל/י לשוחח איתו גם משם - אותו זיכרון, אותו מנוי.'
             : 'Want to talk with Kopel on WhatsApp too? In one tap you can chat with him from there as well — same memory, same plan.'}

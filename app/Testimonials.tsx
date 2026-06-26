@@ -57,7 +57,7 @@ export default function Testimonials() {
             {reviews.slice(0, 6).map((r) => (
               <div key={r.id} className="rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50/60 dark:bg-zinc-950/40 p-5">
                 <StarRow rating={r.rating} />
-                <p className="mt-2.5 text-[15px] text-stone-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{r.content}</p>
+                <p className="mt-2.5 text-[0.94rem] text-stone-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{r.content}</p>
                 <div className="mt-3 text-sm font-medium text-stone-500 dark:text-zinc-500">— {r.display_name}</div>
               </div>
             ))}

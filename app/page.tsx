@@ -160,7 +160,7 @@ export default function HomePage() {
       <section className="px-5 pb-6">
         <div className="max-w-2xl mx-auto rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 sm:p-7 text-center">
           <h2 className="text-lg font-semibold mb-2">{he ? 'על מה זה מבוסס' : 'What it’s built on'}</h2>
-          <p className="text-stone-600 dark:text-zinc-300 leading-relaxed text-[15px]">
+          <p className="text-stone-600 dark:text-zinc-300 leading-relaxed text-[0.94rem]">
             {he
               ? 'קופלAI נשען על גוף העבודה של הפסיכואנליטיקאי קופל אליעזר — 77 הרצאות פסיכואנליטיות וספר, מתוך שנים רבות של ניסיון קליני. מה שעולה כאן מבוסס על מקור מקצועי עמוק, לא על תשובות כלליות.'
               : 'KopelAi draws on the body of work of psychoanalyst Kopel Eliezer — 77 psychoanalytic lectures and a book, grounded in years of clinical experience. What surfaces here rests on a deep professional source, not generic answers.'}
@@ -214,7 +214,7 @@ export default function HomePage() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold tracking-tight">{he ? 'למי זה מתאים?' : 'Who is it for?'}</h2>
-            <p className="text-stone-500 dark:text-zinc-400 mt-2 text-[15px]">
+            <p className="text-stone-500 dark:text-zinc-400 mt-2 text-[0.94rem]">
               {he ? 'מתחילים מאנשי המקצוע - ומתרחבים החוצה.' : 'It starts with professionals — and widens outward.'}
             </p>
           </div>
@@ -239,7 +239,7 @@ export default function HomePage() {
                 <div key={i} className="flex items-start gap-3">
                   <span className="w-3.5 h-3.5 rounded-full shrink-0 mt-1 border border-black/10" style={{ background: r.dot }} />
                   <div>
-                    <div className="font-semibold text-stone-900 dark:text-zinc-100 text-[15px]">{he ? r.he.t : r.en.t}</div>
+                    <div className="font-semibold text-stone-900 dark:text-zinc-100 text-[0.94rem]">{he ? r.he.t : r.en.t}</div>
                     <div className="text-sm text-stone-500 dark:text-zinc-400 leading-relaxed">{he ? r.he.d : r.en.d}</div>
                   </div>
                 </div>
@@ -287,7 +287,7 @@ export default function HomePage() {
       <section className="px-5 py-16">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold tracking-tight mb-2 text-center">{he ? 'תוכניות' : 'Plans'}</h2>
-          <p className="text-center text-stone-500 dark:text-zinc-400 max-w-lg mx-auto mb-7 text-[15px]">
+          <p className="text-center text-stone-500 dark:text-zinc-400 max-w-lg mx-auto mb-7 text-[0.94rem]">
             {he
               ? 'כאילו שילמת על מפגש אחד בחודש - ומקבלים את קופלAI תמיד, מסביב לשעון.'
               : 'About the price of one therapy hour a month - and you get KopelAi always, around the clock.'}

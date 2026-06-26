@@ -97,7 +97,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <div className="w-7 h-7 rounded-lg bg-indigo-950 dark:bg-indigo-600 flex items-center justify-center group-hover:bg-indigo-900 dark:group-hover:bg-indigo-500 transition-colors">
               <span className="text-white font-bold text-sm leading-none">K</span>
             </div>
-            <span className="hidden sm:inline font-semibold text-stone-900 dark:text-zinc-100 text-[15px]">KopelAi</span>
+            <span className="hidden sm:inline font-semibold text-stone-900 dark:text-zinc-100 text-[0.94rem]">KopelAi</span>
           </Link>
 
           {/* Nav tabs + sign out */}

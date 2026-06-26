@@ -536,7 +536,7 @@ export default function ConversationPage() {
             <div className="w-12 h-12 rounded-full bg-indigo-950 dark:bg-indigo-600 flex items-center justify-center animate-pulse">
               <span className="text-white font-bold text-lg leading-none">K</span>
             </div>
-            <p className="text-stone-700 dark:text-zinc-200 font-medium text-[15px]">
+            <p className="text-stone-700 dark:text-zinc-200 font-medium text-[0.94rem]">
               {language === 'he' ? 'קופלAI מנתח את השיחה' : 'Kopel is analyzing the conversation'}
             </p>
             <div className="flex gap-1.5">
@@ -646,7 +646,7 @@ export default function ConversationPage() {
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center mx-auto mb-4">
                   <span className="text-indigo-600 dark:text-indigo-400 font-bold text-lg">K</span>
                 </div>
-                <p className="text-stone-500 dark:text-zinc-500 leading-relaxed whitespace-pre-line text-[15px]">
+                <p className="text-stone-500 dark:text-zinc-500 leading-relaxed whitespace-pre-line text-[0.94rem]">
                   {t.conversation_empty_hint}
                 </p>
               </div>
@@ -660,7 +660,7 @@ export default function ConversationPage() {
                   <span className="text-white font-bold text-[10px] leading-none">K</span>
                 </div>
               )}
-              <div className={`max-w-[80%] px-4 py-3 shadow-sm text-[15px] leading-relaxed ${
+              <div className={`max-w-[80%] px-4 py-3 shadow-sm text-[0.94rem] leading-relaxed ${
                 msg.role === 'user'
                   ? 'bg-indigo-950 dark:bg-indigo-600 text-white rounded-2xl rounded-br-sm'
                   : 'bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-stone-900 dark:text-zinc-100 rounded-2xl rounded-bl-sm'
@@ -851,7 +851,7 @@ export default function ConversationPage() {
             placeholder={t.conversation_input_placeholder}
             disabled={sending}
             rows={1}
-            className="flex-1 resize-none outline-none bg-transparent leading-relaxed py-1.5 max-h-40 text-stone-900 dark:text-zinc-100 placeholder:text-stone-400 dark:placeholder:text-zinc-600 text-[15px]"
+            className="flex-1 resize-none outline-none bg-transparent leading-relaxed py-1.5 max-h-40 text-stone-900 dark:text-zinc-100 placeholder:text-stone-400 dark:placeholder:text-zinc-600 text-[0.94rem]"
           />
           <button
             onClick={handleSend}

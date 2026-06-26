@@ -90,7 +90,7 @@ export default function AboutUsPage() {
               <div className="min-w-0">
                 <div className="font-semibold text-lg text-stone-900 dark:text-zinc-100">{copy.name}</div>
                 <div className="text-sm text-indigo-700 dark:text-indigo-400 mb-3">{copy.role}</div>
-                <div className="space-y-3 text-stone-600 dark:text-zinc-400 text-[15px] leading-relaxed">
+                <div className="space-y-3 text-stone-600 dark:text-zinc-400 text-[0.94rem] leading-relaxed">
                   {copy.bio.map((para, i) => (
                     <p key={i}>{para}</p>
                   ))}
