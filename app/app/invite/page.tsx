@@ -22,8 +22,8 @@ export default function InvitePage() {
   const url = info?.url ?? '';
 
   const shareText = he
-    ? `הצטרפ/י אליי לקופלAI - מרחב שיחה רפלקטיבי למטפלים. דרך הקישור הזה מקבלים חודש פרו במתנה:`
-    : `Join me on KopelAi - a reflective space for therapists. This link gives you a free month of Pro:`;
+    ? `הצטרפ/י אליי לקופלAI - מרחב שיחה רפלקטיבי למטפלים:`
+    : `Join me on KopelAi - a reflective space for therapists:`;
 
   async function copy() {
     if (!url) return;
@@ -59,12 +59,12 @@ export default function InvitePage() {
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 11h-6M19 8v6" /></svg>
         </div>
         <h1 className="text-2xl font-semibold text-stone-900 dark:text-zinc-100 mb-2">
-          {he ? 'מזמינים חבר, מרוויחים חודש' : 'Give a month, get a month'}
+          {he ? 'מזמינים חבר, מרוויחים חודש' : 'Invite a friend, earn a month'}
         </h1>
         <p className="text-stone-500 dark:text-zinc-400 leading-relaxed">
           {he
-            ? 'כל חבר שמצטרף דרך הקישור שלך מקבל חודש פרו במתנה. כשהוא הופך למנוי פרו - גם אתה מקבל חודש פרו, חינם.'
-            : 'Everyone who joins through your link gets a free month of Pro. When they become a Pro subscriber, you get a free month too.'}
+            ? 'שתף את הקישור שלך. כשחבר שנרשם דרכו הופך למנוי פרו - אתה מקבל חודש פרו, חינם. חודשים מצטברים.'
+            : 'Share your link. When a friend who signed up through it becomes a Pro subscriber, you get a free month of Pro. Months stack.'}
         </p>
       </div>
 
@@ -148,13 +148,13 @@ export default function InvitePage() {
               {(he
                 ? [
                     'שתף את הקישור שלך עם חברים או קולגות.',
-                    'הם נרשמים דרך הקישור ומקבלים חודש פרו במתנה.',
-                    'אם הם הופכים למנויי פרו - אתה מקבל חודש פרו, חינם. חודשים מצטברים.',
+                    'הם נרשמים לקופלAI דרך הקישור.',
+                    'כשהם הופכים למנויי פרו - אתה מקבל חודש פרו, חינם. חודשים מצטברים.',
                   ]
                 : [
                     'Share your link with friends or colleagues.',
-                    'They sign up through it and get a free month of Pro.',
-                    'If they become Pro subscribers, you get a free month too. Months stack.',
+                    'They sign up for KopelAi through it.',
+                    'When they become Pro subscribers, you get a free month of Pro. Months stack.',
                   ]
               ).map((step, i) => (
                 <li key={i} className="flex gap-3 text-sm text-stone-600 dark:text-zinc-400">

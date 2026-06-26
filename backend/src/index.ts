@@ -1098,14 +1098,9 @@ app.post('/referral/claim', async (req: Request, res: Response) => {
     const { data: existing } = await supabaseAdmin.from('referrals').select('id').eq('referee_id', user.id).maybeSingle();
     if (existing) return res.json({ ok: true, already: true });
 
+    // Just record the link — the referee gets no special gift. The referrer earns
+    // a free month only once this referee converts to paid Pro (Ching webhook).
     await supabaseAdmin.from('referrals').insert({ referrer_id: referrer.user_id, referee_id: user.id, code, status: 'pending' });
-
-    // Gift the referee a longer 30-day trial (only if they have none and aren't Pro).
-    const { data: prof } = await supabaseAdmin.from('user_profile').select('subscription_tier, trial_ends_at').eq('user_id', user.id).maybeSingle();
-    if (prof?.subscription_tier !== 'pro' && !prof?.trial_ends_at) {
-      const endsAt = new Date(Date.now() + REFERRAL_TRIAL_DAYS * 86_400_000).toISOString();
-      await supabaseAdmin.from('user_profile').upsert({ user_id: user.id, trial_ends_at: endsAt }, { onConflict: 'user_id' });
-    }
     res.json({ ok: true });
   } catch (err: any) {
     console.error('referral claim error:', err);
