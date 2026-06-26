@@ -1928,6 +1928,31 @@ app.post('/water-rewards/collect', async (req: Request, res: Response) => {
 // Account deletion + restore
 // =====================================================
 
+// Permanently erase the user's entire chat history + the memory built from it.
+// Hard delete (not soft) — for privacy-sensitive users who don't want anything
+// retained, and so Kopel truly "forgets" past conversations.
+app.post('/delete-history', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const uid = user.id;
+    // Order respects FKs; deleting conversations also cascades messages, but we
+    // clear each table explicitly to be sure nothing is left behind.
+    await supabaseAdmin.from('messages').delete().eq('user_id', uid);
+    await supabaseAdmin.from('insights').delete().eq('user_id', uid);
+    await supabaseAdmin.from('themes').delete().eq('user_id', uid);
+    await supabaseAdmin.from('conversations').delete().eq('user_id', uid);
+    // Reset the remembered profile so Kopel starts fresh next time.
+    await supabaseAdmin.from('user_profile')
+      .update({ prompt_summary: null, display_opener: null })
+      .eq('user_id', uid);
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error('Delete history error:', err);
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
 app.post('/delete-account', async (req: Request, res: Response) => {
   try {
     const authed = await getAuthedUser(req);

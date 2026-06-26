@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLang } from '@/lib/i18n';
 import { getCurrentUser } from '@/lib/auth';
 import { getSubscriptionTier } from '@/lib/subscription';
+import { deleteHistory } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import ChatTabs from '../ChatTabs';
 
@@ -36,6 +37,25 @@ export default function HistoryPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [deleting, setDeleting] = useState(false);
+
+  async function deleteAllHistory() {
+    const msg = he
+      ? 'למחוק לצמיתות את כל היסטוריית השיחות? קופל גם ישכח את כל מה שלמד עליך. אי אפשר לבטל פעולה זו.'
+      : 'Permanently delete your entire chat history? Kopel will also forget everything it learned about you. This cannot be undone.';
+    if (!window.confirm(msg)) return;
+    setDeleting(true);
+    try {
+      await deleteHistory();
+      setConvos([]);
+      setMsgsByConvo({});
+      setExpanded({});
+    } catch {
+      alert(he ? 'מחיקה נכשלה. נסה שוב.' : 'Delete failed. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -123,8 +143,19 @@ export default function HistoryPage() {
             )}
           </div>
 
-          <div className="text-xs text-stone-400 dark:text-zinc-600 mb-3">
-            {he ? `${filtered.length} שיחות` : `${filtered.length} conversations`}
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs text-stone-400 dark:text-zinc-600">
+              {he ? `${filtered.length} שיחות` : `${filtered.length} conversations`}
+            </div>
+            {convos.length > 0 && (
+              <button
+                onClick={deleteAllHistory}
+                disabled={deleting}
+                className="text-xs text-rose-600 dark:text-rose-400 hover:underline disabled:opacity-50"
+              >
+                {deleting ? (he ? 'מוחק…' : 'Deleting…') : (he ? 'מחק את כל ההיסטוריה' : 'Delete all history')}
+              </button>
+            )}
           </div>
 
           {filtered.length === 0 ? (

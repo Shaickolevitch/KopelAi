@@ -667,3 +667,9 @@ export async function collectWaterReward(id: string): Promise<{ collected: numbe
   if (!r.ok) throw new Error(`Collect error (${r.status})`);
   return r.json();
 }
+
+// Permanently delete the user's entire chat history + remembered profile.
+export async function deleteHistory(): Promise<void> {
+  const r = await fetch(`${API_URL}/delete-history`, { method: 'POST', headers: { ...(await authHeaders()) } });
+  if (!r.ok) throw new Error(`Delete history error (${r.status})`);
+}

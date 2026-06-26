@@ -156,6 +156,23 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Trust / source of authority + privacy (per Kopel's feedback) */}
+      <section className="px-5 pb-6">
+        <div className="max-w-2xl mx-auto rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 sm:p-7 text-center">
+          <h2 className="text-lg font-semibold mb-2">{he ? 'על מה זה מבוסס' : 'What it’s built on'}</h2>
+          <p className="text-stone-600 dark:text-zinc-300 leading-relaxed text-[15px]">
+            {he
+              ? 'קופלAI נשען על גוף העבודה של הפסיכואנליטיקאי קופל אליעזר — 77 הרצאות פסיכואנליטיות וספר, מתוך שנים רבות של ניסיון קליני. מה שעולה כאן מבוסס על מקור מקצועי עמוק, לא על תשובות כלליות.'
+              : 'KopelAi draws on the body of work of psychoanalyst Kopel Eliezer — 77 psychoanalytic lectures and a book, grounded in years of clinical experience. What surfaces here rests on a deep professional source, not generic answers.'}
+          </p>
+          <p className="mt-4 text-sm text-stone-500 dark:text-zinc-400 leading-relaxed">
+            🔒 {he
+              ? 'השיחות שלך נשמרות באופן פרטי ומוצפן — לעיניך בלבד. במנוי פרו אפשר למחוק את כל היסטוריית השיחות לחלוטין, בכל רגע.'
+              : 'Your conversations are stored privately and encrypted — for your eyes only. On Pro you can permanently delete your entire chat history at any time.'}
+          </p>
+        </div>
+      </section>
+
       {/* Pillars */}
       <section className="px-5 py-14 bg-white dark:bg-zinc-900 border-y border-stone-200 dark:border-zinc-800">
         <div className="max-w-4xl mx-auto grid sm:grid-cols-3 gap-5">
