@@ -158,6 +158,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <a href={`/contact${s}`} className="hover:text-stone-600 dark:hover:text-zinc-400 transition-colors">{he ? 'יצירת קשר' : 'Contact'}</a>
                 <a href={`/privacy${s}`} className="hover:text-stone-600 dark:hover:text-zinc-400 transition-colors">{he ? 'פרטיות' : 'Privacy'}</a>
                 <a href={`/terms${s}`} className="hover:text-stone-600 dark:hover:text-zinc-400 transition-colors">{he ? 'תנאי שימוש' : 'Terms'}</a>
+                <a href="/accessibility" className="hover:text-stone-600 dark:hover:text-zinc-400 transition-colors">{he ? 'נגישות' : 'Accessibility'}</a>
               </>
             );
           })()}

@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { LangProvider } from "@/lib/i18n";
 import AnalyticsProvider from "./providers";
+import AccessibilityWidget from "./AccessibilityWidget";
 import "./globals.css";
 
 // Design "A": Assistant for body (clean Hebrew sans), Frank Ruhl Libre for
@@ -66,7 +67,12 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <AnalyticsProvider>
-          <LangProvider>{children}</LangProvider>
+          <LangProvider>
+            {/* a11y-content wraps the page so the accessibility widget can apply
+                contrast/spacing/link styles to content without affecting itself. */}
+            <div id="a11y-content">{children}</div>
+            <AccessibilityWidget />
+          </LangProvider>
         </AnalyticsProvider>
         <Analytics />
         <SpeedInsights />
