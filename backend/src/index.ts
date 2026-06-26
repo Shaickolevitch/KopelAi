@@ -1490,6 +1490,140 @@ Return only the opener, with no headers or explanations.`;
 }
 
 // ----------------------------------------------------------
+// Re-analyze the general (aggregate) analysis from scratch.
+// Called after a single conversation is deleted, so the profile + opener +
+// insights on the "General" tab reflect ONLY the conversations that remain.
+// Bounded to ~2 LLM calls (works from stored per-conversation summaries, not
+// full transcripts), so it stays cheap regardless of history size.
+// ----------------------------------------------------------
+async function rebuildUserAnalysis(userId: string): Promise<void> {
+  // 1. Insights/profile are an effective-Pro feature. For everyone else, make
+  //    sure nothing stale is left around and stop.
+  const { data: tierRow } = await supabaseAdmin
+    .from('user_profile')
+    .select('subscription_tier, trial_ends_at, referral_pro_until')
+    .eq('user_id', userId)
+    .maybeSingle();
+  const isPro = tierRow?.subscription_tier === 'pro'
+    || compedProActive(tierRow?.referral_pro_until)
+    || trialActiveFrom(tierRow?.trial_ends_at);
+
+  // 2. Gather the conversations that still exist (with their stored summaries).
+  const { data: convos } = await supabaseAdmin
+    .from('conversations')
+    .select('summary, started_at')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .order('started_at', { ascending: true });
+
+  const summaries = (convos ?? [])
+    .map((c) => (c.summary ?? '').trim())
+    .filter((s) => s.length > 0);
+
+  // 3. Nothing left to analyze → wipe the aggregate so the page goes blank
+  //    instead of showing traces of deleted conversations.
+  if (!isPro || summaries.length === 0) {
+    await supabaseAdmin.from('insights').delete().eq('user_id', userId);
+    await supabaseAdmin.from('themes').delete().eq('user_id', userId);
+    await supabaseAdmin.from('user_profile')
+      .update({ prompt_summary: null, display_opener: null })
+      .eq('user_id', userId);
+    return;
+  }
+
+  // 4. Prune insights whose supporting evidence was just deleted. Any insight
+  //    that cites only now-gone messages no longer has grounding, so drop it.
+  const { data: remainingMsgs } = await supabaseAdmin
+    .from('messages')
+    .select('id')
+    .eq('user_id', userId);
+  const liveIds = new Set((remainingMsgs ?? []).map((m) => m.id as string));
+
+  const { data: existingInsights } = await supabaseAdmin
+    .from('insights')
+    .select('id, source_message_ids')
+    .eq('user_id', userId);
+  const orphanInsightIds = (existingInsights ?? [])
+    .filter((ins) => {
+      const src: string[] = Array.isArray(ins.source_message_ids) ? ins.source_message_ids : [];
+      if (src.length === 0) return false; // keep insights with no recorded source
+      return !src.some((id) => liveIds.has(id)); // orphan if none of its sources survive
+    })
+    .map((ins) => ins.id as string);
+  if (orphanInsightIds.length > 0) {
+    await supabaseAdmin.from('insights').delete().in('id', orphanInsightIds);
+  }
+
+  // 5. Rebuild the cumulative profile from the surviving summaries (1 LLM call).
+  const joinedSummaries = summaries.map((s, i) => `Conversation ${i + 1}:\n${s}`).join('\n\n');
+  const hebChars = (joinedSummaries.match(/[֐-׿]/g) ?? []).length;
+  const latChars = (joinedSummaries.match(/[A-Za-z]/g) ?? []).length;
+  const lang = hebChars >= latChars ? 'he' : 'en';
+
+  const profilePrompt = `You maintain an evolving understanding of a person, based on their conversations with KopelAi.
+
+Below are summaries of ALL of this person's conversations that currently exist (some past conversations may have been deleted and are intentionally absent). Produce a single, up-to-date understanding of this person based ONLY on what's here.
+
+Keep it under 400 words. Write in concise third-person notes. Group by themes (e.g. how they think, what they care about, recurring patterns, open threads). Be specific. Don't pad with generalities.
+
+Conversation summaries:
+${joinedSummaries}
+
+Updated understanding:`;
+
+  let newProfileSummary = '';
+  try {
+    const profileResponse = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 800,
+      messages: [{ role: 'user', content: profilePrompt }],
+    });
+    const block = profileResponse.content.find((b) => b.type === 'text');
+    newProfileSummary = block && block.type === 'text' ? block.text.trim() : '';
+  } catch (err) {
+    console.error('rebuildUserAnalysis profile error:', err);
+    return; // leave existing profile untouched rather than blanking on failure
+  }
+
+  // 6. Regenerate the user-facing opener from the fresh profile (1 LLM call).
+  const openerPrompt = lang === 'he'
+    ? `הינה סיכום של מה שאני יודע על האדם הזה כרגע:
+
+${newProfileSummary}
+
+כתוב פתיח קצר (2-3 משפטים, עברית, גוף שני - אתה/את) שיופיע בראש דף ה"תובנות" של האדם. חם אבל לא חנפני, ספציפי ולא גנרי, מזכיר משהו אחד או שניים שמתבלטים. החזר רק את הפתיח, בלי כותרות.`
+    : `Here's what I know about this person right now:
+
+${newProfileSummary}
+
+Write a short opener (2-3 sentences, English, second person) for the top of their "insights" page. Warm but not sycophantic, specific not generic, mentioning one or two things that stand out. Return only the opener, no headers.`;
+
+  let displayOpener = '';
+  try {
+    const openerResponse = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: openerPrompt }],
+    });
+    const block = openerResponse.content.find((b) => b.type === 'text');
+    displayOpener = block && block.type === 'text' ? block.text.trim() : '';
+  } catch (err) {
+    console.error('rebuildUserAnalysis opener error:', err);
+  }
+
+  // 7. Persist the refreshed aggregate.
+  await supabaseAdmin.from('user_profile').upsert(
+    {
+      user_id: userId,
+      prompt_summary: newProfileSummary,
+      ...(displayOpener ? { display_opener: displayOpener } : {}),
+      last_updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id' }
+  );
+}
+
+// ----------------------------------------------------------
 // End conversation (web): verify ownership, then consolidate.
 // ----------------------------------------------------------
 app.post('/end-conversation', async (req: Request, res: Response) => {
@@ -1968,6 +2102,17 @@ app.post('/delete-conversation', async (req: Request, res: Response) => {
 
     await supabaseAdmin.from('messages').delete().eq('conversation_id', conversationId);
     await supabaseAdmin.from('conversations').delete().eq('id', conversationId);
+
+    // Re-analyze the general analysis so it reflects only the remaining
+    // conversations (refreshes profile + opener, prunes orphaned insights).
+    try {
+      await rebuildUserAnalysis(user.id);
+    } catch (rebuildErr) {
+      // Don't fail the delete if the re-analysis hiccups — the conversation is
+      // already gone; the aggregate will catch up on the next session-end.
+      console.error('Rebuild analysis after delete failed:', rebuildErr);
+    }
+
     res.json({ ok: true });
   } catch (err: any) {
     console.error('Delete conversation error:', err);
