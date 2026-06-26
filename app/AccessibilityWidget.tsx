@@ -14,7 +14,8 @@ type Settings = {
 };
 
 const DEFAULTS: Settings = { font: 0, contrast: false, links: false, spacing: false, cursor: false, motion: false, guide: false };
-const FONT_STEPS = ['100%', '112%', '125%', '140%'];
+// Step 0 matches the app's default root font-size (set in globals.css).
+const FONT_STEPS = ['109%', '120%', '132%', '145%'];
 const STORAGE_KEY = 'kopelai.a11y';
 
 function apply(s: Settings) {
