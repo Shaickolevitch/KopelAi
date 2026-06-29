@@ -110,6 +110,20 @@ function trialDaysLeftFrom(trialEndsAt: string | null | undefined): number {
 // comped-Pro days (full, uncapped Pro) each time a referee converts to paying.
 const REFERRAL_TRIAL_DAYS = 30;
 const REFERRAL_REWARD_DAYS = 30;
+// Pull a usable first name from the auth user's signup metadata. Returns '' when
+// there's no real name on file (we deliberately don't fall back to the email
+// local-part — "shaigian1" is not a name to greet someone by). Kopel will then
+// pick the name up in conversation and remember it instead.
+function firstNameFromUser(user: any): string {
+  const meta = user?.user_metadata || {};
+  const raw = (meta.full_name || meta.name || meta.first_name || '').toString().trim();
+  if (!raw) return '';
+  const first = raw.split(/\s+/)[0];
+  // Guard against email-ish or junk values sneaking into name fields.
+  if (!first || first.includes('@') || /\d/.test(first)) return '';
+  return first.slice(0, 40);
+}
+
 function compedProActive(referralProUntil: string | null | undefined): boolean {
   if (!referralProUntil) return false;
   return Date.now() < new Date(referralProUntil).getTime();
@@ -716,10 +730,19 @@ async function buildSystemPrompt(
   windDown = false,
   isProEffective = false,
   channel: 'web' | 'whatsapp' = 'web',
-  sessionMinutes = 0
+  sessionMinutes = 0,
+  firstName = ''
 ): Promise<SystemBlock[]> {
   const basePrompt = await getBasePrompt();
   const knowledge = await getKnowledgeContext(lastUserMessage ?? '');
+
+  // If we know the therapist's first name, tell Kopel so the "# Their name"
+  // guidance has something to work with. The base prompt already governs HOW to
+  // use it (sparingly, at warm moments); this only supplies the value.
+  const cleanName = (firstName ?? '').trim();
+  const nameDirective = cleanName
+    ? `\n\n# Their name\n\nThis person's name is ${cleanName}. Use it the way your base instructions describe — sparingly, only at moments that carry warmth, never in every message.`
+    : '';
 
   const langDirective =
     language === 'he'
@@ -755,7 +778,7 @@ async function buildSystemPrompt(
     rest.trim().length > 0 ? [baseBlock, { type: 'text', text: rest }] : [baseBlock];
 
   if (!userId) {
-    return dynamic(knowledge + langDirective + windDownDirective + channelDirective + sessionTimeDirective);
+    return dynamic(knowledge + nameDirective + langDirective + windDownDirective + channelDirective + sessionTimeDirective);
   }
 
   const { data: profile } = await supabaseAdmin
@@ -777,7 +800,7 @@ async function buildSystemPrompt(
     memorySection = `\n\n# What you remember about this person\n\nThis is a fresh session and you have no memory of past conversations with this person. Don't pretend to remember things you don't, and don't claim to recognize them.`;
   }
 
-  return dynamic(knowledge + memorySection + langDirective + windDownDirective + channelDirective + sessionTimeDirective);
+  return dynamic(knowledge + memorySection + nameDirective + langDirective + windDownDirective + channelDirective + sessionTimeDirective);
 }
 
 // Try to extract JSON from a Claude response, handling cases where it includes prose
@@ -898,7 +921,10 @@ app.post('/chat', async (req: Request, res: Response) => {
 
     const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user')?.content;
     const sessionMinutes = typeof session_minutes === 'number' && session_minutes > 0 ? Math.floor(session_minutes) : 0;
-    const systemPrompt = await buildSystemPrompt(userId, language ?? 'he', lastUserMessage, windDown, proFeatures, 'web', sessionMinutes);
+    // First name for the personal "connection" touches — from the signup name
+    // only (never the email local-part, which isn't a name worth being called).
+    const firstName = firstNameFromUser(user);
+    const systemPrompt = await buildSystemPrompt(userId, language ?? 'he', lastUserMessage, windDown, proFeatures, 'web', sessionMinutes, firstName);
     const cappedMessages = messages.slice(-30);
 
     // Prompt-cache the conversation prefix: marking the last message caches
