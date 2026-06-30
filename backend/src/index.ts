@@ -2821,6 +2821,19 @@ const tgConfigured = () => Boolean(TG.token);
 // "Connect Telegram" UI to everyone; admin always sees it for testing.
 const tgLiveFlag = () => process.env.TELEGRAM_LIVE === '1' || process.env.TELEGRAM_LIVE === 'true';
 
+// Show the "typing…" indicator (clears on its own after ~5s or on next message).
+// Best-effort; never throws.
+async function sendTelegramTyping(chatId: string) {
+  if (!tgConfigured()) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${TG.token}/sendChatAction`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, action: 'typing' }),
+    });
+  } catch { /* ignore */ }
+}
+
 async function sendTelegram(chatId: string, body: string, replyMarkup?: unknown) {
   if (!tgConfigured() || !body) return;
   try {
@@ -3011,50 +3024,85 @@ async function handleTelegramMessage(chatId: string, text: string) {
     conversation_id: conversationId, user_id: userId, role: 'user', content: userContent, language: lang, created_at: new Date().toISOString(),
   });
 
-  // 6. Build context from the last messages of this thread.
+  // 6. Don't reply per message. People fire off several quick texts in a row;
+  // replying to each feels robotic. Show a "typing" hint, then debounce — each
+  // new message resets a short timer, and when it settles we generate ONE reply
+  // to the whole burst (all the buffered messages are already persisted above).
+  void sendTelegramTyping(chatId);
+  scheduleTelegramReply(chatId, userId, conversationId, lang, proFeatures, windDown);
+}
+
+// Per-chat debounce so a flurry of quick messages yields a single reply.
+const TG_DEBOUNCE_MS = 4000;
+const tgReplyTimers = new Map<string, NodeJS.Timeout>();
+function scheduleTelegramReply(
+  chatId: string, userId: string, conversationId: string, lang: 'he' | 'en', proFeatures: boolean, windDown: boolean,
+) {
+  const existing = tgReplyTimers.get(chatId);
+  if (existing) clearTimeout(existing);
+  const t = setTimeout(() => {
+    tgReplyTimers.delete(chatId);
+    generateTelegramReply(chatId, userId, conversationId, lang, proFeatures, windDown)
+      .catch((e) => console.error('Telegram reply generation error:', e));
+  }, TG_DEBOUNCE_MS);
+  tgReplyTimers.set(chatId, t);
+}
+
+// Anthropic requires alternating roles; merge consecutive same-role turns (e.g.
+// a burst of user messages) into one so the model sees them as a single turn.
+function mergeConsecutive(msgs: { role: string; content: string }[]) {
+  const out: { role: string; content: string }[] = [];
+  for (const m of msgs) {
+    const last = out[out.length - 1];
+    if (last && last.role === m.role) last.content += '\n' + m.content;
+    else out.push({ role: m.role, content: m.content });
+  }
+  return out;
+}
+
+// Generate + send ONE Telegram reply for the current buffered state of a thread.
+async function generateTelegramReply(
+  chatId: string, userId: string, conversationId: string, lang: 'he' | 'en', proFeatures: boolean, windDown: boolean,
+) {
+  await sendTelegramTyping(chatId);
   const { data: history } = await supabaseAdmin
     .from('messages').select('role, content').eq('conversation_id', conversationId)
     .is('deleted_at', null).order('created_at', { ascending: true }).limit(60);
-  const recent = (history ?? []).slice(-30);
+  const recent = mergeConsecutive((history ?? []).slice(-30));
+  const lastUser = [...recent].reverse().find((m) => m.role === 'user')?.content ?? '';
 
-  // 7. Same brain — system prompt (with memory if Pro/trial) + model.
-  const systemPrompt = await buildSystemPrompt(userId, lang, userContent, windDown, proFeatures, 'telegram');
-  const tgModel = await chooseModel(userContent, proFeatures);
+  const systemPrompt = await buildSystemPrompt(userId, lang, lastUser, windDown, proFeatures, 'telegram');
+  const tgModel = await chooseModel(lastUser, proFeatures);
   const response = await createWithFallback({
     model: tgModel,
     max_tokens: 1024,
     system: systemPrompt,
-    messages: recent.map((m: any) => ({ role: m.role, content: m.content })),
+    messages: recent.map((m) => ({ role: m.role, content: m.content })),
   });
   const block = response.content.find((b) => b.type === 'text');
   let reply = stripToolNoise(block && block.type === 'text' ? block.text : '');
   if (!reply) {
-    // Model produced only tool-call noise — recover gracefully instead of silence.
     reply = lang === 'he'
       ? 'אני כאן 🙂 על מה תרצה/י לדבר? (אם בא לך לסיים, כתוב/י "סיים שיחה".)'
       : "I'm here 🙂 What would you like to talk about? (To wrap up, just say \"end session\".)";
   }
+  if (!reply) return;
 
-  // 8. Persist the clean reply, then send it — with an occasional "this isn't
-  // remembered, go Pro" nudge appended for free users (every ~6th turn + the
-  // first), mirroring the web experience. The nudge is NOT persisted, so it
-  // never pollutes the transcript or the model's context.
-  if (reply) {
-    await supabaseAdmin.from('messages').insert({
-      conversation_id: conversationId, user_id: userId, role: 'assistant', content: reply, language: lang, created_at: new Date().toISOString(),
-    });
-
-    let toSend = reply;
-    if (!proFeatures) {
-      const userTurns = (history ?? []).filter((m: any) => m.role === 'user').length;
-      if (userTurns === 1 || userTurns % 6 === 0) {
-        toSend += lang === 'he'
-          ? '\n\n— אגב, בגרסה החינמית אני לא זוכר את השיחה הזו אחרי שהיא נגמרת, וחבל. בפרו אני זוכר אותך בין מפגשים ובונה ניתוח מצטבר 🌱 לשדרוג: https://kopelai.com/app/plan'
-          : "\n\n— By the way, on the free plan I don't remember this conversation once it ends, which is a shame. With Pro I remember you between sessions and build cumulative insights 🌱 Upgrade: https://kopelai.com/app/plan";
-      }
+  // Persist the clean reply; append the free-user "go Pro" nudge only to the
+  // sent text (every ~6th user turn + the first), never to the stored transcript.
+  await supabaseAdmin.from('messages').insert({
+    conversation_id: conversationId, user_id: userId, role: 'assistant', content: reply, language: lang, created_at: new Date().toISOString(),
+  });
+  let toSend = reply;
+  if (!proFeatures) {
+    const userTurns = (history ?? []).filter((m: any) => m.role === 'user').length;
+    if (userTurns === 1 || userTurns % 6 === 0) {
+      toSend += lang === 'he'
+        ? '\n\n— אגב, בגרסה החינמית אני לא זוכר את השיחה הזו אחרי שהיא נגמרת, וחבל. בפרו אני זוכר אותך בין מפגשים ובונה ניתוח מצטבר 🌱 לשדרוג: https://kopelai.com/app/plan'
+        : "\n\n— By the way, on the free plan I don't remember this conversation once it ends, which is a shame. With Pro I remember you between sessions and build cumulative insights 🌱 Upgrade: https://kopelai.com/app/plan";
     }
-    await sendTelegram(chatId, toSend);
   }
+  await sendTelegram(chatId, toSend);
 }
 
 // Incoming Telegram updates (set this URL via the Bot API setWebhook).
