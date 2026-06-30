@@ -2818,6 +2818,22 @@ async function handleTelegramMessage(chatId: string, text: string) {
     .eq('user_id', userId).eq('channel', 'telegram').is('ended_at', null).is('deleted_at', null)
     .order('started_at', { ascending: false }).limit(1).maybeSingle();
 
+  // Explicit "end this session / start a new one" command — works any time.
+  // Summarizes the current thread (if any) and opens a clean slate on the next
+  // message. Must be the whole message, so "סיים שיחה על X" won't trigger it.
+  const wantsNewSession = /^\s*(\/new|\/restart|\/end|שיחה חדשה|התחל שיחה חדשה|להתחיל שיחה חדשה|בוא נתחיל מחדש|סיים שיחה|לסיים את השיחה|לסיים שיחה|סיום שיחה|מתחילים מחדש|new (chat|conversation|session)|start over|end (session|chat|conversation))\s*[.!?]*\s*$/i.test(trimmed);
+  if (wantsNewSession) {
+    if (openConvo?.id) await consolidateConversation(openConvo.id);
+    await sendTelegram(chatId, lang === 'he'
+      ? (openConvo?.id
+          ? 'סיכמתי ושמרתי את המפגש 🙏 פתחנו דף חדש — על מה תרצה/י לדבר עכשיו?'
+          : 'בוא/י נתחיל דף חדש — על מה תרצה/י לדבר?')
+      : (openConvo?.id
+          ? "Summarized and saved that session 🙏 Fresh start — what would you like to talk about now?"
+          : "Let's start fresh — what's on your mind?"));
+    return;
+  }
+
   // If we previously asked "should I wrap up & summarize?", this message is the
   // answer. A "yes" ends + summarizes the session now; anything else means
   // they're continuing, so we clear the flag and carry on normally.
