@@ -2821,17 +2821,71 @@ const tgConfigured = () => Boolean(TG.token);
 // "Connect Telegram" UI to everyone; admin always sees it for testing.
 const tgLiveFlag = () => process.env.TELEGRAM_LIVE === '1' || process.env.TELEGRAM_LIVE === 'true';
 
-async function sendTelegram(chatId: string, body: string) {
+async function sendTelegram(chatId: string, body: string, replyMarkup?: unknown) {
   if (!tgConfigured() || !body) return;
   try {
+    const payload: Record<string, unknown> = { chat_id: chatId, text: body.slice(0, 4096) };
+    if (replyMarkup) payload.reply_markup = replyMarkup;
     const r = await fetch(`https://api.telegram.org/bot${TG.token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: body.slice(0, 4096) }),
+      body: JSON.stringify(payload),
     });
     if (!r.ok) console.error('Telegram send failed:', r.status, await r.text());
   } catch (e) {
     console.error('Telegram send error:', e);
+  }
+}
+
+// A one-tap inline "end & summarize" button. Tapping it fires a callback_query
+// (data: 'end_session') that we handle below — a real button, not a typed "כן".
+const endSessionKeyboard = (he: boolean) => ({
+  inline_keyboard: [[{ text: he ? '🔚 סיים וסכם שיחה' : '🔚 End & summarize', callback_data: 'end_session' }]],
+});
+
+// Acknowledge a tapped inline button so Telegram stops the loading spinner.
+async function answerTelegramCallback(callbackId: string, text?: string) {
+  if (!tgConfigured()) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${TG.token}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callback_query_id: callbackId, ...(text ? { text: text.slice(0, 200) } : {}) }),
+    });
+  } catch (e) {
+    console.error('Telegram answerCallback error:', e);
+  }
+}
+
+// Handle a tapped inline button. Currently only 'end_session': summarize + close
+// the open Telegram thread immediately (the tap is itself the confirmation).
+async function handleTelegramCallback(cq: any) {
+  try {
+    const chatId = cq?.message?.chat?.id;
+    const data = cq?.data;
+    if (chatId == null || !cq?.id) return;
+    if (data !== 'end_session') { await answerTelegramCallback(cq.id); return; }
+
+    const { data: link } = await supabaseAdmin
+      .from('telegram_links').select('user_id').eq('chat_id', String(chatId)).maybeSingle();
+    if (!link) { await answerTelegramCallback(cq.id); return; }
+
+    const { data: openConvo } = await supabaseAdmin
+      .from('conversations').select('id, language')
+      .eq('user_id', link.user_id).eq('channel', 'telegram').is('ended_at', null).is('deleted_at', null)
+      .order('started_at', { ascending: false }).limit(1).maybeSingle();
+    const he = (openConvo?.language ?? 'he') === 'he';
+    if (!openConvo?.id) {
+      await answerTelegramCallback(cq.id, he ? 'אין כרגע שיחה פעילה לסכם 🙂' : 'No active session to wrap up 🙂');
+      return;
+    }
+    await answerTelegramCallback(cq.id, he ? 'מסכם ושומר…' : 'Summarizing…');
+    await consolidateConversation(openConvo.id);
+    await sendTelegram(String(chatId), he
+      ? 'סיכמתי ושמרתי את המפגש בזיכרון. תודה על השיחה — נתראה בפעם הבאה 🙏'
+      : "Done — I've summarized and saved this session to memory. Thanks for the conversation — see you next time 🙏");
+  } catch (e) {
+    console.error('Telegram callback error:', e);
   }
 }
 
@@ -2893,8 +2947,9 @@ async function handleTelegramMessage(chatId: string, text: string) {
     }
     await supabaseAdmin.from('conversations').update({ close_prompted_at: new Date().toISOString() }).eq('id', openConvo.id);
     await sendTelegram(chatId, lang === 'he'
-      ? 'רוצה שאסכם ואשמור את המפגש הנוכחי, ואז נפתח דף חדש? כתוב/י "כן" לסיום — או פשוט המשך/י לכתוב ונישאר כאן.'
-      : 'Want me to summarize and save this session, then start fresh? Reply "yes" to close — or just keep writing and we\'ll stay here.');
+      ? 'רוצה שאסכם ואשמור את המפגש הנוכחי, ואז נפתח דף חדש? לחצ/י על הכפתור למטה לסיום — או פשוט המשך/י לכתוב ונישאר כאן.'
+      : 'Want me to summarize and save this session, then start fresh? Tap the button below to close — or just keep writing and we\'ll stay here.',
+      endSessionKeyboard(lang === 'he'));
     return;
   }
 
@@ -2998,6 +3053,11 @@ app.post('/telegram/webhook', async (req: Request, res: Response) => {
   }
   res.sendStatus(200); // ack fast; process after
   try {
+    // A tapped inline button (e.g. "סיים וסכם שיחה") arrives as callback_query.
+    if (req.body?.callback_query) {
+      await handleTelegramCallback(req.body.callback_query);
+      return;
+    }
     const msg = req.body?.message ?? req.body?.edited_message;
     const chatId = msg?.chat?.id;
     if (chatId == null) return;
@@ -3063,8 +3123,9 @@ async function sweepIdleTelegram() {
         if (link?.chat_id) {
           const he = c.language === 'he';
           await sendTelegram(link.chat_id, he
-            ? 'נראה לי שעצרנו לרגע 🙂 רוצה שאסכם לנו את המפגש ואשמור אותו בזיכרון? כתוב/י "לסכם" לסיום — או פשוט המשך/י לכתוב ונמשיך מכאן.'
-            : 'Looks like we paused 🙂 Want me to wrap up this session and save a summary to memory? Reply "summarize" to close — or just keep writing and we\'ll continue.');
+            ? 'נראה לי שעצרנו לרגע 🙂 רוצה שאסכם לנו את המפגש ואשמור אותו בזיכרון? לחצ/י על הכפתור למטה לסיום — או פשוט המשך/י לכתוב ונמשיך מכאן.'
+            : 'Looks like we paused 🙂 Want me to wrap up this session and save a summary to memory? Tap the button below to close — or just keep writing and we\'ll continue.',
+            endSessionKeyboard(he));
         }
         await supabaseAdmin.from('conversations').update({ close_prompted_at: new Date().toISOString() }).eq('id', c.id);
       } else if (Date.now() - new Date(c.close_prompted_at).getTime() > TG_CLOSE_GRACE_MS) {
