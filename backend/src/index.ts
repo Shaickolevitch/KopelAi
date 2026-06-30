@@ -2819,18 +2819,22 @@ async function handleTelegramMessage(chatId: string, text: string) {
     .order('started_at', { ascending: false }).limit(1).maybeSingle();
 
   // Explicit "end this session / start a new one" command — works any time.
-  // Summarizes the current thread (if any) and opens a clean slate on the next
-  // message. Must be the whole message, so "סיים שיחה על X" won't trigger it.
+  // We don't end immediately: we ask for confirmation first (set the same
+  // "awaiting confirmation" flag the idle sweep uses), and the user's next
+  // "yes" actually summarizes + closes (handled by the block just below).
+  // Must be the whole message, so "סיים שיחה על X" won't trigger it.
   const wantsNewSession = /^\s*(\/new|\/restart|\/end|שיחה חדשה|התחל שיחה חדשה|להתחיל שיחה חדשה|בוא נתחיל מחדש|סיים שיחה|לסיים את השיחה|לסיים שיחה|סיום שיחה|מתחילים מחדש|new (chat|conversation|session)|start over|end (session|chat|conversation))\s*[.!?]*\s*$/i.test(trimmed);
   if (wantsNewSession) {
-    if (openConvo?.id) await consolidateConversation(openConvo.id);
+    if (!openConvo?.id) {
+      await sendTelegram(chatId, lang === 'he'
+        ? 'אין כרגע שיחה פעילה לסכם — אפשר פשוט להתחיל לכתוב 🙂'
+        : "There's no active session to wrap up — just start writing 🙂");
+      return;
+    }
+    await supabaseAdmin.from('conversations').update({ close_prompted_at: new Date().toISOString() }).eq('id', openConvo.id);
     await sendTelegram(chatId, lang === 'he'
-      ? (openConvo?.id
-          ? 'סיכמתי ושמרתי את המפגש 🙏 פתחנו דף חדש — על מה תרצה/י לדבר עכשיו?'
-          : 'בוא/י נתחיל דף חדש — על מה תרצה/י לדבר?')
-      : (openConvo?.id
-          ? "Summarized and saved that session 🙏 Fresh start — what would you like to talk about now?"
-          : "Let's start fresh — what's on your mind?"));
+      ? 'רוצה שאסכם ואשמור את המפגש הנוכחי, ואז נפתח דף חדש? כתוב/י "כן" לסיום — או פשוט המשך/י לכתוב ונישאר כאן.'
+      : 'Want me to summarize and save this session, then start fresh? Reply "yes" to close — or just keep writing and we\'ll stay here.');
     return;
   }
 
