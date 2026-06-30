@@ -2883,7 +2883,7 @@ async function handleTelegramMessage(chatId: string, text: string) {
   // "awaiting confirmation" flag the idle sweep uses), and the user's next
   // "yes" actually summarizes + closes (handled by the block just below).
   // Must be the whole message, so "סיים שיחה על X" won't trigger it.
-  const wantsNewSession = /^\s*(\/(new|restart|end)|(ל|ת|נ)?סיים(י|נו)?(\s+(את\s+)?ה?שיחה)?|(ל|ת)?סכם(\s+(את\s+)?ה?שיחה)?|סיום(\s+ה?שיחה)?|שיחה\s+חדשה|(התחל|להתחיל|נתחיל)(\s+\S+)*\s+חדשה|מתחילים\s+מחדש|דף\s+חדש|new\s+(chat|conversation|session)|start\s+over|end\s+(the\s+)?(session|chat|conversation)|wrap\s+up)\s*[.!?]*\s*$/i.test(trimmed);
+  const wantsNewSession = /^\s*(?:(?:בוא|בואי|אפשר|נא|רוצה|נרצה|please|lets|let's)\s+)?(?:(?:אני|אנחנו)\s+)?(?:(?:רוצה|רוצים|want|wanna)\s+(?:to\s+)?)?(\/(new|restart|end)|(ל|ת|נ)?סיים(י|נו)?(\s+(את\s+)?ה?שיחה)?|(ל|ת)?סכם(\s+(את\s+)?ה?שיחה)?|סיום(\s+ה?שיחה)?|שיחה\s+חדשה|(התחל|להתחיל|נתחיל)(\s+\S+)*\s+חדשה|מתחילים\s+מחדש|דף\s+חדש|new\s+(chat|conversation|session)|start\s+over|end\s+(the\s+)?(session|chat|conversation)|wrap\s+up)\s*[.!?]*\s*$/i.test(trimmed);
   if (wantsNewSession) {
     if (!openConvo?.id) {
       await sendTelegram(chatId, lang === 'he'

@@ -414,7 +414,7 @@ export default function ConversationPage() {
     // Chat-triggered end-of-session, with a confirmation step (mirrors Telegram).
     // Handled here on the client so it actually ends + goes to analysis, instead
     // of the model just role-playing a goodbye while the session stays open.
-    const endRe = /^\s*(\/?(new|restart|end)|(ל|ת|נ)?סיים(י|נו)?(\s+(את\s+)?ה?שיחה)?|(ל|ת)?סכם(\s+(את\s+)?ה?שיחה)?|סיום(\s+ה?שיחה)?|שיחה\s+חדשה|מתחילים\s+מחדש|דף\s+חדש|new\s+(chat|conversation|session)|start\s+over|end\s+(the\s+)?(session|chat|conversation)|wrap\s+up)\s*[.!?]*\s*$/i;
+    const endRe = /^\s*(?:(?:בוא|בואי|אפשר|נא|רוצה|נרצה|please|lets|let's)\s+)?(?:(?:אני|אנחנו)\s+)?(?:(?:רוצה|רוצים|want|wanna)\s+(?:to\s+)?)?(\/?(new|restart|end)|(ל|ת|נ)?סיים(י|נו)?(\s+(את\s+)?ה?שיחה)?|(ל|ת)?סכם(\s+(את\s+)?ה?שיחה)?|סיום(\s+ה?שיחה)?|שיחה\s+חדשה|מתחילים\s+מחדש|דף\s+חדש|new\s+(chat|conversation|session)|start\s+over|end\s+(the\s+)?(session|chat|conversation)|wrap\s+up)\s*[.!?]*\s*$/i;
     const yesRe = /^\s*(כן|בטח|לסכם|תסכם|סכם|סיימתי|סיימנו|סיום|אפשר|yes|yep|yeah|ok|okay|sure|please)\b/i;
 
     if (!att && pendingEnd) {
