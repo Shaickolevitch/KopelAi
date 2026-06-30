@@ -2810,6 +2810,30 @@ async function handleTelegramMessage(chatId: string, text: string) {
 
   const userId = link.user_id as string;
 
+  // 2.5 Look up the open Telegram thread up front — we need it both for the
+  // wrap-up confirmation below and as the conversation to write into later.
+  const { data: openConvo } = await supabaseAdmin
+    .from('conversations')
+    .select('id, close_prompted_at')
+    .eq('user_id', userId).eq('channel', 'telegram').is('ended_at', null).is('deleted_at', null)
+    .order('started_at', { ascending: false }).limit(1).maybeSingle();
+
+  // If we previously asked "should I wrap up & summarize?", this message is the
+  // answer. A "yes" ends + summarizes the session now; anything else means
+  // they're continuing, so we clear the flag and carry on normally.
+  if (openConvo?.close_prompted_at) {
+    const wantsClose = /^\s*(לסכם|תסכם|סכם|סיכום|כן|בטח|סיימתי|סיימנו|סיום|אפשר|yes|yep|yeah|ok|okay|sure|please|summari[sz]e|wrap)\b/i.test(trimmed);
+    if (wantsClose) {
+      await consolidateConversation(openConvo.id);
+      await sendTelegram(chatId, lang === 'he'
+        ? 'סיכמתי ושמרתי את המפגש בזיכרון. תודה על השיחה — נתראה בפעם הבאה 🙏'
+        : "Done — I've summarized and saved this session to memory. Thanks for the conversation — see you next time 🙏");
+      return;
+    }
+    // Not a "yes" → they want to keep going. Clear the prompt and continue.
+    await supabaseAdmin.from('conversations').update({ close_prompted_at: null }).eq('id', openConvo.id);
+  }
+
   // 3. Shared tier + daily wall (same counter as web).
   const { data: tierRow } = await supabaseAdmin
     .from('user_profile').select('subscription_tier, trial_ends_at, referral_pro_until').eq('user_id', userId).maybeSingle();
@@ -2827,11 +2851,7 @@ async function handleTelegramMessage(chatId: string, text: string) {
   }
   const windDown = !paidPro && typeof count === 'number' && count === dailyLimit;
 
-  // 4. Find or open this user's active Telegram conversation.
-  const { data: openConvo } = await supabaseAdmin
-    .from('conversations').select('id')
-    .eq('user_id', userId).eq('channel', 'telegram').is('ended_at', null).is('deleted_at', null)
-    .order('started_at', { ascending: false }).limit(1).maybeSingle();
+  // 4. Reuse the open conversation we looked up above (or open a fresh one).
   let conversationId = openConvo?.id as string | undefined;
   if (!conversationId) {
     const { data: created } = await supabaseAdmin
@@ -2921,20 +2941,42 @@ app.post('/telegram/link-code', async (req: Request, res: Response) => {
   res.json({ code, tgLink, botUsername: TG.botUsername || null });
 });
 
-// Every 5 minutes: close Telegram threads idle for >30 min and consolidate.
+// Every 5 minutes: for Telegram threads idle >30 min, ASK before wrapping up
+// instead of summarizing silently. First idle → send a "want me to summarize?"
+// prompt and remember we asked. The user's next message answers it (handled in
+// handleTelegramMessage). Only if they never reply for a long grace period do we
+// auto-consolidate as a fallback, so memory still eventually gets built.
+const TG_CLOSE_GRACE_MS = 24 * 60 * 60_000; // 24h after asking with no reply → auto-wrap
 async function sweepIdleTelegram() {
   try {
     const cutoff = new Date(Date.now() - WA_IDLE_MS).toISOString();
     const { data: convos } = await supabaseAdmin
-      .from('conversations').select('id')
+      .from('conversations').select('id, user_id, language, close_prompted_at')
       .eq('channel', 'telegram').is('ended_at', null).is('deleted_at', null).limit(50);
     for (const c of convos ?? []) {
       const { data: last } = await supabaseAdmin
         .from('messages').select('created_at').eq('conversation_id', c.id)
         .order('created_at', { ascending: false }).limit(1).maybeSingle();
       if (!last) {
+        // Empty thread — nothing to summarize; just close it.
         await supabaseAdmin.from('conversations').update({ ended_at: new Date().toISOString() }).eq('id', c.id);
-      } else if (last.created_at < cutoff) {
+        continue;
+      }
+      if (last.created_at >= cutoff) continue; // still active recently
+
+      if (!c.close_prompted_at) {
+        // First time idle → ask whether to wrap up (don't summarize yet).
+        const { data: link } = await supabaseAdmin
+          .from('telegram_links').select('chat_id').eq('user_id', c.user_id).maybeSingle();
+        if (link?.chat_id) {
+          const he = c.language === 'he';
+          await sendTelegram(link.chat_id, he
+            ? 'נראה לי שעצרנו לרגע 🙂 רוצה שאסכם לנו את המפגש ואשמור אותו בזיכרון? כתוב/י "לסכם" לסיום — או פשוט המשך/י לכתוב ונמשיך מכאן.'
+            : 'Looks like we paused 🙂 Want me to wrap up this session and save a summary to memory? Reply "summarize" to close — or just keep writing and we\'ll continue.');
+        }
+        await supabaseAdmin.from('conversations').update({ close_prompted_at: new Date().toISOString() }).eq('id', c.id);
+      } else if (Date.now() - new Date(c.close_prompted_at).getTime() > TG_CLOSE_GRACE_MS) {
+        // Asked a long time ago, never answered → consolidate as a fallback.
         await consolidateConversation(c.id);
       }
     }
