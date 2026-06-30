@@ -2540,6 +2540,20 @@ const waConfigured = () => Boolean(WA.token && WA.phoneNumberId);
 const waLiveFlag = () => process.env.WHATSAPP_LIVE === '1' || process.env.WHATSAPP_LIVE === 'true';
 const isHe = (t: string) => /[֐-׿]/.test(t);
 
+// Safety net: the model occasionally hallucinates "tool calls" (e.g. inventing
+// an end_conversation function) and leaks <tool_calls> JSON / "I need to call …
+// function" narration. We have no tools, so strip any of that before sending.
+function stripToolNoise(s: string): string {
+  let out = (s || '')
+    .replace(/<tool_calls>[\s\S]*?<\/tool_calls>/gi, '')
+    .replace(/<\/?tool_calls>/gi, '');
+  out = out
+    .split('\n')
+    .filter((l) => !/end_conversation|"type"\s*:\s*"function"|"function"\s*:\s*\{|I need to call the .*function/i.test(l))
+    .join('\n');
+  return out.trim();
+}
+
 async function sendWhatsApp(to: string, body: string) {
   if (!waConfigured() || !body) return;
   try {
@@ -2642,7 +2656,7 @@ async function handleWhatsAppMessage(phone: string, text: string) {
     messages: recent.map((m: any) => ({ role: m.role, content: m.content })),
   });
   const block = response.content.find((b) => b.type === 'text');
-  const reply = block && block.type === 'text' ? block.text : '';
+  const reply = stripToolNoise(block && block.type === 'text' ? block.text : '');
 
   // 8. Persist + send the reply.
   if (reply) {
@@ -2823,7 +2837,7 @@ async function handleTelegramMessage(chatId: string, text: string) {
   // "awaiting confirmation" flag the idle sweep uses), and the user's next
   // "yes" actually summarizes + closes (handled by the block just below).
   // Must be the whole message, so "סיים שיחה על X" won't trigger it.
-  const wantsNewSession = /^\s*(\/new|\/restart|\/end|שיחה חדשה|התחל שיחה חדשה|להתחיל שיחה חדשה|בוא נתחיל מחדש|סיים שיחה|לסיים את השיחה|לסיים שיחה|סיום שיחה|מתחילים מחדש|new (chat|conversation|session)|start over|end (session|chat|conversation))\s*[.!?]*\s*$/i.test(trimmed);
+  const wantsNewSession = /^\s*(\/(new|restart|end)|(ל|ת|נ)?סיים(י|נו)?(\s+(את\s+)?ה?שיחה)?|(ל|ת)?סכם(\s+(את\s+)?ה?שיחה)?|סיום(\s+ה?שיחה)?|שיחה\s+חדשה|(התחל|להתחיל|נתחיל)(\s+\S+)*\s+חדשה|מתחילים\s+מחדש|דף\s+חדש|new\s+(chat|conversation|session)|start\s+over|end\s+(the\s+)?(session|chat|conversation)|wrap\s+up)\s*[.!?]*\s*$/i.test(trimmed);
   if (wantsNewSession) {
     if (!openConvo?.id) {
       await sendTelegram(chatId, lang === 'he'
@@ -2906,7 +2920,13 @@ async function handleTelegramMessage(chatId: string, text: string) {
     messages: recent.map((m: any) => ({ role: m.role, content: m.content })),
   });
   const block = response.content.find((b) => b.type === 'text');
-  const reply = block && block.type === 'text' ? block.text : '';
+  let reply = stripToolNoise(block && block.type === 'text' ? block.text : '');
+  if (!reply) {
+    // Model produced only tool-call noise — recover gracefully instead of silence.
+    reply = lang === 'he'
+      ? 'אני כאן 🙂 על מה תרצה/י לדבר? (אם בא לך לסיים, כתוב/י "סיים שיחה".)'
+      : "I'm here 🙂 What would you like to talk about? (To wrap up, just say \"end session\".)";
+  }
 
   // 8. Persist + send the reply.
   if (reply) {
