@@ -938,15 +938,17 @@ app.post('/chat', async (req: Request, res: Response) => {
         : { role: m.role, content: m.content }
     );
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
+    // Auto-route deep/reflective turns (Pro/trial) to Opus for this answer.
+    const chosenModel = await chooseModel(lastUserMessage ?? '', proFeatures);
+    const response = await createWithFallback({
+      model: chosenModel,
       max_tokens: 2048,
       system: systemPrompt,
       messages: apiMessages,
     });
 
     const textBlock = response.content.find((b) => b.type === 'text');
-    const text = textBlock && textBlock.type === 'text' ? textBlock.text : '';
+    const text = stripToolNoise(textBlock && textBlock.type === 'text' ? textBlock.text : '');
 
     // Tree: showing up today waters the tree (daily streak). Fire-and-forget so
     // it never adds latency to the reply; the helper no-ops for non-Pro users.
@@ -2554,6 +2556,50 @@ function stripToolNoise(s: string): string {
   return out.trim();
 }
 
+// Model routing. Everyday turns run on the fast default; substantive/reflective
+// turns from effective-Pro users are auto-routed to a deeper model for that one
+// answer. Both strings are env-overridable, and any failure falls back safely.
+const MODEL_DEFAULT = 'claude-sonnet-4-5';
+const MODEL_DEEP = process.env.KOPELAI_DEEP_MODEL || 'claude-opus-4-6';
+const DEEP_AUTO = process.env.KOPELAI_DEEP_AUTO !== '0';
+
+// Decide which model to use for one user message. Pro/trial only. A cheap
+// pre-filter skips obviously-light messages; a quick Haiku classifier judges the
+// rest. Never throws — returns the default on any problem.
+async function chooseModel(message: string, isPro: boolean): Promise<string> {
+  if (!DEEP_AUTO || !isPro) return MODEL_DEFAULT;
+  const m = (message || '').trim();
+  if (m.length < 40) return MODEL_DEFAULT; // greetings, acks, one-liners → fast
+  try {
+    const r = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 5,
+      system: 'You route a therapist\'s message to one of two models. Reply with exactly one word: DEEP or LIGHT. DEEP = an emotionally, clinically, existentially, or intellectually substantive question or reflection that benefits from careful, deep thinking. LIGHT = small talk, logistics, short reactions, or simple factual asks.',
+      messages: [{ role: 'user', content: m.slice(0, 2000) }],
+    });
+    const b = r.content.find((x) => x.type === 'text');
+    const verdict = b && b.type === 'text' ? b.text.toUpperCase() : '';
+    return verdict.includes('DEEP') ? MODEL_DEEP : MODEL_DEFAULT;
+  } catch (e) {
+    console.error('chooseModel classifier error:', e);
+    return MODEL_DEFAULT;
+  }
+}
+
+// Create a message, but if a non-default (deep) model fails — e.g. an unknown
+// model id or no access — transparently retry once on the default model.
+async function createWithFallback(params: any) {
+  try {
+    return await anthropic.messages.create(params);
+  } catch (e) {
+    if (params?.model && params.model !== MODEL_DEFAULT) {
+      console.error('Deep model failed, falling back to default:', e);
+      return await anthropic.messages.create({ ...params, model: MODEL_DEFAULT });
+    }
+    throw e;
+  }
+}
+
 async function sendWhatsApp(to: string, body: string) {
   if (!waConfigured() || !body) return;
   try {
@@ -2913,8 +2959,9 @@ async function handleTelegramMessage(chatId: string, text: string) {
 
   // 7. Same brain — system prompt (with memory if Pro/trial) + model.
   const systemPrompt = await buildSystemPrompt(userId, lang, userContent, windDown, proFeatures, 'telegram');
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5',
+  const tgModel = await chooseModel(userContent, proFeatures);
+  const response = await createWithFallback({
+    model: tgModel,
     max_tokens: 1024,
     system: systemPrompt,
     messages: recent.map((m: any) => ({ role: m.role, content: m.content })),
