@@ -3020,32 +3020,38 @@ async function handleTelegramMessage(chatId: string, text: string) {
 
   // 5. Persist the user message. (Strip a leading "/start" command echo.)
   const userContent = trimmed.replace(/^\/start(\s+\S+)?\s*/i, '').trim() || trimmed;
-  await supabaseAdmin.from('messages').insert({
+  const { data: insertedMsg } = await supabaseAdmin.from('messages').insert({
     conversation_id: conversationId, user_id: userId, role: 'user', content: userContent, language: lang, created_at: new Date().toISOString(),
-  });
+  }).select('id').single();
+  const myMsgId = insertedMsg?.id as string | undefined;
 
   // 6. Don't reply per message. People fire off several quick texts in a row;
-  // replying to each feels robotic. Show a "typing" hint, then debounce — each
-  // new message resets a short timer, and when it settles we generate ONE reply
-  // to the whole burst (all the buffered messages are already persisted above).
+  // replying to each feels robotic. Show "typing", wait a beat, and only the
+  // handler for the LAST message in the burst actually replies — the earlier
+  // ones bail when they see a newer message exists. This is checked against the
+  // DB (not an in-memory timer), so it works even if the backend runs on more
+  // than one instance.
   void sendTelegramTyping(chatId);
-  scheduleTelegramReply(chatId, userId, conversationId, lang, proFeatures, windDown);
+  await settleAndReply(chatId, userId, conversationId, lang, proFeatures, windDown, myMsgId);
 }
 
-// Per-chat debounce so a flurry of quick messages yields a single reply.
-const TG_DEBOUNCE_MS = 4000;
-const tgReplyTimers = new Map<string, NodeJS.Timeout>();
-function scheduleTelegramReply(
-  chatId: string, userId: string, conversationId: string, lang: 'he' | 'en', proFeatures: boolean, windDown: boolean,
+const TG_DEBOUNCE_MS = 4500;
+
+// Wait out the burst, then reply once — only if no newer user message has landed
+// in this conversation since ours (otherwise a later handler will do it).
+async function settleAndReply(
+  chatId: string, userId: string, conversationId: string, lang: 'he' | 'en', proFeatures: boolean, windDown: boolean, myMsgId?: string,
 ) {
-  const existing = tgReplyTimers.get(chatId);
-  if (existing) clearTimeout(existing);
-  const t = setTimeout(() => {
-    tgReplyTimers.delete(chatId);
-    generateTelegramReply(chatId, userId, conversationId, lang, proFeatures, windDown)
-      .catch((e) => console.error('Telegram reply generation error:', e));
-  }, TG_DEBOUNCE_MS);
-  tgReplyTimers.set(chatId, t);
+  await new Promise((r) => setTimeout(r, TG_DEBOUNCE_MS));
+  if (myMsgId) {
+    const { data: latest } = await supabaseAdmin
+      .from('messages').select('id')
+      .eq('conversation_id', conversationId).eq('role', 'user').is('deleted_at', null)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (latest && latest.id !== myMsgId) return; // a newer message exists → it replies
+  }
+  await generateTelegramReply(chatId, userId, conversationId, lang, proFeatures, windDown)
+    .catch((e) => console.error('Telegram reply generation error:', e));
 }
 
 // Anthropic requires alternating roles; merge consecutive same-role turns (e.g.
