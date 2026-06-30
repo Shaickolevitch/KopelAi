@@ -501,10 +501,23 @@ export default function ConversationPage() {
   }
 
   async function handleEndSession() {
-    if (!user || !conversationId || endingSession) return;
+    if (!user || endingSession) return;
+    // conversationId may be empty if the page resumed a thread without setting
+    // it, or the user typed "סיים שיחה" before sending a normal message. Resolve
+    // the latest open web conversation from the DB so the end always works.
+    let convId = conversationId;
+    if (!convId) {
+      const { data } = await supabase()
+        .from('conversations').select('id')
+        .eq('user_id', user.id).is('ended_at', null).is('deleted_at', null)
+        .or('channel.is.null,channel.eq.web')
+        .order('started_at', { ascending: false }).limit(1).maybeSingle();
+      convId = data?.id ?? null;
+    }
+    if (!convId) return;
     setEndingSession(true);
     try {
-      await endConversation(conversationId);
+      await endConversation(convId);
       const tier = await getSubscriptionTier(user.id);
       track('session_ended', { tier });
       if (tier === 'free') {
