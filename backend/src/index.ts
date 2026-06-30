@@ -2902,7 +2902,12 @@ async function handleTelegramMessage(chatId: string, text: string) {
   // answer. A "yes" ends + summarizes the session now; anything else means
   // they're continuing, so we clear the flag and carry on normally.
   if (openConvo?.close_prompted_at) {
-    const wantsClose = /^\s*(לסכם|תסכם|סכם|סיכום|כן|בטח|סיימתי|סיימנו|סיום|אפשר|yes|yep|yeah|ok|okay|sure|please|summari[sz]e|wrap)\b/i.test(trimmed);
+    // NOTE: end with a Hebrew-safe lookahead, NOT \b. JS \b only treats
+    // [A-Za-z0-9_] as word chars, so "כן\b" never matches — the confirmation
+    // silently failed for every Hebrew "yes", the session stayed open, and the
+    // idle sweep re-prompted later. Require the word to be followed by space,
+    // punctuation, or end-of-string instead.
+    const wantsClose = /^\s*(לסכם|תסכם|סכם|סיכום|כן|בטח|סיימתי|סיימנו|סיום|אפשר|yes|yep|yeah|ok|okay|sure|please|summari[sz]e|wrap)(?=[\s.!?,]|$)/i.test(trimmed);
     if (wantsClose) {
       await consolidateConversation(openConvo.id);
       await sendTelegram(chatId, lang === 'he'

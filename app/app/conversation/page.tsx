@@ -420,7 +420,10 @@ export default function ConversationPage() {
     // Handled here on the client so it actually ends + goes to analysis, instead
     // of the model just role-playing a goodbye while the session stays open.
     const endRe = /^\s*(?:(?:בוא|בואי|אפשר|נא|רוצה|נרצה|please|lets|let's)\s+)?(?:(?:אני|אנחנו)\s+)?(?:(?:רוצה|רוצים|want|wanna)\s+(?:to\s+)?)?(\/?(new|restart|end)|(ל|ת|נ)?סיים(י|נו)?(\s+(את\s+)?ה?שיחה)?|(ל|ת)?סכם(\s+(את\s+)?ה?שיחה)?|סיום(\s+ה?שיחה)?|שיחה\s+חדשה|מתחילים\s+מחדש|דף\s+חדש|new\s+(chat|conversation|session)|start\s+over|end\s+(the\s+)?(session|chat|conversation)|wrap\s+up)\s*[.!?]*\s*$/i;
-    const yesRe = /^\s*(כן|בטח|לסכם|תסכם|סכם|סיימתי|סיימנו|סיום|אפשר|yes|yep|yeah|ok|okay|sure|please)\b/i;
+    // Hebrew-safe end anchor: JS \b only knows ASCII word chars, so a trailing
+    // \b makes "כן" (and every Hebrew "yes") never match. Use a lookahead for
+    // whitespace/punctuation/end instead.
+    const yesRe = /^\s*(כן|בטח|לסכם|תסכם|סכם|סיימתי|סיימנו|סיום|אפשר|yes|yep|yeah|ok|okay|sure|please)(?=[\s.!?,]|$)/i;
 
     if (!att && pendingEnd) {
       if (yesRe.test(trimmed)) {
