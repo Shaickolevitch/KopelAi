@@ -121,7 +121,9 @@ export default function HistoryPage() {
     return first ? first.content : (he ? '(שיחה ריקה)' : '(empty)');
   }
   function channelLabel(ch: string | null) {
-    return ch === 'whatsapp' ? (he ? 'וואטסאפ' : 'WhatsApp') : (he ? 'אתר' : 'Web');
+    if (ch === 'whatsapp') return he ? 'וואטסאפ' : 'WhatsApp';
+    if (ch === 'telegram') return he ? 'טלגרם' : 'Telegram';
+    return he ? 'אתר' : 'Web';
   }
 
   return (
