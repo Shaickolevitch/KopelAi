@@ -12,6 +12,7 @@ import {
 } from '@/lib/subscription';
 import { getUsage, startTrial } from '@/lib/api';
 import ConnectWhatsApp from './ConnectWhatsApp';
+import ConnectTelegram from './ConnectTelegram';
 import { DropSpot } from '../rewards';
 
 export default function PlanPage() {
@@ -325,6 +326,7 @@ export default function PlanPage() {
           : 'Secure payment via Ching · Tax invoice · Cancel anytime'}
       </p>
 
+      <ConnectTelegram />
       <ConnectWhatsApp />
 
       {/* Student / trainee rate - unlocked with a code requested from us directly */}

@@ -729,7 +729,7 @@ async function buildSystemPrompt(
   lastUserMessage?: string,
   windDown = false,
   isProEffective = false,
-  channel: 'web' | 'whatsapp' = 'web',
+  channel: 'web' | 'whatsapp' | 'telegram' = 'web',
   sessionMinutes = 0,
   firstName = ''
 ): Promise<SystemBlock[]> {
@@ -756,9 +756,10 @@ async function buildSystemPrompt(
     ? '\n\n# Closing beat\n\nThis is the last exchange available in this session. Respond fully and warmly, then gently bring this turn to a natural resting point — offer a small thought to sit with, rather than opening a new line of inquiry. Do not mention limits, plans, or payment; just let it land softly.'
     : '';
 
-  // WhatsApp replies should read like thoughtful texts, not web-length essays.
-  const channelDirective = channel === 'whatsapp'
-    ? '\n\n# WhatsApp\n\nYou are replying over WhatsApp. Keep it short and conversational — usually 1–4 sentences, like a warm text message. No headings, no long lists. Offer one gentle reflection or question at a time.'
+  // Messaging-app replies (WhatsApp/Telegram) should read like thoughtful texts,
+  // not web-length essays.
+  const channelDirective = (channel === 'whatsapp' || channel === 'telegram')
+    ? `\n\n# ${channel === 'telegram' ? 'Telegram' : 'WhatsApp'}\n\nYou are replying over ${channel === 'telegram' ? 'Telegram' : 'WhatsApp'}. Keep it short and conversational — usually 1–4 sentences, like a warm text message. No headings, no long lists. Offer one gentle reflection or question at a time.`
     : '';
 
   // Time-awareness: a real therapist watches the clock and closes the hour around
@@ -2740,6 +2741,207 @@ async function sweepIdleWhatsApp() {
 }
 if (waConfigured()) {
   setInterval(sweepIdleWhatsApp, 5 * 60_000);
+}
+
+// =====================================================
+// Telegram agent — a third doorway into the same Kopel.
+// Inert until TELEGRAM_BOT_TOKEN is set. Mirrors the WhatsApp flow:
+// a one-time code links a Telegram chat to an account, then the same
+// memory/tier/wall/brain runs over Telegram.
+// =====================================================
+const TG = {
+  token: process.env.TELEGRAM_BOT_TOKEN || '',
+  botUsername: (process.env.TELEGRAM_BOT_USERNAME || '').replace(/^@/, ''), // for t.me deep links
+  webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET || '',
+};
+const tgConfigured = () => Boolean(TG.token);
+// Same public-visibility switch as WhatsApp: flip TELEGRAM_LIVE=1 to reveal the
+// "Connect Telegram" UI to everyone; admin always sees it for testing.
+const tgLiveFlag = () => process.env.TELEGRAM_LIVE === '1' || process.env.TELEGRAM_LIVE === 'true';
+
+async function sendTelegram(chatId: string, body: string) {
+  if (!tgConfigured() || !body) return;
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${TG.token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: body.slice(0, 4096) }),
+    });
+    if (!r.ok) console.error('Telegram send failed:', r.status, await r.text());
+  } catch (e) {
+    console.error('Telegram send error:', e);
+  }
+}
+
+// The brain: same memory/tier/wall logic as /chat, just over Telegram.
+async function handleTelegramMessage(chatId: string, text: string) {
+  const lang: 'he' | 'en' = isHe(text) ? 'he' : 'en';
+  const trimmed = (text || '').trim();
+  if (!trimmed) return;
+
+  // 1. Who is this? Resolve chat → account.
+  const { data: link } = await supabaseAdmin
+    .from('telegram_links').select('user_id').eq('chat_id', chatId).maybeSingle();
+
+  // 2. Not linked → try to redeem a link code (from "/start CODE" or a bare
+  //    code), else send onboarding.
+  if (!link) {
+    const startMatch = trimmed.match(/^\/start\s+(\S+)/i);
+    const candidate = (startMatch ? startMatch[1] : trimmed).toUpperCase().replace(/\s+/g, '');
+    const { data: codeRow } = await supabaseAdmin
+      .from('telegram_link_codes').select('user_id, created_at').eq('code', candidate).maybeSingle();
+    if (codeRow && Date.now() - new Date(codeRow.created_at).getTime() < 30 * 60_000) {
+      await supabaseAdmin.from('telegram_links').upsert({ chat_id: chatId, user_id: codeRow.user_id }, { onConflict: 'chat_id' });
+      await supabaseAdmin.from('telegram_link_codes').delete().eq('user_id', codeRow.user_id);
+      // Tree: connecting Telegram is a one-time collectible milestone (+5).
+      void awardWater(codeRow.user_id, 5, { source: 'telegram', route: '/app/plan', labelHe: 'חיבור טלגרם', labelEn: 'Connected Telegram', onceKey: 'telegram' });
+      await sendTelegram(chatId, lang === 'he'
+        ? 'היי, אני קופלAI. עכשיו אפשר לשוחח איתי גם כאן בטלגרם, ולא רק דרך האתר - כתוב/י לי מתי שבא לך, ואני כאן.'
+        : "Hi, I'm KopelAi. You can now talk with me right here on Telegram, not only through the website — message me whenever you like, I'm here.");
+      return;
+    }
+    await sendTelegram(chatId, lang === 'he'
+      ? 'היי, כאן קופלAI. כדי שאלווה אותך לאורך זמן צריך לחבר את הטלגרם לחשבון: היכנס/י ל-kopelai.com ← "מנוי" ← "חיבור טלגרם", ושלח/י לי את הקוד שתקבל/י.'
+      : 'Hi, this is KopelAi. To accompany you over time, link your Telegram: go to kopelai.com → "Plan" → "Connect Telegram", and send me the code you get.');
+    return;
+  }
+
+  const userId = link.user_id as string;
+
+  // 3. Shared tier + daily wall (same counter as web).
+  const { data: tierRow } = await supabaseAdmin
+    .from('user_profile').select('subscription_tier, trial_ends_at, referral_pro_until').eq('user_id', userId).maybeSingle();
+  const paidPro = tierRow?.subscription_tier === 'pro' || compedProActive(tierRow?.referral_pro_until);
+  const onTrial = !paidPro && trialActiveFrom(tierRow?.trial_ends_at);
+  const proFeatures = paidPro || onTrial;
+  const dailyLimit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;
+
+  const { data: count } = await supabaseAdmin.rpc('bump_daily_usage', { p_user: userId });
+  if (!paidPro && typeof count === 'number' && count > dailyLimit) {
+    await sendTelegram(chatId, lang === 'he'
+      ? (onTrial ? 'הגענו למכסת ההודעות להיום 🙏 נתראה מחר להמשך.' : 'הגענו לסוף המכסה היומית בגרסה החינמית. נתראה מחר - או לשיחה ללא הגבלה, שדרגו לפרו ב-kopelai.com')
+      : (onTrial ? "That's our messages for today 🙏 see you tomorrow." : "That's today's free limit. See you tomorrow — or go Pro for unlimited at kopelai.com"));
+    return;
+  }
+  const windDown = !paidPro && typeof count === 'number' && count === dailyLimit;
+
+  // 4. Find or open this user's active Telegram conversation.
+  const { data: openConvo } = await supabaseAdmin
+    .from('conversations').select('id')
+    .eq('user_id', userId).eq('channel', 'telegram').is('ended_at', null).is('deleted_at', null)
+    .order('started_at', { ascending: false }).limit(1).maybeSingle();
+  let conversationId = openConvo?.id as string | undefined;
+  if (!conversationId) {
+    const { data: created } = await supabaseAdmin
+      .from('conversations')
+      .insert({ user_id: userId, language: lang, channel: 'telegram', started_at: new Date().toISOString() })
+      .select('id').single();
+    conversationId = created?.id;
+  }
+  if (!conversationId) {
+    await sendTelegram(chatId, lang === 'he' ? 'משהו השתבש, נסה/י שוב בעוד רגע.' : 'Something went wrong, please try again in a moment.');
+    return;
+  }
+
+  // 5. Persist the user message. (Strip a leading "/start" command echo.)
+  const userContent = trimmed.replace(/^\/start(\s+\S+)?\s*/i, '').trim() || trimmed;
+  await supabaseAdmin.from('messages').insert({
+    conversation_id: conversationId, user_id: userId, role: 'user', content: userContent, language: lang, created_at: new Date().toISOString(),
+  });
+
+  // 6. Build context from the last messages of this thread.
+  const { data: history } = await supabaseAdmin
+    .from('messages').select('role, content').eq('conversation_id', conversationId)
+    .is('deleted_at', null).order('created_at', { ascending: true }).limit(60);
+  const recent = (history ?? []).slice(-30);
+
+  // 7. Same brain — system prompt (with memory if Pro/trial) + model.
+  const systemPrompt = await buildSystemPrompt(userId, lang, userContent, windDown, proFeatures, 'telegram');
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5',
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: recent.map((m: any) => ({ role: m.role, content: m.content })),
+  });
+  const block = response.content.find((b) => b.type === 'text');
+  const reply = block && block.type === 'text' ? block.text : '';
+
+  // 8. Persist + send the reply.
+  if (reply) {
+    await supabaseAdmin.from('messages').insert({
+      conversation_id: conversationId, user_id: userId, role: 'assistant', content: reply, language: lang, created_at: new Date().toISOString(),
+    });
+    await sendTelegram(chatId, reply);
+  }
+}
+
+// Incoming Telegram updates (set this URL via the Bot API setWebhook).
+app.post('/telegram/webhook', async (req: Request, res: Response) => {
+  // If a secret token is configured, verify Telegram's header before trusting.
+  if (TG.webhookSecret) {
+    const got = req.header('x-telegram-bot-api-secret-token') || '';
+    if (got !== TG.webhookSecret) return res.sendStatus(401);
+  }
+  res.sendStatus(200); // ack fast; process after
+  try {
+    const msg = req.body?.message ?? req.body?.edited_message;
+    const chatId = msg?.chat?.id;
+    if (chatId == null) return;
+    if (typeof msg.text === 'string' && msg.text.trim()) {
+      await handleTelegramMessage(String(chatId), msg.text);
+    } else {
+      await sendTelegram(String(chatId), 'כרגע אני קורא רק הודעות טקסט - כתוב/י לי במילים 🙂 / I can read text messages for now.');
+    }
+  } catch (e) {
+    console.error('Telegram webhook processing error:', e);
+  }
+});
+
+// Web: is this account linked to Telegram, and is the feature live?
+app.get('/telegram/status', async (req: Request, res: Response) => {
+  const user = await getAuthedUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  const { data: link } = await supabaseAdmin.from('telegram_links').select('chat_id, linked_at').eq('user_id', user.id).maybeSingle();
+  const visible = tgConfigured() && (tgLiveFlag() || user.id === ADMIN_USER_ID);
+  res.json({ configured: visible, linked: Boolean(link), botUsername: TG.botUsername || null });
+});
+
+// Web: generate a one-time link code + a t.me deep link that pre-fills /start.
+app.post('/telegram/link-code', async (req: Request, res: Response) => {
+  const user = await getAuthedUser(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (!tgConfigured()) return res.status(503).json({ error: 'telegram_not_configured' });
+  const code = 'KOPEL' + crypto.randomBytes(3).toString('hex').toUpperCase(); // no hyphen: cleaner /start param
+  await supabaseAdmin.from('telegram_link_codes').delete().eq('user_id', user.id); // one active code per user
+  const { error } = await supabaseAdmin.from('telegram_link_codes').insert({ code, user_id: user.id });
+  if (error) return res.status(500).json({ error: 'Could not create code' });
+  const tgLink = TG.botUsername ? `https://t.me/${TG.botUsername}?start=${code}` : null;
+  res.json({ code, tgLink, botUsername: TG.botUsername || null });
+});
+
+// Every 5 minutes: close Telegram threads idle for >30 min and consolidate.
+async function sweepIdleTelegram() {
+  try {
+    const cutoff = new Date(Date.now() - WA_IDLE_MS).toISOString();
+    const { data: convos } = await supabaseAdmin
+      .from('conversations').select('id')
+      .eq('channel', 'telegram').is('ended_at', null).is('deleted_at', null).limit(50);
+    for (const c of convos ?? []) {
+      const { data: last } = await supabaseAdmin
+        .from('messages').select('created_at').eq('conversation_id', c.id)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (!last) {
+        await supabaseAdmin.from('conversations').update({ ended_at: new Date().toISOString() }).eq('id', c.id);
+      } else if (last.created_at < cutoff) {
+        await consolidateConversation(c.id);
+      }
+    }
+  } catch (e) {
+    console.error('Telegram idle sweep error:', e);
+  }
+}
+if (tgConfigured()) {
+  setInterval(sweepIdleTelegram, 5 * 60_000);
 }
 
 // Sentry error handler — must be after all routes, before listen.

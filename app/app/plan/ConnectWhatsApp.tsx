@@ -20,8 +20,29 @@ export default function ConnectWhatsApp() {
     getWhatsappStatus().then(setStatus).catch(() => setStatus(null));
   }, []);
 
-  // Hidden entirely until the WhatsApp number is live.
-  if (!status || !status.configured) return null;
+  // Until WhatsApp is approved + live, show it as a "coming soon" teaser rather
+  // than hiding it — so users know it's on the way. Auto-upgrades to the real
+  // connect flow once the backend reports it configured/live.
+  if (!status || !status.configured) {
+    return (
+      <div className="mt-6 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50/70 dark:bg-zinc-900/40 p-5 opacity-90">
+        <div className="flex items-center gap-2 mb-1.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-400 dark:text-zinc-500">
+            <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 0 1-.9-3.8A8.38 8.38 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z" />
+          </svg>
+          <div className="font-semibold text-stone-700 dark:text-zinc-300">{he ? 'קופלAI בוואטסאפ' : 'KopelAi on WhatsApp'}</div>
+          <span className="ms-1 px-2 py-0.5 rounded-full text-xs font-medium bg-stone-200 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400">
+            {he ? 'בקרוב' : 'Coming soon'}
+          </span>
+        </div>
+        <p className="text-sm text-stone-500 dark:text-zinc-400">
+          {he
+            ? 'בקרוב תוכלו לדבר עם קופלAI גם בוואטסאפ. בינתיים אפשר להתחבר דרך טלגרם.'
+            : 'Soon you’ll be able to talk to KopelAi on WhatsApp too. In the meantime, you can connect via Telegram.'}
+        </p>
+      </div>
+    );
+  }
 
   async function connect() {
     setBusy(true); setErr('');
