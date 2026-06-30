@@ -99,7 +99,7 @@ export async function submitMarketingConsent(consent: boolean): Promise<void> {
 }
 
 // ── WhatsApp linking ────────────────────────────────────────────────────────
-export type WhatsappStatus = { configured: boolean; linked: boolean; phone: string | null; number: string | null };
+export type WhatsappStatus = { configured: boolean; live?: boolean; linked: boolean; phone: string | null; number: string | null };
 
 export async function getWhatsappStatus(): Promise<WhatsappStatus> {
   const response = await fetch(`${API_URL}/whatsapp/status`, { headers: { ...(await authHeaders()) } });

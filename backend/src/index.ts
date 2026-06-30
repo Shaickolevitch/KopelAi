@@ -2698,9 +2698,11 @@ app.get('/whatsapp/status', async (req: Request, res: Response) => {
   const user = await getAuthedUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
   const { data: link } = await supabaseAdmin.from('whatsapp_links').select('phone, linked_at').eq('user_id', user.id).maybeSingle();
-  // Visible to the public only when live; admin always sees it (for testing).
-  const visible = waConfigured() && (waLiveFlag() || user.id === ADMIN_USER_ID);
-  res.json({ configured: visible, linked: Boolean(link), phone: link?.phone ?? null, number: WA.displayNumber || null });
+  // `live` = the real connect flow is available (Meta approved + WHATSAPP_LIVE=1).
+  // Until then EVERYONE (admin included) sees the "coming soon" teaser — no admin
+  // bypass, so the live state can't be mistaken for "it already works".
+  const live = waConfigured() && waLiveFlag();
+  res.json({ configured: live, live, linked: Boolean(link), phone: link?.phone ?? null, number: WA.displayNumber || null });
 });
 
 // Web: generate a one-time link code + a wa.me deep link to send it.
