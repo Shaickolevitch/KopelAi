@@ -45,11 +45,24 @@ export default function ConnectTelegram() {
       </div>
 
       {status.linked ? (
-        <p className="text-sm text-stone-600 dark:text-zinc-300">
-          {he
-            ? 'הטלגרם שלך מחובר. אפשר לכתוב לקופלAI בטלגרם בכל עת - אותו זיכרון, אותו מנוי.'
-            : 'Your Telegram is connected. Message KopelAi on Telegram anytime — same memory, same plan.'}
-        </p>
+        <div className="space-y-3">
+          <p className="text-sm text-stone-600 dark:text-zinc-300">
+            {he
+              ? 'הטלגרם שלך מחובר. אפשר לכתוב לקופלAI בטלגרם בכל עת - אותו זיכרון, אותו מנוי.'
+              : 'Your Telegram is connected. Message KopelAi on Telegram anytime — same memory, same plan.'}
+          </p>
+          {status.botUsername && (
+            <a
+              href={`https://t.me/${status.botUsername}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-white text-sm font-medium transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.94 4.6 18.6 20.3c-.25 1.1-.92 1.37-1.86.85l-5.14-3.79-2.48 2.39c-.27.27-.5.5-1.03.5l.37-5.22 9.5-8.58c.41-.37-.09-.57-.64-.2L5.96 13.1l-5.06-1.58c-1.1-.34-1.12-1.1.23-1.63L20.5 3.04c.92-.34 1.72.2 1.44 1.56z" /></svg>
+              {he ? 'פתיחת השיחה בטלגרם' : 'Open the chat on Telegram'}
+            </a>
+          )}
+        </div>
       ) : code ? (
         <div className="space-y-2.5">
           <p className="text-sm text-stone-600 dark:text-zinc-300">

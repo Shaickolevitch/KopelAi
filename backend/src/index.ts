@@ -3035,12 +3035,25 @@ async function handleTelegramMessage(chatId: string, text: string) {
       : "I'm here 🙂 What would you like to talk about? (To wrap up, just say \"end session\".)";
   }
 
-  // 8. Persist + send the reply.
+  // 8. Persist the clean reply, then send it — with an occasional "this isn't
+  // remembered, go Pro" nudge appended for free users (every ~6th turn + the
+  // first), mirroring the web experience. The nudge is NOT persisted, so it
+  // never pollutes the transcript or the model's context.
   if (reply) {
     await supabaseAdmin.from('messages').insert({
       conversation_id: conversationId, user_id: userId, role: 'assistant', content: reply, language: lang, created_at: new Date().toISOString(),
     });
-    await sendTelegram(chatId, reply);
+
+    let toSend = reply;
+    if (!proFeatures) {
+      const userTurns = (history ?? []).filter((m: any) => m.role === 'user').length;
+      if (userTurns === 1 || userTurns % 6 === 0) {
+        toSend += lang === 'he'
+          ? '\n\n— אגב, בגרסה החינמית אני לא זוכר את השיחה הזו אחרי שהיא נגמרת, וחבל. בפרו אני זוכר אותך בין מפגשים ובונה ניתוח מצטבר 🌱 לשדרוג: https://kopelai.com/app/plan'
+          : "\n\n— By the way, on the free plan I don't remember this conversation once it ends, which is a shame. With Pro I remember you between sessions and build cumulative insights 🌱 Upgrade: https://kopelai.com/app/plan";
+      }
+    }
+    await sendTelegram(chatId, toSend);
   }
 }
 
