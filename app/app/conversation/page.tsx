@@ -201,6 +201,9 @@ export default function ConversationPage() {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
+  // True after the user asked (in chat) to end the session and we're awaiting
+  // their "yes" to actually wrap up + go to analysis.
+  const [pendingEnd, setPendingEnd] = useState(false);
   const [endingSession, setEndingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // When the current sitting began — set on the first message of this mount, so
@@ -407,6 +410,40 @@ export default function ConversationPage() {
     const att = attachment;
     if (!trimmed && !att) return;
     setError(null);
+
+    // Chat-triggered end-of-session, with a confirmation step (mirrors Telegram).
+    // Handled here on the client so it actually ends + goes to analysis, instead
+    // of the model just role-playing a goodbye while the session stays open.
+    const endRe = /^\s*(\/?(new|restart|end)|(ל|ת|נ)?סיים(י|נו)?(\s+(את\s+)?ה?שיחה)?|(ל|ת)?סכם(\s+(את\s+)?ה?שיחה)?|סיום(\s+ה?שיחה)?|שיחה\s+חדשה|מתחילים\s+מחדש|דף\s+חדש|new\s+(chat|conversation|session)|start\s+over|end\s+(the\s+)?(session|chat|conversation)|wrap\s+up)\s*[.!?]*\s*$/i;
+    const yesRe = /^\s*(כן|בטח|לסכם|תסכם|סכם|סיימתי|סיימנו|סיום|אפשר|yes|yep|yeah|ok|okay|sure|please)\b/i;
+
+    if (!att && pendingEnd) {
+      if (yesRe.test(trimmed)) {
+        setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'user', content: trimmed }]);
+        setInputText('');
+        setPendingEnd(false);
+        await handleEndSession();
+        return;
+      }
+      setPendingEnd(false); // not a "yes" → fall through and continue the chat
+    } else if (!att && trimmed && messages.length > 0 && endRe.test(trimmed)) {
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: 'user', content: trimmed },
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: language === 'he'
+            ? 'לסכם ולשמור את השיחה, ואז לעבור לניתוח? כתוב/י "כן" לסיום — או פשוט המשך/י לכתוב ונישאר כאן.'
+            : 'Wrap up and save this session, then go to the analysis? Reply "yes" to finish — or just keep writing and we\'ll stay here.',
+        },
+      ]);
+      setInputText('');
+      setPendingEnd(true);
+      return;
+    }
+
+    setPendingEnd(false);
     setSending(true);
 
     try {
