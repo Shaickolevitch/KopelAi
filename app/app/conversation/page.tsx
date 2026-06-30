@@ -442,8 +442,8 @@ export default function ConversationPage() {
           id: crypto.randomUUID(),
           role: 'assistant',
           content: language === 'he'
-            ? 'לסכם ולשמור את השיחה, ואז לעבור לניתוח? כתוב/י "כן" לסיום — או פשוט המשך/י לכתוב ונישאר כאן.'
-            : 'Wrap up and save this session, then go to the analysis? Reply "yes" to finish — or just keep writing and we\'ll stay here.',
+            ? 'לסכם ולשמור את השיחה, ואז לעבור לניתוח? אפשר ללחוץ על הכפתור למטה לסיום — או פשוט להמשיך לכתוב ונישאר כאן.'
+            : 'Wrap up and save this session, then go to the analysis? Tap the button below to finish — or just keep writing and we\'ll stay here.',
         },
       ]);
       setInputText('');
@@ -732,6 +732,28 @@ export default function ConversationPage() {
               </div>
             </div>
           ))}
+
+          {/* When ending comes up, offer a tappable confirm instead of making the
+              user type "כן" (which also dodges Hebrew yes-matching entirely). */}
+          {pendingEnd && !endingSession && (
+            <div className="flex justify-start">
+              <div className="flex flex-wrap gap-2 ms-9">
+                <button
+                  onClick={async () => { setPendingEnd(false); await handleEndSession(); }}
+                  disabled={endingSession || sending}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-950 dark:bg-indigo-600 text-white hover:bg-indigo-900 dark:hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+                >
+                  {language === 'he' ? 'כן, לסיים ולנתח' : 'Yes, end & analyze'}
+                </button>
+                <button
+                  onClick={() => setPendingEnd(false)}
+                  className="px-4 py-2 rounded-xl text-sm font-medium bg-stone-100 dark:bg-zinc-800 text-stone-700 dark:text-zinc-300 hover:bg-stone-200 dark:hover:bg-zinc-700 transition-colors"
+                >
+                  {language === 'he' ? 'להמשיך לדבר' : 'Keep talking'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {sending && (
             <div className="flex justify-start items-end gap-2">
