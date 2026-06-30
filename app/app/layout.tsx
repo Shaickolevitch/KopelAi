@@ -12,6 +12,7 @@ import FeedbackButton from './FeedbackButton';
 import AdminBell from './AdminBell';
 import TreeIndicator from './TreeIndicator';
 import { RewardsProvider, DropTrail } from './rewards';
+import InstallBanner from './InstallBanner';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const t = useT();
@@ -143,6 +144,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
+      <InstallBanner />
+
       <main className="flex-1 flex flex-col">{children}</main>
 
       <FeedbackButton />

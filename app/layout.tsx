@@ -34,6 +34,8 @@ export const metadata: Metadata = {
   },
   description: OG_DESCRIPTION,
   applicationName: "KopelAi",
+  // PWA: iOS treats the home-screen launch as a standalone app.
+  appleWebApp: { capable: true, title: "KopelAi", statusBarStyle: "default" },
   // og:image is provided by app/opengraph-image.tsx (the file convention).
   openGraph: {
     type: "website",
