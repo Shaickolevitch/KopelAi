@@ -318,10 +318,15 @@ export default function ConversationPage() {
         // Wipe previous session data so free users start clean each time.
         await clearPreviousSession(u.id);
       } else {
-        // Pro users: restore any active conversation.
+        // Pro users: restore any active conversation — but only a *web* one.
+        // Telegram/WhatsApp threads live in the same table; without scoping by
+        // channel the page would cross-load an open Telegram thread into the
+        // web session (and keep showing it on every refresh, even after it was
+        // ended elsewhere). Mirrors the channel filter in handleEndSession.
         const { data: activeConvo } = await supabase()
           .from('conversations').select('id').eq('user_id', u.id)
           .is('ended_at', null).is('deleted_at', null)
+          .or('channel.is.null,channel.eq.web')
           .order('started_at', { ascending: false }).limit(1).maybeSingle();
 
         if (activeConvo) {
