@@ -11,6 +11,7 @@ import {
   type SubscriptionTier,
 } from '@/lib/subscription';
 import { getUsage, startTrial } from '@/lib/api';
+import { track } from '@/lib/analytics';
 import ConnectWhatsApp from './ConnectWhatsApp';
 import ConnectTelegram from './ConnectTelegram';
 import { InstallInstructions } from '../InstallBanner';
@@ -71,6 +72,9 @@ export default function PlanPage() {
   async function go(action: () => Promise<void>, key: string) {
     setBusy(key);
     setError('');
+    // Funnel: the plan page is the primary upgrade surface — track intent here
+    // (the in-chat nudge tags itself source:'chat_nudge').
+    track('checkout_started', { plan: key, source: 'plan_page' });
     try {
       await action();
     } catch (e) {

@@ -296,7 +296,7 @@ export default function HomePage() {
             {/* Free */}
             <div className="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
               <div className="font-semibold">{he ? 'חינם' : 'Free'}</div>
-              <div className="text-3xl font-bold my-2">{he ? '₪0' : '$0'}</div>
+              <div className="text-3xl font-bold my-2">₪0</div>
               <ul className="space-y-2 mt-3 text-sm">
                 <li className="text-stone-700 dark:text-zinc-300">✓ {he ? 'שיחה מלאה עם קופלAI' : 'Full conversation with KopelAi'}</li>
                 <li className="text-stone-400 dark:text-zinc-600">✕ {he ? 'ללא זיכרון בין מפגשים' : 'No memory between sessions'}</li>
