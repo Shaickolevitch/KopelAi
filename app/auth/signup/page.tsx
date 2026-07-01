@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useT, useLang } from '@/lib/i18n';
 import { signUpWithEmail, signInWithGoogle, authErrorToMessageKey } from '@/lib/auth';
+import { track } from '@/lib/analytics';
 
 function GoogleButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
   return (
@@ -35,7 +36,9 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [marketingConsent, setMarketingConsent] = useState(true); // pre-checked
+  // Opt-in, not opt-out: Israeli Amendment 40 (anti-spam) and GDPR require an
+  // affirmative tick — must NOT be pre-checked.
+  const [marketingConsent, setMarketingConsent] = useState(false);
 
   // Stash the consent choice so it can be saved once the user is authenticated
   // (works for both the email flow and the Google redirect flow).
@@ -68,6 +71,7 @@ export default function SignupPage() {
     stashConsent();
     try {
       await signUpWithEmail(trimmedEmail, password);
+      track('signup', { method: 'email' });
       router.push(nextDest());
     } catch (err: unknown) {
       const key = authErrorToMessageKey(err);
@@ -83,6 +87,7 @@ export default function SignupPage() {
     setSubmitting(true);
     stashConsent();
     try {
+      track('signup', { method: 'google' });
       await signInWithGoogle(nextDest());
     } catch {
       setError(t.auth_error_generic);
@@ -150,13 +155,13 @@ export default function SignupPage() {
                 placeholder={t.auth_password_placeholder}
                 autoComplete="new-password"
                 disabled={submitting}
-                className="w-full px-4 py-3 pr-11 rounded-xl border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-900 dark:text-zinc-100 placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-900/25 dark:focus:ring-indigo-500/40 focus:border-indigo-900 dark:focus:border-indigo-500 transition-colors"
+                className="w-full px-4 py-3 pe-11 rounded-xl border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-900 dark:text-zinc-100 placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-900/25 dark:focus:ring-indigo-500/40 focus:border-indigo-900 dark:focus:border-indigo-500 transition-colors"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors"
+                aria-label={showPassword ? t.auth_hide_password : t.auth_show_password}
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors"
               >
                 {showPassword ? (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>

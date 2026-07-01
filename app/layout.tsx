@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { Assistant, Frank_Ruhl_Libre } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { LangProvider } from "@/lib/i18n";
 import AnalyticsProvider from "./providers";
 import AccessibilityWidget from "./AccessibilityWidget";
+import ConsentBanner from "./ConsentBanner";
 import "./globals.css";
 
 // Design "A": Assistant for body (clean Hebrew sans), Frank Ruhl Libre for
@@ -33,6 +32,7 @@ export const metadata: Metadata = {
     template: "%s · KopelAi",
   },
   description: OG_DESCRIPTION,
+  alternates: { canonical: "/" },
   applicationName: "KopelAi",
   // PWA: iOS treats the home-screen launch as a standalone app.
   appleWebApp: { capable: true, title: "KopelAi", statusBarStyle: "default" },
@@ -74,10 +74,10 @@ export default function RootLayout({
                 contrast/spacing/link styles to content without affecting itself. */}
             <div id="a11y-content">{children}</div>
             <AccessibilityWidget />
+            {/* Analytics/cookie consent — gates PostHog + Vercel Analytics. */}
+            <ConsentBanner />
           </LangProvider>
         </AnalyticsProvider>
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );

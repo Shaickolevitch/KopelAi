@@ -2726,14 +2726,18 @@ app.get('/whatsapp/webhook', (req: Request, res: Response) => {
 
 // Incoming WhatsApp messages.
 app.post('/whatsapp/webhook', async (req: Request, res: Response) => {
-  // Verify the payload really came from Meta (when the app secret is set).
-  if (WA.appSecret) {
-    const sig = req.header('x-hub-signature-256') || '';
-    const raw = ((req as any).rawBody as Buffer) ?? Buffer.from('');
-    const expected = 'sha256=' + crypto.createHmac('sha256', WA.appSecret).update(raw).digest('hex');
-    if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
-      return res.sendStatus(401);
-    }
+  // Fail closed: sender identity is taken from msg.from, so an unverified payload
+  // lets anyone impersonate any phone number. If the app secret isn't set we
+  // cannot verify — reject rather than process forged messages.
+  if (!WA.appSecret) {
+    console.error('WhatsApp webhook rejected: WHATSAPP_APP_SECRET is not set.');
+    return res.sendStatus(503);
+  }
+  const sig = req.header('x-hub-signature-256') || '';
+  const raw = ((req as any).rawBody as Buffer) ?? Buffer.from('');
+  const expected = 'sha256=' + crypto.createHmac('sha256', WA.appSecret).update(raw).digest('hex');
+  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+    return res.sendStatus(401);
   }
   res.sendStatus(200); // ack fast; process after
   try {
@@ -2987,22 +2991,16 @@ async function handleTelegramMessage(chatId: string, text: string) {
     await supabaseAdmin.from('conversations').update({ close_prompted_at: null }).eq('id', openConvo.id);
   }
 
-  // 3. Shared tier + daily wall (same counter as web).
+  // 3. Shared tier (same counter as web). The daily wall itself is enforced ONCE
+  //    per burst inside settleAndReply — so a run of rapid-fire messages that
+  //    merges into a single reply only consumes one message of the daily quota,
+  //    instead of burning the free budget ~5× faster than intended.
   const { data: tierRow } = await supabaseAdmin
     .from('user_profile').select('subscription_tier, trial_ends_at, referral_pro_until').eq('user_id', userId).maybeSingle();
   const paidPro = tierRow?.subscription_tier === 'pro' || compedProActive(tierRow?.referral_pro_until);
   const onTrial = !paidPro && trialActiveFrom(tierRow?.trial_ends_at);
   const proFeatures = paidPro || onTrial;
   const dailyLimit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;
-
-  const { data: count } = await supabaseAdmin.rpc('bump_daily_usage', { p_user: userId });
-  if (!paidPro && typeof count === 'number' && count > dailyLimit) {
-    await sendTelegram(chatId, lang === 'he'
-      ? (onTrial ? 'הגענו למכסת ההודעות להיום 🙏 נתראה מחר להמשך.' : 'הגענו לסוף המכסה היומית בגרסה החינמית. נתראה מחר - או לשיחה ללא הגבלה, שדרגו לפרו ב-kopelai.com')
-      : (onTrial ? "That's our messages for today 🙏 see you tomorrow." : "That's today's free limit. See you tomorrow — or go Pro for unlimited at kopelai.com"));
-    return;
-  }
-  const windDown = !paidPro && typeof count === 'number' && count === dailyLimit;
 
   // 4. Reuse the open conversation we looked up above (or open a fresh one).
   let conversationId = openConvo?.id as string | undefined;
@@ -3032,24 +3030,41 @@ async function handleTelegramMessage(chatId: string, text: string) {
   // DB (not an in-memory timer), so it works even if the backend runs on more
   // than one instance.
   void sendTelegramTyping(chatId);
-  await settleAndReply(chatId, userId, conversationId, lang, proFeatures, windDown, myMsgId);
+  await settleAndReply(chatId, userId, conversationId, lang, proFeatures, { paidPro, onTrial, dailyLimit }, myMsgId);
 }
 
 const TG_DEBOUNCE_MS = 4500;
 
 // Wait out the burst, then reply once — only if no newer user message has landed
-// in this conversation since ours (otherwise a later handler will do it).
+// in this conversation since ours (otherwise a later handler will do it). The
+// daily-usage bump + wall live HERE, after the "am I the latest?" gate, so a
+// burst of N messages that yields one reply only spends one message of quota.
 async function settleAndReply(
-  chatId: string, userId: string, conversationId: string, lang: 'he' | 'en', proFeatures: boolean, windDown: boolean, myMsgId?: string,
+  chatId: string, userId: string, conversationId: string, lang: 'he' | 'en', proFeatures: boolean,
+  quota: { paidPro: boolean; onTrial: boolean; dailyLimit: number }, myMsgId?: string,
 ) {
   await new Promise((r) => setTimeout(r, TG_DEBOUNCE_MS));
   if (myMsgId) {
     const { data: latest } = await supabaseAdmin
       .from('messages').select('id')
       .eq('conversation_id', conversationId).eq('role', 'user').is('deleted_at', null)
-      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      // Secondary sort by id breaks ties when two messages share a created_at,
+      // so the "latest" is deterministic and exactly one handler proceeds.
+      .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(1).maybeSingle();
     if (latest && latest.id !== myMsgId) return; // a newer message exists → it replies
   }
+
+  // Count one message for this burst and enforce the shared daily wall.
+  const { paidPro, onTrial, dailyLimit } = quota;
+  const { data: count } = await supabaseAdmin.rpc('bump_daily_usage', { p_user: userId });
+  if (!paidPro && typeof count === 'number' && count > dailyLimit) {
+    await sendTelegram(chatId, lang === 'he'
+      ? (onTrial ? 'הגענו למכסת ההודעות להיום 🙏 נתראה מחר להמשך.' : 'הגענו לסוף המכסה היומית בגרסה החינמית. נתראה מחר - או לשיחה ללא הגבלה, שדרגו לפרו ב-kopelai.com')
+      : (onTrial ? "That's our messages for today 🙏 see you tomorrow." : "That's today's free limit. See you tomorrow — or go Pro for unlimited at kopelai.com"));
+    return;
+  }
+  const windDown = !paidPro && typeof count === 'number' && count === dailyLimit;
+
   await generateTelegramReply(chatId, userId, conversationId, lang, proFeatures, windDown)
     .catch((e) => console.error('Telegram reply generation error:', e));
 }
@@ -3113,10 +3128,17 @@ async function generateTelegramReply(
 
 // Incoming Telegram updates (set this URL via the Bot API setWebhook).
 app.post('/telegram/webhook', async (req: Request, res: Response) => {
-  // If a secret token is configured, verify Telegram's header before trusting.
-  if (TG.webhookSecret) {
-    const got = req.header('x-telegram-bot-api-secret-token') || '';
-    if (got !== TG.webhookSecret) return res.sendStatus(401);
+  // Fail closed: chat identity is taken from the payload, so an unverified update
+  // lets anyone impersonate any chat id. Require the secret token — if it isn't
+  // configured we cannot verify, so reject rather than trust forged updates.
+  if (!TG.webhookSecret) {
+    console.error('Telegram webhook rejected: TELEGRAM_WEBHOOK_SECRET is not set.');
+    return res.sendStatus(503);
+  }
+  const got = req.header('x-telegram-bot-api-secret-token') || '';
+  if (got.length !== TG.webhookSecret.length ||
+      !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(TG.webhookSecret))) {
+    return res.sendStatus(401);
   }
   res.sendStatus(200); // ack fast; process after
   try {

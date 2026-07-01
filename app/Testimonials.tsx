@@ -47,7 +47,7 @@ export default function Testimonials() {
           {count > 0 && (
             <div className="mt-2 flex items-center justify-center gap-2 text-sm text-stone-500 dark:text-zinc-400">
               <StarRow rating={Math.round(average)} />
-              <span>{average} · {he ? `${count} המלצות` : `${count} reviews`}</span>
+              <span>{average.toFixed(1)} · {he ? `${count} המלצות` : `${count} reviews`}</span>
             </div>
           )}
         </div>

@@ -16,7 +16,7 @@ export default function StorePage() {
       </h1>
       <p className="text-stone-500 dark:text-zinc-400 mb-8">
         {isHebrew
-          ? '"בין שעה לשעה" - הרצאות וידאו קצרות על מושגי יסוד בפסיכואנליזה, מאת קופלAI אליעזר.'
+          ? '"בין שעה לשעה" - הרצאות וידאו קצרות על מושגי יסוד בפסיכואנליזה, מאת קופל אליעזר.'
           : '"Between Hour and Hour" - short video lectures on core psychoanalytic concepts, by Kopel Eliezer.'}
       </p>
 
@@ -31,7 +31,7 @@ export default function StorePage() {
         </h2>
         <p className="text-sm text-stone-500 dark:text-zinc-500 max-w-md mx-auto mb-6">
           {isHebrew
-            ? 'כל הרצאה מתמקדת במושג יסוד אחד. ניתן לצפות ולרכוש הרצאות בודדות (₪50 להרצאה) באתר של קופלAI אליעזר.'
+            ? 'כל הרצאה מתמקדת במושג יסוד אחד. ניתן לצפות ולרכוש הרצאות בודדות (₪50 להרצאה) באתר של קופל אליעזר.'
             : 'Each lecture focuses on one core concept. Browse and buy individual lectures (₪50 each) on Kopel Eliezer\'s site.'}
         </p>
         <a

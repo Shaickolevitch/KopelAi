@@ -43,7 +43,7 @@ export default function ResetPasswordPage() {
         {/* Logo */}
         <div className="mb-8 flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-indigo-950 dark:bg-indigo-600 flex items-center justify-center">
-            <span className="text-white font-bold text-base leading-none">Z</span>
+            <span className="text-white font-bold text-base leading-none">K</span>
           </div>
           <span className="font-semibold text-stone-900 dark:text-zinc-100 text-lg">KopelAi</span>
         </div>
@@ -53,7 +53,7 @@ export default function ResetPasswordPage() {
         </h1>
         {!sent && (
           <p className="text-stone-500 dark:text-zinc-400 mb-8 text-sm leading-relaxed">
-            Enter your email and we&apos;ll send you a reset link.
+            {t.auth_reset_intro}
           </p>
         )}
 

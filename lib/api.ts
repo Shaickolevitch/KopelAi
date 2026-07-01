@@ -5,6 +5,16 @@ import { supabase } from './supabase';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
+// Fail loud, not silent. If this is empty in production, every backend call
+// (chat, usage, gating) resolves against the app's own origin and 404s — which
+// makes free-tier usage checks silently no-op. Surface it immediately in the
+// console/Sentry at launch instead of shipping a broken gate unnoticed.
+if (!API_URL && process.env.NODE_ENV === 'production' && typeof window !== 'undefined') {
+  console.error(
+    'CRITICAL: NEXT_PUBLIC_API_URL is not set. Backend calls will fail and free-tier gating will not work. Set it in the production environment.'
+  );
+}
+
 // The backend verifies this token and derives the user from it — never trusting
 // a user id sent in the body.
 async function authHeaders(): Promise<Record<string, string>> {

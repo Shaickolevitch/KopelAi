@@ -53,8 +53,8 @@ export default function CheckoutSuccessPage() {
       <div className="max-w-sm w-full text-center space-y-5">
         <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center mx-auto">
           {phase === 'timeout' ? (
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-amber-500">
-              <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600 dark:text-green-400">
+              <path d="M20 6L9 17l-5-5"/>
             </svg>
           ) : (
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-500 dark:text-indigo-400">
@@ -85,10 +85,10 @@ export default function CheckoutSuccessPage() {
 
         {phase === 'timeout' && (
           <button
-            onClick={() => router.replace('/app/plan')}
+            onClick={() => router.replace('/app/conversation')}
             className="px-5 py-2.5 rounded-xl bg-indigo-950 dark:bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-900 transition-colors"
           >
-            {t.checkout_success_goto_settings}
+            {t.checkout_success_continue}
           </button>
         )}
       </div>
