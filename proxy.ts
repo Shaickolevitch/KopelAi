@@ -4,22 +4,21 @@ import type { NextRequest } from "next/server";
 // ---------------------------------------------------------------------------
 // MAINTENANCE MODE
 // ---------------------------------------------------------------------------
-// While this is ON, every visitor to the site is shown app/maintenance
-// (a friendly "under maintenance" page) with an HTTP 503 status.
+// While this is ON, every visitor is shown app/maintenance (a friendly Hebrew
+// "under maintenance" page) with an HTTP 503 status.
 //
-// HOW TO TURN IT OFF (two options):
-//   1. In Vercel → Project → Settings → Environment Variables, set
-//        MAINTENANCE_MODE = 0
-//      then redeploy. No code change needed.
-//   2. Or change the default below to `false` and push to GitHub.
+// The switch is a RUNTIME value in Supabase (app_settings.maintenance_mode),
+// toggled from the admin page (Admin → תחזוקה) WITHOUT a redeploy. proxy.ts
+// reads it here on each request, cached briefly per warm edge isolate.
 //
-// Default is ON so the page goes live immediately on deploy.
+// If the switch can't be read (DB unreachable / row missing), we fall back to
+// the MAINTENANCE_MODE env var, defaulting to ON (safe for pre-launch).
 // ---------------------------------------------------------------------------
-const MAINTENANCE_MODE =
-  process.env.MAINTENANCE_MODE === undefined
-    ? true // default: maintenance ON
-    : process.env.MAINTENANCE_MODE === "1" ||
-      process.env.MAINTENANCE_MODE.toLowerCase() === "true";
+function envDefaultMaintenance(): boolean {
+  const v = process.env.MAINTENANCE_MODE;
+  if (v === undefined) return true; // default: maintenance ON
+  return v === "1" || v.toLowerCase() === "true";
+}
 
 // ---------------------------------------------------------------------------
 // OWNER BYPASS
@@ -28,15 +27,51 @@ const MAINTENANCE_MODE =
 //     https://kopelai.com/?bypass=Jemzd8vPMJHw
 // once. Your browser gets a cookie and from then on you see the full site,
 // while everyone else keeps seeing the maintenance page. The cookie lasts 30
-// days. To lock yourself back out, clear the site's cookies (or visit
-//     https://kopelai.com/?bypass=off ).
+// days. To lock yourself back out, visit https://kopelai.com/?bypass=off .
 // Change the key below to rotate it. (Optionally set MAINTENANCE_BYPASS_KEY.)
 // ---------------------------------------------------------------------------
 const BYPASS_KEY = process.env.MAINTENANCE_BYPASS_KEY || "Jemzd8vPMJHw";
 const BYPASS_COOKIE = "kopelai-bypass";
 
-export function proxy(request: NextRequest) {
-  if (!MAINTENANCE_MODE) {
+// Cache the switch briefly so we don't hit Supabase on every single request.
+// A toggle from the admin page takes effect within this window.
+const SETTINGS_TTL_MS = 10_000;
+let cached: { on: boolean; at: number } | null = null;
+
+async function isMaintenanceOn(): Promise<boolean> {
+  const now = Date.now();
+  if (cached && now - cached.at < SETTINGS_TTL_MS) return cached.on;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (url && key) {
+    try {
+      const r = await fetch(
+        `${url}/rest/v1/app_settings?key=eq.maintenance_mode&select=value`,
+        { headers: { apikey: key, authorization: `Bearer ${key}` }, cache: "no-store" }
+      );
+      if (r.ok) {
+        const rows = (await r.json()) as { value?: string }[];
+        if (rows.length > 0) {
+          const v = (rows[0].value || "").toLowerCase();
+          const on = v === "on" || v === "1" || v === "true";
+          cached = { on, at: now };
+          return on;
+        }
+      }
+    } catch {
+      /* fall through to fallback below */
+    }
+  }
+
+  // Couldn't read the switch: reuse the last known value, else the env default.
+  const fallback = cached?.on ?? envDefaultMaintenance();
+  cached = { on: fallback, at: now };
+  return fallback;
+}
+
+export async function proxy(request: NextRequest) {
+  if (!(await isMaintenanceOn())) {
     return NextResponse.next();
   }
 
