@@ -402,6 +402,26 @@ export async function adminGetAnalytics(): Promise<AnalyticsData> {
   return response.json();
 }
 
+// ── Admin: token cost dashboard ──────────────────────────────────────────────
+export type TokenUsageSummary = {
+  periodDays: number;
+  totalCostUsd: number;
+  totalRequests: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  byModel: { model: string; input: number; output: number; cache: number; requests: number; costUsd: number }[];
+  daily: { day: string; costUsd: number; requests: number }[];
+  topUsers: { user_id: string; costUsd: number; requests: number; email: string | null }[];
+};
+
+export async function adminGetTokenUsage(days = 30): Promise<TokenUsageSummary> {
+  const response = await fetch(`${API_URL}/admin/token-usage?days=${days}`, {
+    headers: { ...(await authHeaders()) },
+  });
+  if (!response.ok) throw new Error(`Token usage error (${response.status})`);
+  return response.json();
+}
+
 export async function adminSetTier(userId: string, tier: 'free' | 'pro') {
   const response = await fetch(`${API_URL}/admin/set-tier`, {
     method: 'POST',

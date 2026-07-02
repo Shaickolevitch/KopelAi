@@ -164,6 +164,100 @@ app.get('/system-prompt', async (req: Request, res: Response) => {
   }
 });
 
+// Estimated USD list prices per 1M tokens. Approximate — edit these to match your
+// actual Anthropic plan. Cache reads are far cheaper than fresh input tokens.
+const TOKEN_PRICES: Record<string, { in: number; out: number; cache: number }> = {
+  opus:   { in: 15, out: 75, cache: 1.5 },
+  sonnet: { in: 3,  out: 15, cache: 0.3 },
+  haiku:  { in: 1,  out: 5,  cache: 0.1 },
+};
+function priceFor(model: string) {
+  const m = (model || '').toLowerCase();
+  if (m.includes('opus')) return TOKEN_PRICES.opus;
+  if (m.includes('haiku')) return TOKEN_PRICES.haiku;
+  return TOKEN_PRICES.sonnet; // default/unknown → sonnet pricing
+}
+function rowCostUsd(model: string, inTok: number, outTok: number, cacheTok: number) {
+  const p = priceFor(model);
+  return (inTok * p.in + outTok * p.out + cacheTok * p.cache) / 1_000_000;
+}
+
+// Admin cost dashboard: aggregates token_usage_daily into per-model, per-day, and
+// per-user rollups with an estimated USD cost.
+app.get('/admin/token-usage', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthedUser(req);
+    if (!user || user.id !== ADMIN_USER_ID) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    const days = Math.min(90, Math.max(1, Number(req.query.days) || 30));
+    const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+
+    const { data: rows } = await supabaseAdmin
+      .from('token_usage_daily')
+      .select('day, user_id, model, input_tokens, output_tokens, cache_read_tokens, requests')
+      .gte('day', since)
+      .limit(20000);
+    const all = rows ?? [];
+
+    const modelMap = new Map<string, { input: number; output: number; cache: number; requests: number }>();
+    const dayMap = new Map<string, { cost: number; requests: number }>();
+    const userMap = new Map<string, { cost: number; requests: number }>();
+    let totalCost = 0, totalRequests = 0, totalIn = 0, totalOut = 0;
+
+    for (const r of all) {
+      const inTok = Number(r.input_tokens) || 0;
+      const outTok = Number(r.output_tokens) || 0;
+      const cacheTok = Number(r.cache_read_tokens) || 0;
+      const reqs = Number(r.requests) || 0;
+      const cost = rowCostUsd(r.model, inTok, outTok, cacheTok);
+      totalCost += cost; totalRequests += reqs; totalIn += inTok; totalOut += outTok;
+
+      const mm = modelMap.get(r.model) ?? { input: 0, output: 0, cache: 0, requests: 0 };
+      mm.input += inTok; mm.output += outTok; mm.cache += cacheTok; mm.requests += reqs;
+      modelMap.set(r.model, mm);
+
+      const dd = dayMap.get(r.day) ?? { cost: 0, requests: 0 };
+      dd.cost += cost; dd.requests += reqs; dayMap.set(r.day, dd);
+
+      const uu = userMap.get(r.user_id) ?? { cost: 0, requests: 0 };
+      uu.cost += cost; uu.requests += reqs; userMap.set(r.user_id, uu);
+    }
+
+    const byModel = [...modelMap.entries()]
+      .map(([model, v]) => ({ model, ...v, costUsd: rowCostUsd(model, v.input, v.output, v.cache) }))
+      .sort((a, b) => b.costUsd - a.costUsd);
+    const daily = [...dayMap.entries()]
+      .map(([day, v]) => ({ day, costUsd: v.cost, requests: v.requests }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+    const topUsersRaw = [...userMap.entries()]
+      .map(([user_id, v]) => ({ user_id, costUsd: v.cost, requests: v.requests }))
+      .sort((a, b) => b.costUsd - a.costUsd)
+      .slice(0, 10);
+    const topUsers = await Promise.all(topUsersRaw.map(async (u) => {
+      try {
+        const { data } = await supabaseAdmin.auth.admin.getUserById(u.user_id);
+        return { ...u, email: data?.user?.email ?? null };
+      } catch {
+        return { ...u, email: null };
+      }
+    }));
+
+    res.json({
+      periodDays: days,
+      totalCostUsd: totalCost,
+      totalRequests,
+      totalInputTokens: totalIn,
+      totalOutputTokens: totalOut,
+      byModel,
+      daily,
+      topUsers,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
 app.post('/system-prompt', async (req: Request, res: Response) => {
   try {
     const user = await getAuthedUser(req);
