@@ -20,6 +20,10 @@ const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
+  // Force Node's native (undici) fetch. The SDK's bundled node-fetch throws
+  // ERR_STREAM_PREMATURE_CLOSE on gzipped responses under Node 22, which took
+  // every /chat + Telegram Anthropic call down. undici handles gzip correctly.
+  fetch: ((url: any, init?: any) => (globalThis as any).fetch(url, init)) as any,
 });
 
 const openai = new OpenAI({
