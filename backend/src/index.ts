@@ -91,8 +91,13 @@ async function getAuthedUser(req: Request) {
 // number to adjust the wall; the daily_usage counter and UI follow it.
 const FREE_DAILY_MESSAGE_LIMIT = 25;
 // Trial users keep Pro features (memory, insights) but are metered at a higher
-// daily cap to bound cost during the 14-day trial. Paid Pro is uncapped.
+// daily cap to bound cost during the 14-day trial.
 const TRIAL_DAILY_MESSAGE_LIMIT = 50;
+// Paid Pro is effectively unlimited for real use, but a generous soft fair-use
+// cap guards against a single account running up unbounded token cost (a Pro
+// message can route to the deep model, ~5× the price). Well above any human's
+// daily use; invisible in practice. Env-overridable to tune without a code change.
+const PRO_DAILY_MESSAGE_LIMIT = Number(process.env.PRO_DAILY_MESSAGE_LIMIT) || 300;
 
 // Opt-in 14-day Pro trial: users start free and explicitly activate the trial,
 // which stamps user_profile.trial_ends_at. The clock is that timestamp (not
@@ -901,18 +906,28 @@ app.post('/chat', async (req: Request, res: Response) => {
     const paidPro = tierRow?.subscription_tier === 'pro' || compedProActive(tierRow?.referral_pro_until);
     const onTrial = !paidPro && trialActiveFrom(tierRow?.trial_ends_at);
     const proFeatures = paidPro || onTrial; // memory + insights
-    const dailyLimit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;
+    // Every tier now has a cap: free/trial the visible limit, Pro a generous
+    // fair-use ceiling that only ever stops runaway/abusive token cost.
+    const dailyLimit = paidPro ? PRO_DAILY_MESSAGE_LIMIT : (onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT);
 
     // Always record activity (daily_usage is our canonical, session-wipe-proof
-    // activity log used by analytics). Only ENFORCE the cap for non-paid users.
+    // activity log used by analytics), then enforce the tier's cap.
     const { data: count, error: bumpErr } = await supabaseAdmin.rpc('bump_daily_usage', {
       p_user: userId,
     });
     if (bumpErr) {
       console.error('bump_daily_usage failed:', bumpErr);
       // Fail open: never block a paying-customer-to-be on an infra hiccup.
-    } else if (!paidPro && typeof count === 'number') {
+    } else if (typeof count === 'number') {
       if (count > dailyLimit) {
+        if (paidPro) {
+          // Pro fair-use soft cap: reply gently (not the upgrade wall) and don't
+          // call the model, so no tokens are spent past the ceiling.
+          const msg = (language ?? 'he') === 'he'
+            ? 'הגעת למכסת השימוש ההוגן היומית 🙏 נתראה מחר להמשך.'
+            : "You've reached today's fair-use limit 🙏 see you tomorrow.";
+          return res.json({ text: msg, remaining: 0 });
+        }
         return res.status(429).json({
           error: 'Daily message limit reached.',
           code: 'daily_limit_reached',
@@ -920,9 +935,11 @@ app.post('/chat', async (req: Request, res: Response) => {
           trial: onTrial,
         });
       }
-      remaining = Math.max(0, dailyLimit - count);
-      // The final allowed message of the day winds down gracefully.
-      windDown = count === dailyLimit;
+      if (!paidPro) {
+        remaining = Math.max(0, dailyLimit - count);
+        // The final allowed message of the day winds down gracefully.
+        windDown = count === dailyLimit;
+      }
     }
 
     const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user')?.content;
@@ -958,6 +975,7 @@ app.post('/chat', async (req: Request, res: Response) => {
     // Tree: showing up today waters the tree (daily streak). Fire-and-forget so
     // it never adds latency to the reply; the helper no-ops for non-Pro users.
     void awardDailyStreak(userId);
+    recordTokenUsage(userId, chosenModel, response.usage);
 
     res.json({ text, usage: response.usage, remaining });
   } catch (err: any) {
@@ -2605,6 +2623,27 @@ async function createWithFallback(params: any) {
   }
 }
 
+// Fire-and-forget: accumulate per-day, per-user, per-model token usage so we can
+// see real cost (especially Pro volume and deep-model routing). Never blocks or
+// slows the reply; swallows its own errors.
+function recordTokenUsage(userId: string, model: string, usage: unknown) {
+  try {
+    if (!userId || !usage) return;
+    const u = usage as {
+      input_tokens?: number; output_tokens?: number;
+      cache_read_input_tokens?: number; cache_creation_input_tokens?: number;
+    };
+    const input = Number(u.input_tokens ?? 0);
+    const output = Number(u.output_tokens ?? 0);
+    const cache = Number(u.cache_read_input_tokens ?? 0) + Number(u.cache_creation_input_tokens ?? 0);
+    void supabaseAdmin
+      .rpc('bump_token_usage', { p_user: userId, p_model: model || 'unknown', p_in: input, p_out: output, p_cache: cache })
+      .then(({ error }) => { if (error) console.error('bump_token_usage failed:', error); });
+  } catch (e) {
+    console.error('recordTokenUsage error:', e);
+  }
+}
+
 async function sendWhatsApp(to: string, body: string) {
   if (!waConfigured() || !body) return;
   try {
@@ -2658,13 +2697,17 @@ async function handleWhatsAppMessage(phone: string, text: string) {
   const paidPro = tierRow?.subscription_tier === 'pro' || compedProActive(tierRow?.referral_pro_until);
   const onTrial = !paidPro && trialActiveFrom(tierRow?.trial_ends_at);
   const proFeatures = paidPro || onTrial;
-  const dailyLimit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;
+  const dailyLimit = paidPro ? PRO_DAILY_MESSAGE_LIMIT : (onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT);
 
   const { data: count } = await supabaseAdmin.rpc('bump_daily_usage', { p_user: userId });
-  if (!paidPro && typeof count === 'number' && count > dailyLimit) {
+  if (typeof count === 'number' && count > dailyLimit) {
     await sendWhatsApp(phone, lang === 'he'
-      ? (onTrial ? 'הגענו למכסת ההודעות להיום 🙏 נתראה מחר להמשך.' : 'הגענו לסוף המכסה היומית בגרסה החינמית. נתראה מחר - או לשיחה ללא הגבלה, שדרגו לפרו ב-kopelai.com')
-      : (onTrial ? "That's our messages for today 🙏 see you tomorrow." : "That's today's free limit. See you tomorrow — or go Pro for unlimited at kopelai.com"));
+      ? (paidPro ? 'הגעת למכסת השימוש ההוגן היומית 🙏 נתראה מחר להמשך.'
+        : onTrial ? 'הגענו למכסת ההודעות להיום 🙏 נתראה מחר להמשך.'
+        : 'הגענו לסוף המכסה היומית בגרסה החינמית. נתראה מחר - או לשיחה ללא הגבלה, שדרגו לפרו ב-kopelai.com')
+      : (paidPro ? "You've reached today's fair-use limit 🙏 see you tomorrow."
+        : onTrial ? "That's our messages for today 🙏 see you tomorrow."
+        : "That's today's free limit. See you tomorrow — or go Pro for unlimited at kopelai.com"));
     return;
   }
   const windDown = !paidPro && typeof count === 'number' && count === dailyLimit;
@@ -2706,6 +2749,7 @@ async function handleWhatsAppMessage(phone: string, text: string) {
     system: systemPrompt,
     messages: recent.map((m: any) => ({ role: m.role, content: m.content })),
   });
+  recordTokenUsage(userId, 'claude-sonnet-4-5', response.usage);
   const block = response.content.find((b) => b.type === 'text');
   const reply = stripToolNoise(block && block.type === 'text' ? block.text : '');
 
@@ -3005,7 +3049,7 @@ async function handleTelegramMessage(chatId: string, text: string) {
   const paidPro = tierRow?.subscription_tier === 'pro' || compedProActive(tierRow?.referral_pro_until);
   const onTrial = !paidPro && trialActiveFrom(tierRow?.trial_ends_at);
   const proFeatures = paidPro || onTrial;
-  const dailyLimit = onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT;
+  const dailyLimit = paidPro ? PRO_DAILY_MESSAGE_LIMIT : (onTrial ? TRIAL_DAILY_MESSAGE_LIMIT : FREE_DAILY_MESSAGE_LIMIT);
 
   // 4. Reuse the open conversation we looked up above (or open a fresh one).
   let conversationId = openConvo?.id as string | undefined;
@@ -3059,13 +3103,17 @@ async function settleAndReply(
     if (latest && latest.id !== myMsgId) return; // a newer message exists → it replies
   }
 
-  // Count one message for this burst and enforce the shared daily wall.
+  // Count one message for this burst and enforce the tier's daily cap.
   const { paidPro, onTrial, dailyLimit } = quota;
   const { data: count } = await supabaseAdmin.rpc('bump_daily_usage', { p_user: userId });
-  if (!paidPro && typeof count === 'number' && count > dailyLimit) {
+  if (typeof count === 'number' && count > dailyLimit) {
     await sendTelegram(chatId, lang === 'he'
-      ? (onTrial ? 'הגענו למכסת ההודעות להיום 🙏 נתראה מחר להמשך.' : 'הגענו לסוף המכסה היומית בגרסה החינמית. נתראה מחר - או לשיחה ללא הגבלה, שדרגו לפרו ב-kopelai.com')
-      : (onTrial ? "That's our messages for today 🙏 see you tomorrow." : "That's today's free limit. See you tomorrow — or go Pro for unlimited at kopelai.com"));
+      ? (paidPro ? 'הגעת למכסת השימוש ההוגן היומית 🙏 נתראה מחר להמשך.'
+        : onTrial ? 'הגענו למכסת ההודעות להיום 🙏 נתראה מחר להמשך.'
+        : 'הגענו לסוף המכסה היומית בגרסה החינמית. נתראה מחר - או לשיחה ללא הגבלה, שדרגו לפרו ב-kopelai.com')
+      : (paidPro ? "You've reached today's fair-use limit 🙏 see you tomorrow."
+        : onTrial ? "That's our messages for today 🙏 see you tomorrow."
+        : "That's today's free limit. See you tomorrow — or go Pro for unlimited at kopelai.com"));
     return;
   }
   const windDown = !paidPro && typeof count === 'number' && count === dailyLimit;
@@ -3105,6 +3153,7 @@ async function generateTelegramReply(
     system: systemPrompt,
     messages: recent.map((m) => ({ role: m.role, content: m.content })),
   });
+  recordTokenUsage(userId, tgModel, response.usage);
   const block = response.content.find((b) => b.type === 'text');
   let reply = stripToolNoise(block && block.type === 'text' ? block.text : '');
   if (!reply) {
