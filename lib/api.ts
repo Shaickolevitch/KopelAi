@@ -246,6 +246,7 @@ export type AdminUser = {
   last_active: string | null;
   marketing_consent: boolean;
   conversations_count: number;
+  trial_started: boolean;
 };
 
 export async function adminListUsers(params: {

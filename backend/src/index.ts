@@ -306,6 +306,7 @@ app.get('/admin/users', async (req: Request, res: Response) => {
         last_active: r.last_active,
         marketing_consent: r.marketing_consent ?? false,
         conversations_count: Number(r.conversations_count ?? 0),
+        trial_started: r.trial_started ?? false,
       })),
       total,
       page,

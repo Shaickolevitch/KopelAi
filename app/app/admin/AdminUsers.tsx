@@ -160,15 +160,16 @@ export default function AdminUsers() {
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'נוצר' : 'Joined'}</th>
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'פעילות אחרונה' : 'Last active'}</th>
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'שיחות שמורות' : 'Conversations'}</th>
+              <th className="text-start font-medium py-2 px-2">{isHebrew ? 'התחיל ניסיון בפרו' : 'Started Pro trial'}</th>
               <th className="text-start font-medium py-2 px-2">{isHebrew ? 'דיוור' : 'Marketing'}</th>
               <th className="text-start font-medium py-2 px-2"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="py-6 text-center text-stone-400 dark:text-zinc-600">…</td></tr>
+              <tr><td colSpan={8} className="py-6 text-center text-stone-400 dark:text-zinc-600">…</td></tr>
             ) : users.length === 0 ? (
-              <tr><td colSpan={7} className="py-6 text-center text-stone-400 dark:text-zinc-600">{isHebrew ? 'לא נמצאו משתמשים' : 'No users found'}</td></tr>
+              <tr><td colSpan={8} className="py-6 text-center text-stone-400 dark:text-zinc-600">{isHebrew ? 'לא נמצאו משתמשים' : 'No users found'}</td></tr>
             ) : (
               users.map((u) => (
                 <tr key={u.id} className="border-t border-stone-100 dark:border-zinc-800">
@@ -208,6 +209,11 @@ export default function AdminUsers() {
                   </td>
                   <td className="py-2.5 px-2 text-xs text-stone-600 dark:text-zinc-400 tabular-nums">
                     {u.conversations_count}
+                  </td>
+                  <td className="py-2.5 px-2 text-xs text-center">
+                    {u.trial_started
+                      ? <span className="text-emerald-600 dark:text-emerald-400" title={isHebrew ? 'התחיל ניסיון בפרו' : 'Started Pro trial'}>✓</span>
+                      : <span className="text-stone-300 dark:text-zinc-700">—</span>}
                   </td>
                   <td className="py-2.5 px-2 text-xs">
                     {u.marketing_consent
