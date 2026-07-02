@@ -19,6 +19,7 @@ import AdminFeedback from './AdminFeedback';
 import AdminAnalytics from './AdminAnalytics';
 import AdminReviews from './AdminReviews';
 import AdminMaintenance from './AdminMaintenance';
+import AdminCost from './AdminCost';
 
 // Admin-only (Shai): live-edit the system prompt + manage the knowledge base (RAG).
 // TODO: replace the hard-coded admin email with a real role flag, and enforce on the server.
@@ -152,13 +153,13 @@ export default function AdminPage() {
   const [kbListOpen, setKbListOpen] = useState(false);
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [tab, setTab] = useState<'users' | 'analytics' | 'feedback' | 'reviews' | 'prompt' | 'kb' | 'monitoring' | 'maintenance'>('users');
+  const [tab, setTab] = useState<'users' | 'analytics' | 'feedback' | 'reviews' | 'prompt' | 'kb' | 'monitoring' | 'maintenance' | 'cost'>('users');
 
   // Open a specific tab when linked from the notification bell (?tab=reviews).
   useEffect(() => {
     try {
       const t = new URLSearchParams(window.location.search).get('tab');
-      if (t && ['users', 'analytics', 'feedback', 'reviews', 'prompt', 'kb', 'monitoring', 'maintenance'].includes(t)) {
+      if (t && ['users', 'analytics', 'feedback', 'reviews', 'prompt', 'kb', 'monitoring', 'maintenance', 'cost'].includes(t)) {
         setTab(t as typeof tab);
       }
     } catch { /* ignore */ }
@@ -333,6 +334,7 @@ export default function AdminPage() {
           { key: 'prompt', label: isHebrew ? 'הנחיית AI' : 'AI prompt' },
           { key: 'kb', label: isHebrew ? 'בסיס ידע' : 'Knowledge base' },
           { key: 'monitoring', label: isHebrew ? 'ניטור' : 'Monitoring' },
+          { key: 'cost', label: isHebrew ? 'עלות' : 'Cost' },
           { key: 'maintenance', label: isHebrew ? 'תחזוקה' : 'Maintenance' },
         ] as const).map((tb) => (
           <button
@@ -358,6 +360,8 @@ export default function AdminPage() {
       {tab === 'reviews' && <AdminReviews />}
 
       {tab === 'maintenance' && <AdminMaintenance />}
+
+      {tab === 'cost' && <AdminCost />}
 
       {tab === 'prompt' && (
       <div className="rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm">
