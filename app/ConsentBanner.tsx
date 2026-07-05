@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useT } from '@/lib/i18n';
 import { getConsent, setConsent } from '@/lib/consent';
 
@@ -33,9 +32,12 @@ export default function ConsentBanner() {
     >
       <p className="text-sm text-stone-600 dark:text-zinc-300 leading-snug flex-1">
         {t.consent_message}{' '}
-        <Link href="/privacy" className="underline hover:text-indigo-700 dark:hover:text-indigo-400">
+        {/* Plain <a>, not next/link: /privacy is a static public HTML file served
+            via a rewrite, not an app route. Using <Link> auto-prefetches an RSC
+            payload for /privacy that 404s (Sentry KOPELAI-7). Matches the footer links. */}
+        <a href="/privacy" className="underline hover:text-indigo-700 dark:hover:text-indigo-400">
           {t.consent_learn_more}
-        </Link>
+        </a>
       </p>
       <div className="flex items-center gap-2 shrink-0">
         <button
