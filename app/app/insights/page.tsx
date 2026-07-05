@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { INSIGHT_CATEGORIES, getCategoryLabel } from '@kopelai/shared';
 import { getSubscriptionTier } from '@/lib/subscription';
 import ByConversation from './ByConversation';
+import PatientList from '../patients/PatientList';
 
 type Insight = {
   id: string;
@@ -41,9 +42,9 @@ export default function InsightsPage() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPro, setIsPro] = useState(true);
-  const [tab, setTabState] = useState<'general' | 'conversations'>('general');
+  const [tab, setTabState] = useState<'general' | 'conversations' | 'patients'>('general');
 
-  const setTab = (next: 'general' | 'conversations') => {
+  const setTab = (next: 'general' | 'conversations' | 'patients') => {
     setTabState(next);
     try { localStorage.setItem('kopelai.analysisTab', next); } catch {}
   };
@@ -52,7 +53,8 @@ export default function InsightsPage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem('kopelai.analysisTab');
-      if (saved === 'conversations' || saved === 'general') setTabState(saved);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (saved === 'conversations' || saved === 'general' || saved === 'patients') setTabState(saved);
     } catch {}
   }, []);
 
@@ -157,7 +159,7 @@ export default function InsightsPage() {
   }
 
   const he = language === 'he';
-  const tabBtn = (key: 'general' | 'conversations', label: string) => (
+  const tabBtn = (key: 'general' | 'conversations' | 'patients', label: string) => (
     <button
       onClick={() => setTab(key)}
       className={`px-4 py-2.5 text-sm font-medium -mb-px border-b-2 transition-colors ${
@@ -178,9 +180,12 @@ export default function InsightsPage() {
       <div className="flex gap-1 mb-6 border-b border-stone-200 dark:border-zinc-800">
         {tabBtn('general', he ? 'כללי' : 'General')}
         {tabBtn('conversations', he ? 'לפי שיחה' : 'By conversation')}
+        {tabBtn('patients', he ? 'לפי מטופל' : 'By patient')}
       </div>
 
-      {tab === 'conversations' ? (
+      {tab === 'patients' ? (
+        <PatientList />
+      ) : tab === 'conversations' ? (
         <ByConversation />
       ) : !hasAnyInsights ? (
         <div className="py-12 text-center">

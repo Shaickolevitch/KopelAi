@@ -656,6 +656,122 @@ export async function getConversationAnalysis(conversationId: string): Promise<C
   return (data.analysis ?? {}) as ConversationAnalysis;
 }
 
+// ── Patients mini-CRM ───────────────────────────────────────────────────────
+// A "patient" is the therapist's PRIVATE label for a client (pseudonym / first
+// name / descriptor) — their own reflective file, never identifiable data.
+export type PatientAnalysis = {
+  client_picture?: string;
+  processes_over_time?: string;
+  therapeutic_relationship?: string;
+  your_strengths?: string[];
+  your_blind_spots?: string[];
+  reinforcements?: string[];
+  open_threads?: string[];
+  questions_next?: string[];
+};
+
+export type Patient = {
+  id: string;
+  name: string;
+  aliases: string[] | null;
+  notes: string | null;
+  emoji: string | null;
+  archived: boolean;
+  analysis?: PatientAnalysis | null;
+  analysis_generated_at: string | null;
+  created_at: string;
+  updated_at: string;
+  session_count?: number;
+  last_session_at?: string | null;
+};
+
+export type PatientConversation = {
+  id: string;
+  started_at: string;
+  ended_at: string | null;
+  tag_source: 'auto' | 'manual';
+};
+
+export async function getPatients(): Promise<Patient[]> {
+  const r = await fetch(`${API_URL}/patients`, { headers: { ...(await authHeaders()) } });
+  if (r.status === 403) throw new ProRequiredError();
+  if (!r.ok) throw new Error(`Patients error (${r.status})`);
+  const d = await r.json();
+  return (d.patients ?? []) as Patient[];
+}
+
+export async function getPatient(
+  id: string
+): Promise<{ patient: Patient; conversations: PatientConversation[] }> {
+  const r = await fetch(`${API_URL}/patient/${id}`, { headers: { ...(await authHeaders()) } });
+  if (r.status === 403) throw new ProRequiredError();
+  if (!r.ok) throw new Error(`Patient error (${r.status})`);
+  return r.json();
+}
+
+export async function updatePatient(
+  id: string,
+  patch: { name?: string; notes?: string; emoji?: string | null; archived?: boolean; aliases?: string[] }
+): Promise<void> {
+  const r = await fetch(`${API_URL}/patient/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify(patch),
+  });
+  if (!r.ok) {
+    let t = await r.text();
+    try { t = JSON.parse(t).error ?? t; } catch {}
+    throw new Error(t || `Update patient error (${r.status})`);
+  }
+}
+
+export async function deletePatient(id: string): Promise<void> {
+  const r = await fetch(`${API_URL}/patient/${id}`, {
+    method: 'DELETE',
+    headers: { ...(await authHeaders()) },
+  });
+  if (!r.ok) throw new Error(`Delete patient error (${r.status})`);
+}
+
+export async function tagConversationToPatient(patientId: string, conversationId: string): Promise<void> {
+  const r = await fetch(`${API_URL}/patient/${patientId}/tag`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ conversation_id: conversationId }),
+  });
+  if (!r.ok) throw new Error(`Tag error (${r.status})`);
+}
+
+export async function untagConversationFromPatient(patientId: string, conversationId: string): Promise<void> {
+  const r = await fetch(`${API_URL}/patient/${patientId}/tag/${conversationId}`, {
+    method: 'DELETE',
+    headers: { ...(await authHeaders()) },
+  });
+  if (!r.ok) throw new Error(`Untag error (${r.status})`);
+}
+
+export async function mergePatients(sourceId: string, targetId: string): Promise<void> {
+  const r = await fetch(`${API_URL}/patients/merge`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify({ source_id: sourceId, target_id: targetId }),
+  });
+  if (!r.ok) throw new Error(`Merge error (${r.status})`);
+}
+
+export async function reanalyzePatient(
+  id: string
+): Promise<{ analysis: PatientAnalysis | null; analysis_generated_at: string | null }> {
+  const r = await fetch(`${API_URL}/patient/${id}/reanalyze`, {
+    method: 'POST',
+    headers: { ...(await authHeaders()) },
+  });
+  if (r.status === 403) throw new ProRequiredError();
+  if (!r.ok) throw new Error(`Reanalyze error (${r.status})`);
+  const d = await r.json();
+  return { analysis: d.analysis ?? null, analysis_generated_at: d.analysis_generated_at ?? null };
+}
+
 // ── Relationship orange-tree ────────────────────────────────────────────────
 export type TreeState =
   | { planted: false }

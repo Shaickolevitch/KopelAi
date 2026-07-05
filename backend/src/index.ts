@@ -1631,8 +1631,234 @@ Return only the opener, with no headers or explanations.`;
       { onConflict: 'user_id' }
     );
 
+    // 8. Patients mini-CRM (effective-Pro only, we're past the free-user return).
+    //    Detect the clients this session was about, tag the conversation, and
+    //    (re)build each affected patient's reflective analysis. Fire-and-forget
+    //    so it never slows the session-end response.
+    const patientsLang: 'he' | 'en' = (() => {
+      const c = (messages ?? []).map((m) => m.content).join(' ');
+      const heb = (c.match(/[֐-׿]/g) ?? []).length;
+      const lat = (c.match(/[A-Za-z]/g) ?? []).length;
+      return heb >= lat ? 'he' : 'en';
+    })();
+    void extractTagAndAnalyzePatients(userId, conversationId, transcript, patientsLang);
+
     return { status: 'ok', tier: 'pro', insights_count: validInsights.length, summary };
   }
+}
+
+// ============================================================
+// Patients mini-CRM
+// A "patient" here is the private label (pseudonym / first name / descriptor)
+// the therapist uses for a client. It is the therapist's OWN reflective file,
+// never identifiable clinical data. Extraction + analysis are effective-Pro only
+// and are triggered from consolidateConversation at session end.
+// ============================================================
+
+const PATIENT_MODEL = 'claude-sonnet-4-5';
+
+// Detect the clients a session was about, match/create patient rows, tag the
+// conversation, then regenerate each affected patient's analysis.
+async function extractTagAndAnalyzePatients(
+  userId: string,
+  conversationId: string,
+  transcript: string,
+  lang: 'he' | 'en'
+): Promise<void> {
+  try {
+    const extractPrompt = `You read a therapist's private reflective conversation with an AI supervisor. Identify the CLIENTS / PATIENTS the therapist discussed — the people they are treating.
+
+For each client, return the exact label the therapist used to refer to them (a first name, initials, pseudonym, or a short descriptor like "the client with the panic attacks"). Keep the label in its original language.
+
+Rules:
+- Include ONLY the therapist's own clients/patients.
+- EXCLUDE the therapist themselves, their family, friends, colleagues, supervisors, public figures, or anyone mentioned in passing who is not a patient.
+- Merge references that clearly point to the same client into one entry.
+- If no client is discussed, return an empty array.
+
+Return ONLY valid JSON, no prose:
+{"patients":[{"name":"<label>","note":"<=8 words describing who this client is, same language>"}]}
+
+Conversation:
+${transcript.slice(0, 24000)}`;
+
+    const r = await createWithFallback({
+      model: PATIENT_MODEL,
+      max_tokens: 600,
+      messages: [{ role: 'user', content: extractPrompt }],
+    });
+    const b = r.content.find((x: any) => x.type === 'text');
+    let parsed: { patients?: { name?: string; note?: string }[] } = {};
+    try {
+      parsed = extractJSON(b && b.type === 'text' ? b.text : '') || {};
+    } catch {
+      parsed = {};
+    }
+    const found = (parsed.patients ?? [])
+      .map((p) => ({ name: (p?.name ?? '').trim(), note: (p?.note ?? '').trim() }))
+      .filter((p) => p.name.length > 0 && p.name.length <= 60);
+    if (found.length === 0) return;
+
+    const { data: existing } = await supabaseAdmin
+      .from('patients')
+      .select('id, name, aliases')
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+    const roster: { id: string; name: string; aliases: string[] }[] = (existing ?? []).map((e: any) => ({
+      id: e.id,
+      name: e.name,
+      aliases: e.aliases ?? [],
+    }));
+    const norm = (s: string) => s.trim().toLowerCase();
+    const affected = new Set<string>();
+
+    for (const p of found) {
+      let patientId: string | undefined = roster.find(
+        (e) => norm(e.name) === norm(p.name) || e.aliases.some((a) => norm(a) === norm(p.name))
+      )?.id;
+
+      if (!patientId) {
+        const { data: created, error: cErr } = await supabaseAdmin
+          .from('patients')
+          .insert({ user_id: userId, name: p.name, notes: p.note || null })
+          .select('id')
+          .single();
+        if (cErr) {
+          // Likely a unique-name race/duplicate — fetch the existing row.
+          const { data: dup } = await supabaseAdmin
+            .from('patients')
+            .select('id')
+            .eq('user_id', userId)
+            .ilike('name', p.name)
+            .is('deleted_at', null)
+            .maybeSingle();
+          patientId = dup?.id;
+        } else {
+          patientId = created?.id;
+          if (patientId) roster.push({ id: patientId, name: p.name, aliases: [] });
+        }
+      }
+      if (!patientId) continue;
+
+      await supabaseAdmin
+        .from('conversation_patients')
+        .upsert(
+          { conversation_id: conversationId, patient_id: patientId, user_id: userId, source: 'auto' },
+          { onConflict: 'conversation_id,patient_id' }
+        );
+      affected.add(patientId);
+    }
+
+    for (const pid of affected) {
+      await analyzePatient(userId, pid, lang).catch((e) => console.error('analyzePatient error:', e));
+    }
+  } catch (e) {
+    console.error('extractTagAndAnalyzePatients error:', e);
+  }
+}
+
+// Cross-reference every conversation tagged with a patient and (re)build the
+// therapist-facing reflective analysis stored on patients.analysis.
+async function analyzePatient(userId: string, patientId: string, lang: 'he' | 'en'): Promise<void> {
+  const { data: patient } = await supabaseAdmin
+    .from('patients')
+    .select('name')
+    .eq('id', patientId)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (!patient) return;
+
+  const { data: tags } = await supabaseAdmin
+    .from('conversation_patients')
+    .select('conversation_id')
+    .eq('patient_id', patientId)
+    .eq('user_id', userId);
+  const convoIds = (tags ?? []).map((t: any) => t.conversation_id);
+  if (convoIds.length === 0) return;
+
+  const { data: convos } = await supabaseAdmin
+    .from('conversations')
+    .select('id, started_at')
+    .in('id', convoIds)
+    .is('deleted_at', null)
+    .order('started_at', { ascending: false });
+
+  // Build a bounded combined transcript, most recent sessions first.
+  let material = '';
+  const he = lang === 'he';
+  for (const c of convos ?? []) {
+    if (material.length > 22000) break;
+    const { data: msgs } = await supabaseAdmin
+      .from('messages')
+      .select('role, content')
+      .eq('conversation_id', c.id)
+      .order('created_at', { ascending: true })
+      .limit(120);
+    const t = (msgs ?? [])
+      .map((m: any) => `${m.role === 'user' ? (he ? 'מטפל' : 'Therapist') : (he ? 'קופל' : 'Kopel')}: ${m.content}`)
+      .join('\n');
+    const date = c.started_at ? new Date(c.started_at).toLocaleDateString(he ? 'he-IL' : 'en-GB') : '';
+    material += `\n\n--- ${he ? 'מפגש' : 'Session'} (${date}) ---\n${t}`;
+  }
+  if (!material.trim()) return;
+
+  const sessionCount = (convos ?? []).length;
+
+  const prompt = he
+    ? `אתה קופל — דמות מדריך פסיכואנליטי, חם, ספרותי וזהיר. לפניך כל מה שמטפל שיתף איתך לאורך זמן על מטופל שהוא מכנה "${patient.name}" (${sessionCount} מפגשים). צור עבור המטפל ניתוח רפלקטיבי על העבודה שלו עם המטופל הזה — לא דו״ח קליני יבש, אלא הרהור זהיר בגוף שני ("אתה/את"), ששומר את העדשה על המטפל לא פחות מאשר על המטופל. אל תמציא פרטים שלא נאמרו; אם אין מספיק חומר לשדה מסוים — השאר אותו ריק.
+
+החזר אך ורק JSON בפורמט הבא (עברית, גוף שני; ערכי טקסט קצרים; מערכים של 2–5 פריטים):
+{
+ "client_picture": "תמונה זהירה ומתפתחת של המטופל כפי שתיארת אותו — מה מביא אותו, הנושאים המרכזיים, הדינמיקות",
+ "processes_over_time": "אילו תהליכים ותנועות זיהית לאורך הזמן — מה זז, מה נתקע, מה חוזר, נקודות מפנה",
+ "therapeutic_relationship": "הדינמיקה ביניכם — מה המטופל הזה מעורר בך, רגעי חיבור מול קרע, סימני העברה והעברה-נגדית",
+ "your_strengths": ["איפה אתה עובד טוב מול המטופל הזה — ספציפי ומעוגן ברגעים"],
+ "your_blind_spots": ["דפוסים ונקודות עיוורון שספציפיים למטופל הזה — עדין וישיר"],
+ "reinforcements": ["חיזוק אמיתי אליך כמטפל בהקשר של המטופל הזה — מה מגיע שייאמר לך בקול"],
+ "open_threads": ["דברים שעלו ולא נחקרו לעומק — שווה לחזור אליהם"],
+ "questions_next": ["שאלה או השערה קונקרטית להחזיק לקראת המפגש הבא"]
+}
+
+החומר:
+${material}`
+    : `You are Kopel — a warm, literary, careful psychoanalytic supervisor. Below is everything a therapist has shared with you over time about a client they call "${patient.name}" (${sessionCount} sessions). Write a reflective analysis for the therapist about their work with this client — not a dry clinical report, but a careful second-person reflection ("you"), keeping the lens on the therapist as much as on the client. Do not invent details that were not said; if a field lacks material, leave it empty.
+
+Return ONLY JSON in this exact shape (English, second person; short text values; arrays of 2–5 items):
+{
+ "client_picture": "A careful, evolving portrait of the client as you described them — what brings them, core themes, dynamics",
+ "processes_over_time": "The processes and movements you can see across time — what shifted, what got stuck, what recurs, turning points",
+ "therapeutic_relationship": "The dynamic between you — what this client evokes in you, moments of contact vs rupture, transference/countertransference signals",
+ "your_strengths": ["Where you work well with this particular client — specific, anchored in moments"],
+ "your_blind_spots": ["Patterns and blind spots specific to this client — gentle and direct"],
+ "reinforcements": ["Genuine encouragement to you as a therapist with this client — what deserves to be said out loud"],
+ "open_threads": ["Things that came up and were not explored in depth — worth returning to"],
+ "questions_next": ["A concrete question or hypothesis to hold for the next session"]
+}
+
+Material:
+${material}`;
+
+  const resp = await createWithFallback({
+    model: PATIENT_MODEL,
+    max_tokens: 2000,
+    messages: [{ role: 'user', content: prompt }],
+  });
+  const blk = resp.content.find((x: any) => x.type === 'text');
+  let analysis: any = {};
+  try {
+    analysis = parseLooseJSON(blk && blk.type === 'text' ? blk.text : '{}') || {};
+  } catch {
+    analysis = {};
+  }
+
+  await supabaseAdmin
+    .from('patients')
+    .update({
+      analysis,
+      analysis_generated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', patientId);
 }
 
 // ----------------------------------------------------------
@@ -1803,6 +2029,327 @@ app.post('/end-conversation', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('End conversation error:', err);
     res.status(500).json({ error: err.message ?? 'Internal server error' });
+  }
+});
+
+// ----------------------------------------------------------
+// Patients mini-CRM endpoints. A "patient" is the therapist's private label
+// for a client; these are effective-Pro only, and every write goes through the
+// service role after an ownership check.
+// ----------------------------------------------------------
+async function requireProUser(req: Request, res: Response) {
+  const user = await getAuthedUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return null;
+  }
+  const { data: tierRow } = await supabaseAdmin
+    .from('user_profile')
+    .select('subscription_tier, trial_ends_at, referral_pro_until')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  const isPro =
+    tierRow?.subscription_tier === 'pro' ||
+    compedProActive(tierRow?.referral_pro_until) ||
+    trialActiveFrom(tierRow?.trial_ends_at);
+  if (!isPro) {
+    res.status(403).json({ error: 'pro_required' });
+    return null;
+  }
+  return user;
+}
+
+// List all patients for the user, with session counts + last activity.
+app.get('/patients', async (req: Request, res: Response) => {
+  try {
+    const user = await requireProUser(req, res);
+    if (!user) return;
+
+    const { data: patients } = await supabaseAdmin
+      .from('patients')
+      .select('id, name, aliases, notes, emoji, archived, analysis_generated_at, created_at, updated_at')
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .order('updated_at', { ascending: false });
+
+    const { data: tags } = await supabaseAdmin
+      .from('conversation_patients')
+      .select('patient_id, created_at')
+      .eq('user_id', user.id);
+
+    const counts: Record<string, { sessions: number; last: string | null }> = {};
+    for (const t of tags ?? []) {
+      const pid = (t as any).patient_id as string;
+      const c = counts[pid] ?? { sessions: 0, last: null };
+      c.sessions += 1;
+      if (!c.last || (t as any).created_at > c.last) c.last = (t as any).created_at;
+      counts[pid] = c;
+    }
+
+    const rows = (patients ?? []).map((p: any) => ({
+      ...p,
+      session_count: counts[p.id]?.sessions ?? 0,
+      last_session_at: counts[p.id]?.last ?? null,
+    }));
+    return res.json({ patients: rows });
+  } catch (e) {
+    console.error('GET /patients error:', e);
+    return res.status(500).json({ error: 'Failed to load patients' });
+  }
+});
+
+// Patient detail: profile, analysis, and the list of tagged conversations.
+app.get('/patient/:id', async (req: Request, res: Response) => {
+  try {
+    const user = await requireProUser(req, res);
+    if (!user) return;
+    const patientId = String(req.params.id ?? '');
+
+    const { data: patient } = await supabaseAdmin
+      .from('patients')
+      .select('id, user_id, name, aliases, notes, emoji, archived, analysis, analysis_generated_at, created_at, updated_at')
+      .eq('id', patientId)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (!patient || patient.user_id !== user.id) {
+      return res.status(403).json({ error: 'Not your patient' });
+    }
+
+    const { data: tags } = await supabaseAdmin
+      .from('conversation_patients')
+      .select('conversation_id, source, created_at')
+      .eq('patient_id', patientId)
+      .eq('user_id', user.id);
+    const convoIds = (tags ?? []).map((t: any) => t.conversation_id);
+
+    let conversations: any[] = [];
+    if (convoIds.length > 0) {
+      const { data: convos } = await supabaseAdmin
+        .from('conversations')
+        .select('id, started_at, ended_at')
+        .in('id', convoIds)
+        .is('deleted_at', null)
+        .order('started_at', { ascending: false });
+      const sourceById: Record<string, string> = {};
+      for (const t of tags ?? []) sourceById[(t as any).conversation_id] = (t as any).source;
+      conversations = (convos ?? []).map((c: any) => ({ ...c, tag_source: sourceById[c.id] ?? 'auto' }));
+    }
+
+    return res.json({ patient, conversations });
+  } catch (e) {
+    console.error('GET /patient/:id error:', e);
+    return res.status(500).json({ error: 'Failed to load patient' });
+  }
+});
+
+// Rename / edit notes / emoji / archive.
+app.patch('/patient/:id', async (req: Request, res: Response) => {
+  try {
+    const user = await requireProUser(req, res);
+    if (!user) return;
+    const patientId = String(req.params.id ?? '');
+
+    const { data: patient } = await supabaseAdmin
+      .from('patients')
+      .select('id, user_id')
+      .eq('id', patientId)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (!patient || patient.user_id !== user.id) {
+      return res.status(403).json({ error: 'Not your patient' });
+    }
+
+    const body = req.body ?? {};
+    const update: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (typeof body.name === 'string' && body.name.trim()) update.name = body.name.trim().slice(0, 60);
+    if (typeof body.notes === 'string') update.notes = body.notes.slice(0, 4000);
+    if (typeof body.emoji === 'string') update.emoji = body.emoji.slice(0, 8) || null;
+    if (typeof body.archived === 'boolean') update.archived = body.archived;
+    if (Array.isArray(body.aliases)) {
+      update.aliases = body.aliases.filter((a: any) => typeof a === 'string' && a.trim()).map((a: string) => a.trim().slice(0, 60)).slice(0, 20);
+    }
+
+    const { error } = await supabaseAdmin.from('patients').update(update).eq('id', patientId);
+    if (error) {
+      // Unique-name collision on rename.
+      return res.status(409).json({ error: 'A patient with that name already exists.' });
+    }
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('PATCH /patient/:id error:', e);
+    return res.status(500).json({ error: 'Failed to update patient' });
+  }
+});
+
+// Soft-delete a patient (does not touch the underlying conversations).
+app.delete('/patient/:id', async (req: Request, res: Response) => {
+  try {
+    const user = await requireProUser(req, res);
+    if (!user) return;
+    const patientId = String(req.params.id ?? '');
+
+    const { data: patient } = await supabaseAdmin
+      .from('patients')
+      .select('id, user_id')
+      .eq('id', patientId)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (!patient || patient.user_id !== user.id) {
+      return res.status(403).json({ error: 'Not your patient' });
+    }
+
+    await supabaseAdmin
+      .from('patients')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', patientId);
+    await supabaseAdmin.from('conversation_patients').delete().eq('patient_id', patientId);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('DELETE /patient/:id error:', e);
+    return res.status(500).json({ error: 'Failed to delete patient' });
+  }
+});
+
+// Manually add/remove a conversation tag (the "fix the auto-tag" affordance).
+app.post('/patient/:id/tag', async (req: Request, res: Response) => {
+  try {
+    const user = await requireProUser(req, res);
+    if (!user) return;
+    const patientId = String(req.params.id ?? '');
+    const conversationId = String((req.body ?? {}).conversation_id ?? '');
+    if (!conversationId) return res.status(400).json({ error: 'conversation_id required' });
+
+    const [{ data: patient }, { data: convo }] = await Promise.all([
+      supabaseAdmin.from('patients').select('id, user_id').eq('id', patientId).is('deleted_at', null).maybeSingle(),
+      supabaseAdmin.from('conversations').select('id, user_id').eq('id', conversationId).is('deleted_at', null).maybeSingle(),
+    ]);
+    if (!patient || patient.user_id !== user.id) return res.status(403).json({ error: 'Not your patient' });
+    if (!convo || convo.user_id !== user.id) return res.status(403).json({ error: 'Not your conversation' });
+
+    await supabaseAdmin
+      .from('conversation_patients')
+      .upsert(
+        { conversation_id: conversationId, patient_id: patientId, user_id: user.id, source: 'manual' },
+        { onConflict: 'conversation_id,patient_id' }
+      );
+    // Re-analyze in the background so the profile reflects the new material.
+    void analyzePatient(user.id, patientId, 'he').catch(() => {});
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('POST /patient/:id/tag error:', e);
+    return res.status(500).json({ error: 'Failed to tag conversation' });
+  }
+});
+
+app.delete('/patient/:id/tag/:conversationId', async (req: Request, res: Response) => {
+  try {
+    const user = await requireProUser(req, res);
+    if (!user) return;
+    const patientId = String(req.params.id ?? '');
+    const conversationId = String(req.params.conversationId ?? '');
+
+    const { data: patient } = await supabaseAdmin
+      .from('patients').select('id, user_id').eq('id', patientId).is('deleted_at', null).maybeSingle();
+    if (!patient || patient.user_id !== user.id) return res.status(403).json({ error: 'Not your patient' });
+
+    await supabaseAdmin
+      .from('conversation_patients')
+      .delete()
+      .eq('patient_id', patientId)
+      .eq('conversation_id', conversationId)
+      .eq('user_id', user.id);
+    void analyzePatient(user.id, patientId, 'he').catch(() => {});
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('DELETE /patient/:id/tag error:', e);
+    return res.status(500).json({ error: 'Failed to untag conversation' });
+  }
+});
+
+// Merge one patient into another (keeps the target, moves tags + aliases).
+app.post('/patients/merge', async (req: Request, res: Response) => {
+  try {
+    const user = await requireProUser(req, res);
+    if (!user) return;
+    const body = req.body ?? {};
+    const sourceId = String(body.source_id ?? '');
+    const targetId = String(body.target_id ?? '');
+    if (!sourceId || !targetId || sourceId === targetId) {
+      return res.status(400).json({ error: 'source_id and target_id required and must differ' });
+    }
+
+    const { data: rows } = await supabaseAdmin
+      .from('patients')
+      .select('id, user_id, name, aliases')
+      .in('id', [sourceId, targetId])
+      .is('deleted_at', null);
+    const source = (rows ?? []).find((r: any) => r.id === sourceId);
+    const target = (rows ?? []).find((r: any) => r.id === targetId);
+    if (!source || !target || source.user_id !== user.id || target.user_id !== user.id) {
+      return res.status(403).json({ error: 'Not your patients' });
+    }
+
+    // Move tags (ignore conflicts where the conversation is already on target).
+    const { data: srcTags } = await supabaseAdmin
+      .from('conversation_patients')
+      .select('conversation_id, source')
+      .eq('patient_id', sourceId)
+      .eq('user_id', user.id);
+    for (const t of srcTags ?? []) {
+      await supabaseAdmin
+        .from('conversation_patients')
+        .upsert(
+          { conversation_id: (t as any).conversation_id, patient_id: targetId, user_id: user.id, source: (t as any).source },
+          { onConflict: 'conversation_id,patient_id' }
+        );
+    }
+    await supabaseAdmin.from('conversation_patients').delete().eq('patient_id', sourceId);
+
+    // Fold the source name + aliases into the target's aliases.
+    const mergedAliases = Array.from(
+      new Set([...(target.aliases ?? []), ...(source.aliases ?? []), source.name].filter(Boolean))
+    ).slice(0, 20);
+    await supabaseAdmin
+      .from('patients')
+      .update({ aliases: mergedAliases, updated_at: new Date().toISOString() })
+      .eq('id', targetId);
+    await supabaseAdmin
+      .from('patients')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', sourceId);
+
+    void analyzePatient(user.id, targetId, 'he').catch(() => {});
+    return res.json({ ok: true, target_id: targetId });
+  } catch (e) {
+    console.error('POST /patients/merge error:', e);
+    return res.status(500).json({ error: 'Failed to merge patients' });
+  }
+});
+
+// Force a fresh analysis for a patient.
+app.post('/patient/:id/reanalyze', async (req: Request, res: Response) => {
+  try {
+    const user = await requireProUser(req, res);
+    if (!user) return;
+    const patientId = String(req.params.id ?? '');
+
+    const { data: patient } = await supabaseAdmin
+      .from('patients').select('id, user_id').eq('id', patientId).is('deleted_at', null).maybeSingle();
+    if (!patient || patient.user_id !== user.id) return res.status(403).json({ error: 'Not your patient' });
+
+    if (rateLimited(`patientanalysis:${user.id}`, 20, 60_000)) {
+      return res.status(429).json({ error: 'Too many requests, slow down a moment.' });
+    }
+    await analyzePatient(user.id, patientId, 'he');
+    const { data: fresh } = await supabaseAdmin
+      .from('patients')
+      .select('analysis, analysis_generated_at')
+      .eq('id', patientId)
+      .maybeSingle();
+    return res.json({ ok: true, analysis: fresh?.analysis ?? null, analysis_generated_at: fresh?.analysis_generated_at ?? null });
+  } catch (e) {
+    console.error('POST /patient/:id/reanalyze error:', e);
+    return res.status(500).json({ error: 'Failed to reanalyze patient' });
   }
 });
 
